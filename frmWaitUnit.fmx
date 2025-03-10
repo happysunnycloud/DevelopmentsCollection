@@ -1,0 +1,41 @@
+object frmWait: TfrmWait
+  Left = 0
+  Top = 0
+  BorderIcons = [biSystemMenu]
+  BorderStyle = Single
+  Caption = 'Wait'
+  ClientHeight = 109
+  ClientWidth = 517
+  Position = ScreenCenter
+  FormStyle = StayOnTop
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  OnCreate = FormCreate
+  OnClose = FormClose
+  DesignerMasterStyle = 0
+  object pbLine: TProgressBar
+    Orientation = Horizontal
+    Position.X = 8.000000000000000000
+    Position.Y = 32.000000000000000000
+    Size.Width = 501.000000000000000000
+    Size.Height = 37.000000000000000000
+    Size.PlatformDefault = False
+  end
+  object bnCancel: TButton
+    Position.X = 220.000000000000000000
+    Position.Y = 80.000000000000000000
+    TabOrder = 1
+    Text = 'Cancel'
+    OnClick = bnCancelClick
+  end
+  object Label1: TLabel
+    Position.X = 224.000000000000000000
+    Position.Y = 8.000000000000000000
+    Size.Width = 85.000000000000000000
+    Size.Height = 17.000000000000000000
+    Size.PlatformDefault = False
+    Text = 'Please wait ...'
+    TabOrder = 3
+  end
+end

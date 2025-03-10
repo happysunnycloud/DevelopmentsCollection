@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<codetemplate	xmlns="http://schemas.borland.com/Delphi/2005/codetemplates"
+				version="1.0.0">
+	<template name="mark.begin" invoke="manual">
+		<description>
+
+		</description>
+		<author>
+
+		</author>
+		<code language="Delphi"><![CDATA[//fors:avr:begin]]>
+		</code>
+	</template>
+</codetemplate>

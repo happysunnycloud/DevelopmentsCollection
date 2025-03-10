@@ -1,0 +1,48 @@
+object frmHint: TfrmHint
+  Left = 0
+  Top = 0
+  BorderIcons = []
+  BorderStyle = None
+  Caption = 'Hint'
+  ClientHeight = 17
+  ClientWidth = 123
+  Fill.Kind = Solid
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  OnCreate = FormCreate
+  OnClose = FormClose
+  OnCloseQuery = FormCloseQuery
+  OnDestroy = FormDestroy
+  DesignerMasterStyle = 0
+  object lblHint: TLabel
+    AutoTranslate = False
+    Size.Width = 123.000000000000000000
+    Size.Height = 17.000000000000000000
+    Size.PlatformDefault = False
+    TextSettings.HorzAlign = Center
+    Text = 'lblHint'
+    TabOrder = 0
+  end
+  object rcBorder: TRectangle
+    Align = Client
+    Fill.Kind = Gradient
+    Fill.Gradient.Points = <
+      item
+        Color = xFF777777
+        Offset = 0.000000000000000000
+      end
+      item
+        Color = xFFD4D4D4
+        Offset = 0.465838521718978900
+      end>
+    Fill.Gradient.StartPosition.X = 0.500000000000000000
+    Fill.Gradient.StartPosition.Y = 1.000000000000000000
+    Fill.Gradient.StopPosition.X = 0.499999970197677600
+    Fill.Gradient.StopPosition.Y = 0.000000000000000000
+    Opacity = 0.300000011920929000
+    Size.Width = 123.000000000000000000
+    Size.Height = 17.000000000000000000
+    Size.PlatformDefault = False
+  end
+end
