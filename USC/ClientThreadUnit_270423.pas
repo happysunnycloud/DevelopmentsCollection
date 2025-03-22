@@ -1,4 +1,4 @@
-unit UClientUnit;
+п»їunit UClientUnit;
 
 interface
 
@@ -347,17 +347,17 @@ begin
   except
     on EIdSocketError do
     begin
-      //Сервер не найден. Ошибка подключения
+      //РЎРµСЂРІРµСЂ РЅРµ РЅР°Р№РґРµРЅ. РћС€РёР±РєР° РїРѕРґРєР»СЋС‡РµРЅРёСЏ
       Terminate;
     end;
 //        on EIdOSSLConnectError do
 //        begin
-//          //Сервер разорвал соединение
+//          //РЎРµСЂРІРµСЂ СЂР°Р·РѕСЂРІР°Р» СЃРѕРµРґРёРЅРµРЅРёРµ
 //          Terminate;
 //        end
     else
     begin
-      //Ошибка подключения
+      //РћС€РёР±РєР° РїРѕРґРєР»СЋС‡РµРЅРёСЏ
       Terminate;
     end;
   end;
@@ -393,21 +393,21 @@ begin
     except
       on EIdClosedSocket do
       begin
-        //Соединение закрыто
+        //РЎРѕРµРґРёРЅРµРЅРёРµ Р·Р°РєСЂС‹С‚Рѕ
         Terminate;
 
         Break;
       end;
       on EIdConnClosedGracefully do
       begin
-        //Соединение закрыто
+        //РЎРѕРµРґРёРЅРµРЅРёРµ Р·Р°РєСЂС‹С‚Рѕ
         Terminate;
 
         Break;
       end
       else
       begin
-        //Соединение закрыто
+        //РЎРѕРµРґРёРЅРµРЅРёРµ Р·Р°РєСЂС‹С‚Рѕ
         Terminate;
 
         Break;

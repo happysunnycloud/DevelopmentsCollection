@@ -1,4 +1,4 @@
-{0.8}
+п»ї{0.8}
 unit FMX.SoundUnit;
 
 interface
@@ -276,7 +276,7 @@ class procedure TSoundUnit.UnInitEngine;
 begin
   if Assigned(fInitMediaPlayer) then
   begin
-  //  //реализуем stop через CurrentTime = Duration
+  //  //СЂРµР°Р»РёР·СѓРµРј stop С‡РµСЂРµР· CurrentTime = Duration
     fInitMediaPlayer.CurrentTime := fInitMediaPlayer.Duration;
 //    fInitMediaPlayer.Stop;
 //    fInitMediaPlayer.Clear;
@@ -356,9 +356,9 @@ begin
       end;
       DO_PLAY:
       begin
-        //множественного доступа к fMediaPlayer нет,
-        //либо он управляется здесь,
-        //либо передается на управление в TTrackTracerThread
+        //РјРЅРѕР¶РµСЃС‚РІРµРЅРЅРѕРіРѕ РґРѕСЃС‚СѓРїР° Рє fMediaPlayer РЅРµС‚,
+        //Р»РёР±Рѕ РѕРЅ СѓРїСЂР°РІР»СЏРµС‚СЃСЏ Р·РґРµСЃСЊ,
+        //Р»РёР±Рѕ РїРµСЂРµРґР°РµС‚СЃСЏ РЅР° СѓРїСЂР°РІР»РµРЅРёРµ РІ TTrackTracerThread
         if Assigned(fTrackTracerThread) then
           TTrackTracerThread.UnInit(fTrackTracerThread);
 
@@ -378,7 +378,7 @@ begin
         if Assigned(fTrackTracerThread) then
           TTrackTracerThread.UnInit(fTrackTracerThread);
 
-        //на fMediaPlayer.Stop почему то глохнет, поэтому останов реализуем чере CurrentTime = Duration;
+        //РЅР° fMediaPlayer.Stop РїРѕС‡РµРјСѓ С‚Рѕ РіР»РѕС…РЅРµС‚, РїРѕСЌС‚РѕРјСѓ РѕСЃС‚Р°РЅРѕРІ СЂРµР°Р»РёР·СѓРµРј С‡РµСЂРµ CurrentTime = Duration;
         fMediaPlayer.CurrentTime := fMediaPlayer.Duration;
 
 //        DoCommand := DO_NONE;

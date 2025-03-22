@@ -1,4 +1,4 @@
-unit DBAccessClassUnit;
+п»їunit DBAccessClassUnit;
 
 interface
 
@@ -21,7 +21,7 @@ type
   protected
     class var FDBFileName: String;
     class var FSQLTemplates: TSQLTemplates;
-    // Возможно стоит перенести в SQLiteHelpmateUnit
+    // Р’РѕР·РјРѕР¶РЅРѕ СЃС‚РѕРёС‚ РїРµСЂРµРЅРµСЃС‚Рё РІ SQLiteHelpmateUnit
     //class function IntToBool(const AValue: Integer): Boolean;
   public
     class function DBAParamsFunc(
@@ -43,7 +43,7 @@ uses
   , ExceptionContainerUnit
   ;
 
-// Возможно стоит перенести в SQLiteHelpmateUnit
+// Р’РѕР·РјРѕР¶РЅРѕ СЃС‚РѕРёС‚ РїРµСЂРµРЅРµСЃС‚Рё РІ SQLiteHelpmateUnit
 //class function TDBAccessClass.IntToBool(const AValue: Integer): Boolean;
 //begin
 //  Result := false;

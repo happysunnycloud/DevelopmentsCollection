@@ -1,4 +1,4 @@
-{0.0}
+﻿{0.0}
 unit CustomThreadUnit;
 
 interface

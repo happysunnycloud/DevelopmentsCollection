@@ -1,4 +1,4 @@
-unit FileToolsUnit;
+﻿unit FileToolsUnit;
 
 interface
 
@@ -11,6 +11,7 @@ uses
 type
   TSearchRecList = TList<TSearchRec>;
   TCopyFileResult = (crOk = 0, crFileNotExists = 1, crCopyError = 2);
+  TFileNames = array of String;
 
   TFileTools = class
   public
@@ -20,6 +21,12 @@ type
     class procedure GetFileSearchRecListByDir(
       const ADir: String;
       const ASearchRecList: TSearchRecList);
+
+    class procedure GetFileNames(
+      const ARootDir: String;
+      const ASubDir: String;
+      const AExt: String;
+      var AFileNames: TFileNames);
 
     class function CopyFile(const AFileNameFrom: String; const AFileNameTo: String): TCopyFileResult;
   end;
@@ -77,9 +84,54 @@ begin
       if (SearchRec.Attr and faDirectory) <> faDirectory then
         ASearchRecList.Add(SearchRec);
     end;
-    IsFound := FindNext(SearchRec) = 0;
+    IsFound := System.SysUtils.FindNext(SearchRec) = 0;
   end;
   System.SysUtils.FindClose(SearchRec);
+end;
+
+class procedure TFileTools.GetFileNames(
+  const ARootDir: String;
+  const ASubDir: String;
+  const AExt: String;
+  var AFileNames: TFileNames);
+var
+  sRec: TSearchRec;
+  isFound: Boolean;
+begin
+  isFound := FindFirst(ARootDir + '\*.*', faAnyFile, sRec ) = 0;
+  while isFound do
+  begin
+    if (sRec.Name <> '.') and (sRec.Name <> '..') then
+    begin
+      if (sRec.Attr and faDirectory) = faDirectory then
+      begin
+        GetFileNames(ARootDir + '\' + sRec.Name, ASubDir, AExt, AFileNames);
+      end;
+      if (LowerCase(ExtractFileExt(sRec.Name)) = '.' + AExt)
+          or
+         (AExt = '')
+      then
+      begin
+        if
+            (
+              (ASubDir <> '')
+               and
+              (Pos(ASubDir, ARootDir) > 0)
+            )
+            or
+            (ASubDir = '')
+        then
+        begin
+          SetLength(AFileNames, Length(AFileNames) + 1);
+          AFileNames[Length(AFileNames) - 1] := ARootDir + '\' + sRec.Name;
+        end;
+      end;
+    end;
+
+    isFound := System.SysUtils.FindNext(sRec) = 0;
+  end;
+
+  System.SysUtils.FindClose(sRec);
 end;
 
 class function TFileTools.CopyFile(const AFileNameFrom: String; const AFileNameTo: String): TCopyFileResult;

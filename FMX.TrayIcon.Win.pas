@@ -1,4 +1,4 @@
-unit FMX.TrayIcon.Win;
+﻿unit FMX.TrayIcon.Win;
 
 interface
 

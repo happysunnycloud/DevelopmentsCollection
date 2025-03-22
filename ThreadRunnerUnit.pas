@@ -1,4 +1,4 @@
-unit ThreadRunnerUnit;
+﻿unit ThreadRunnerUnit;
 
 interface
 

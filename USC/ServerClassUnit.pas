@@ -1,4 +1,4 @@
-unit ServerClassUnit;
+п»їunit ServerClassUnit;
 
 interface
 
@@ -179,7 +179,7 @@ begin
             TCRead := TTransportContainer.Create;
             try
               TCRead.Data.CopyFrom(DataMemoryStream);
-              // -1 - это пинг
+              // -1 - СЌС‚Рѕ РїРёРЅРі
               if TCRead.ReadAsInteger(0) = -1 then
               begin
                 TCWrite := TTransportContainer.Create;

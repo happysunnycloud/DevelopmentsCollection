@@ -1,4 +1,4 @@
-{1.5}
+п»ї{1.5}
 unit frmHintUnit;
 
 interface
@@ -171,8 +171,8 @@ begin
 
     fFrmHint.lblHint.Text := fHintText;
     fTextWidth := fFrmHint.lblHint.Canvas.TextWidth(fHintText);
-    //длина пробела может быть короче, чем длина отдельного символа
-    //по этому получаем длину через символ 'A'
+    //РґР»РёРЅР° РїСЂРѕР±РµР»Р° РјРѕР¶РµС‚ Р±С‹С‚СЊ РєРѕСЂРѕС‡Рµ, С‡РµРј РґР»РёРЅР° РѕС‚РґРµР»СЊРЅРѕРіРѕ СЃРёРјРІРѕР»Р°
+    //РїРѕ СЌС‚РѕРјСѓ РїРѕР»СѓС‡Р°РµРј РґР»РёРЅСѓ С‡РµСЂРµР· СЃРёРјРІРѕР» 'A'
     fFrmHint.Width := Round(fTextWidth + fFrmHint.lblHint.Canvas.TextWidth('AA'));
     fFrmHint.Height := Round(fFrmHint.lblHint.Height);
     fFrmHint.lblHint.Width := fTextWidth;
@@ -180,8 +180,8 @@ begin
     fFrmHint.lblHint.Position.Y := (fFrmHint.Height / 2) - (fFrmHint.lblHint.Height / 2);
 
     fFrmHint.Left := fMouseCursorPos.X;
-    //с высотой курсора все неоднозначно, в эфирах пишут, что размер из метрики получается с учетом фона
-    //т.е. это не чистая высота курсора, по этому делим на 2, чисто импирически
+    //СЃ РІС‹СЃРѕС‚РѕР№ РєСѓСЂСЃРѕСЂР° РІСЃРµ РЅРµРѕРґРЅРѕР·РЅР°С‡РЅРѕ, РІ СЌС„РёСЂР°С… РїРёС€СѓС‚, С‡С‚Рѕ СЂР°Р·РјРµСЂ РёР· РјРµС‚СЂРёРєРё РїРѕР»СѓС‡Р°РµС‚СЃСЏ СЃ СѓС‡РµС‚РѕРј С„РѕРЅР°
+    //С‚.Рµ. СЌС‚Рѕ РЅРµ С‡РёСЃС‚Р°СЏ РІС‹СЃРѕС‚Р° РєСѓСЂСЃРѕСЂР°, РїРѕ СЌС‚РѕРјСѓ РґРµР»РёРј РЅР° 2, С‡РёСЃС‚Рѕ РёРјРїРёСЂРёС‡РµСЃРєРё
     fFrmHint.Top := fMouseCursorPos.Y + Round(GetSystemMetrics(SM_CYCURSOR) / 2);
 
 //    fFrmHint.Show;

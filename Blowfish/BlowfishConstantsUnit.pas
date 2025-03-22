@@ -1,4 +1,4 @@
-unit BlowfishConstantsUnit;
+﻿unit BlowfishConstantsUnit;
 
 interface
 

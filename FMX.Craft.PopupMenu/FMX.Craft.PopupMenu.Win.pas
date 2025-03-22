@@ -1,4 +1,4 @@
-{1.01}
+﻿{1.01}
 unit FMX.Craft.PopupMenu.Win;
 
 interface

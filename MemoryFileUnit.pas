@@ -1,4 +1,4 @@
-{0.1}
+ï»¿{0.1}
 unit MemoryFileUnit;
 
 interface
@@ -176,7 +176,7 @@ begin
   if Assigned(StartAddress) then
     raise TExceptionContainer.CreateExceptionContainer(ecFileOpen, FileName, METHOD);
 
-  // Åñëè FileHandle = 0 çíà÷èò CreateMemoryFile íå âûïîëíÿëñÿ
+  // Ð•ÑÐ»Ð¸ FileHandle = 0 Ð·Ð½Ð°Ñ‡Ð¸Ñ‚ CreateMemoryFile Ð½Ðµ Ð²Ñ‹Ð¿Ð¾Ð»Ð½ÑÐ»ÑÑ
   if FileHandle = 0 then
     FileHandle := OpenFileMapping(FILE_MAP_ALL_ACCESS, true, PWideChar(FileName));
 
@@ -208,7 +208,7 @@ begin
   if not Assigned(StartAddress) then
     raise TExceptionContainer.CreateExceptionContainer(ecFileClosed, FileName, METHOD);
 
-  //Îòêëþ÷èì ôàéë îò àäðåñíîãî ïðîñòðàíñòâà
+  //ÐžÑ‚ÐºÐ»ÑŽÑ‡Ð¸Ð¼ Ñ„Ð°Ð¹Ð» Ð¾Ñ‚ Ð°Ð´Ñ€ÐµÑÐ½Ð¾Ð³Ð¾ Ð¿Ñ€Ð¾ÑÑ‚Ñ€Ð°Ð½ÑÑ‚Ð²Ð°
   if not UnmapViewOfFile(StartAddress) then
     raise TExceptionContainer.CreateExceptionContainer(ecFileNotUnMapped, FileName, METHOD);
 
@@ -230,7 +230,7 @@ begin
   if Assigned(StartAddress) then
     CloseMemoryFile;
 
-  //Îñâîáîæäàåì îáúåêò ôàéëà
+  //ÐžÑÐ²Ð¾Ð±Ð¾Ð¶Ð´Ð°ÐµÐ¼ Ð¾Ð±ÑŠÐµÐºÑ‚ Ñ„Ð°Ð¹Ð»Ð°
   if FileHandle > 0 then
     if not CloseHandle(FileHandle) then
       raise TExceptionContainer.CreateExceptionContainer(ecCantFreeFile, FileName, METHOD);

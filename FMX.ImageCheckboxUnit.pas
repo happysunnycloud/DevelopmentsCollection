@@ -1,4 +1,4 @@
-{0.5}
+п»ї{0.5}
 unit FMX.ImageCheckBoxUnit;
 
 interface
@@ -277,7 +277,7 @@ begin
 
   fCheckBoxRectangle.Position.Assign(ACheckBoxSample.Position);
 
-  // Подменять имя нужно в самом конце, иначе теряется ссылна на контрол-источник ACheckBoxSample
+  // РџРѕРґРјРµРЅСЏС‚СЊ РёРјСЏ РЅСѓР¶РЅРѕ РІ СЃР°РјРѕРј РєРѕРЅС†Рµ, РёРЅР°С‡Рµ С‚РµСЂСЏРµС‚СЃСЏ СЃСЃС‹Р»РЅР° РЅР° РєРѕРЅС‚СЂРѕР»-РёСЃС‚РѕС‡РЅРёРє ACheckBoxSample
   ACheckBoxSample.Name := '';
 
   FreeAndNil(ACheckBoxSample);

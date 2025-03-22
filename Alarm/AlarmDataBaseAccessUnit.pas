@@ -1,4 +1,4 @@
-{0.1}
+п»ї{0.1}
 unit AlarmDataBaseAccessUnit;
 
 interface
@@ -33,13 +33,13 @@ type
     class function GetDBFileName: String;
   public
     class procedure SetDBFileName(ADBFileName: String);
-    //загружаем время срабатывания сигнала для зарядки сигнализатора
+    //Р·Р°РіСЂСѓР¶Р°РµРј РІСЂРµРјСЏ СЃСЂР°Р±Р°С‚С‹РІР°РЅРёСЏ СЃРёРіРЅР°Р»Р° РґР»СЏ Р·Р°СЂСЏРґРєРё СЃРёРіРЅР°Р»РёР·Р°С‚РѕСЂР°
     class procedure LoadAlarmFromDB(var AAlarmRecArray: TAlarmRecArray);
-    //загружаем список сигналов
+    //Р·Р°РіСЂСѓР¶Р°РµРј СЃРїРёСЃРѕРє СЃРёРіРЅР°Р»РѕРІ
     class procedure LoadAlarmTimeArrayFromDB(var AAlarmRecArray: TAlarmRecArray; const AAlarmType: Byte);
-    //загружаем значения таймера по его id
+    //Р·Р°РіСЂСѓР¶Р°РµРј Р·РЅР°С‡РµРЅРёСЏ С‚Р°Р№РјРµСЂР° РїРѕ РµРіРѕ id
     class procedure LoadAlarmTimeFromDBById(const AAlarmId: Integer; var AAlarmRecArray: TAlarmRecArray);
-    //загружаем самое младшее значение таймера по его типу (таймер или будильник)
+    //Р·Р°РіСЂСѓР¶Р°РµРј СЃР°РјРѕРµ РјР»Р°РґС€РµРµ Р·РЅР°С‡РµРЅРёРµ С‚Р°Р№РјРµСЂР° РїРѕ РµРіРѕ С‚РёРїСѓ (С‚Р°Р№РјРµСЂ РёР»Рё Р±СѓРґРёР»СЊРЅРёРє)
     class procedure LoadAlarmTimeFromDBByType(const AAlarmType: Byte; var AAlarmRecArray: TAlarmRecArray);
 
     class procedure RefreshAlarmTime    (const AAlarmRec: TAlarmRec);

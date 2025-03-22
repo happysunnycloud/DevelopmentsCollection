@@ -1,4 +1,4 @@
-unit TransportContainerUnit;
+Ôªøunit TransportContainerUnit;
 
 interface
 
@@ -148,7 +148,7 @@ begin
       if i <> AIndex then
       begin
         fData.Read(ParamType, SizeOf(ParamType));
-        //ÂÒÎË Len > 0, ÁÌ‡˜ËÚ ÔÂÂ‰‡ÂÚÒˇ ÒÚÓÍ‡, ÂÒÎË Len = 0, ÚÓ„‰‡ Î˛·ÓÈ ‰Û„ÓÈ ÚËÔ
+        //–µ—Å–ª–∏ Len > 0, –∑–Ω–∞—á–∏—Ç –ø–µ—Ä–µ–¥–∞–µ—Ç—Å—è —Å—Ç—Ä–æ–∫–∞, –µ—Å–ª–∏ Len = 0, —Ç–æ–≥–¥–∞ –ª—é–±–æ–π –¥—Ä—É–≥–æ–π —Ç–∏–ø
         fData.Read(Len, SizeOf(Len));
         fData.Position := fData.Position + (Len * SizeOf(Char) or SizeOfType(TParamType(ParamType)));
       end

@@ -1,4 +1,4 @@
-unit ErrorClassUnit;
+﻿unit ErrorClassUnit;
 
 interface
 

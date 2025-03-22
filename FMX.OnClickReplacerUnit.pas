@@ -1,4 +1,4 @@
-{0.1}
+﻿{0.1}
 unit FMX.OnClickReplacerUnit;
 
 interface

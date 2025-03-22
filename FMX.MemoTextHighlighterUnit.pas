@@ -1,4 +1,4 @@
-unit FMX.MemoTextHighlighterUnit;
+﻿unit FMX.MemoTextHighlighterUnit;
 
 interface
 

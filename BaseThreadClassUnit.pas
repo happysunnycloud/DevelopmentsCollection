@@ -1,4 +1,4 @@
-{1.10}
+п»ї{1.10}
 
 unit BaseThreadClassUnit;
 
@@ -37,10 +37,10 @@ type
     fSyncCount:                                          Integer;
 
     fTriggerArray:                              array of TTrigger;
-    //**** Нужны только для передачи параметров через WaitForCondition ****//
+    //**** РќСѓР¶РЅС‹ С‚РѕР»СЊРєРѕ РґР»СЏ РїРµСЂРµРґР°С‡Рё РїР°СЂР°РјРµС‚СЂРѕРІ С‡РµСЂРµР· WaitForCondition ****//
     fExitConditionWaitForKind:                           TWaitForKind;
     fExitConditionTrigger:                               ^TTrigger;
-    //**** Нужны только для передачи параметров через WaitForCondition ****//
+    //**** РќСѓР¶РЅС‹ С‚РѕР»СЊРєРѕ РґР»СЏ РїРµСЂРµРґР°С‡Рё РїР°СЂР°РјРµС‚СЂРѕРІ С‡РµСЂРµР· WaitForCondition ****//
     function    GetIsHolded:                             Boolean;
 
     function    GetHoldIntentionIs:                      Boolean;
@@ -340,7 +340,7 @@ end;
 function TBaseThread.WaitForKind(
   AWaitForKind: TWaitForKind;
   ATimeOut: Cardinal = 100;
-  // Если ASuspendedTimeOut = 0, то контроль зависания потока отключается
+  // Р•СЃР»Рё ASuspendedTimeOut = 0, С‚Рѕ РєРѕРЅС‚СЂРѕР»СЊ Р·Р°РІРёСЃР°РЅРёСЏ РїРѕС‚РѕРєР° РѕС‚РєР»СЋС‡Р°РµС‚СЃСЏ
   ASuspendedTimeOut: Cardinal = SUSPENDED_TIME_OUT): LongWord;
 begin
   Assert(((AWaitForKind = wfHold) and HoldIntentionIs) or (AWaitForKind = wfUnHold), 'The command "DoHold" was not executed, it may freeze');
@@ -357,7 +357,7 @@ end;
 function TBaseThread.WaitForTrigger(
   ATriggerIndex: Word;
   ATimeOut: Cardinal = 100;
-  // Если ASuspendedTimeOut = 0, то контроль зависания потока отключается
+  // Р•СЃР»Рё ASuspendedTimeOut = 0, С‚Рѕ РєРѕРЅС‚СЂРѕР»СЊ Р·Р°РІРёСЃР°РЅРёСЏ РїРѕС‚РѕРєР° РѕС‚РєР»СЋС‡Р°РµС‚СЃСЏ
   ASuspendedTimeOut: Cardinal = SUSPENDED_TIME_OUT): LongWord;
 begin
   Assert(ATriggerIndex < Length(fTriggerArray), 'TriggerIndex out of range');
@@ -373,7 +373,7 @@ end;
 function TBaseThread.WaitForCondition(
   AExitConditionFunction: TExitConditonFunction;
   ATimeOut: Cardinal = 100;
-  // Если ASuspendedTimeOut = 0, то контроль зависания потока отключается
+  // Р•СЃР»Рё ASuspendedTimeOut = 0, С‚Рѕ РєРѕРЅС‚СЂРѕР»СЊ Р·Р°РІРёСЃР°РЅРёСЏ РїРѕС‚РѕРєР° РѕС‚РєР»СЋС‡Р°РµС‚СЃСЏ
   ASuspendedTimeOut: Cardinal = SUSPENDED_TIME_OUT): LongWord;
 var
   TimeOut: Cardinal;

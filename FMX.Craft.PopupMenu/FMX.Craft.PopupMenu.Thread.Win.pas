@@ -1,4 +1,4 @@
-{0.0}
+п»ї{0.0}
 unit FMX.Craft.PopupMenu.Thread.Win;
 
 interface
@@ -108,15 +108,15 @@ uses
   , FMX.Platform.Win;
 
 function FindTaskBarPos(var ARect: TRect; var AAutoHide: Boolean): Integer;
-// найти положение панели задач
-// ARect - координаты, результат - положение, см. константы ниже
+// РЅР°Р№С‚Рё РїРѕР»РѕР¶РµРЅРёРµ РїР°РЅРµР»Рё Р·Р°РґР°С‡
+// ARect - РєРѕРѕСЂРґРёРЅР°С‚С‹, СЂРµР·СѓР»СЊС‚Р°С‚ - РїРѕР»РѕР¶РµРЅРёРµ, СЃРј. РєРѕРЅСЃС‚Р°РЅС‚С‹ РЅРёР¶Рµ
 var
   AppData: TAppBarData;
 begin
   AppData.Hwnd := FindWindowW('Shell_TrayWnd', nil);
   if AppData.Hwnd = 0 then
     RaiseLastOSError;
-    //RaiseLastWin32Error; // на всякий случай :)
+    //RaiseLastWin32Error; // РЅР° РІСЃСЏРєРёР№ СЃР»СѓС‡Р°Р№ :)
   AppData.cbSize := SizeOf(TAppBarData);
   if SHAppBarMessage(ABM_GETTASKBARPOS, AppData) = 0 then
     raise Exception.Create('SHAppBarMessage runtime error for requesting Taskbar');
@@ -600,11 +600,11 @@ begin
           end;
           Sleep(100);
         end;
-        //анализируем выход из монитора
+        //Р°РЅР°Р»РёР·РёСЂСѓРµРј РІС‹С…РѕРґ РёР· РјРѕРЅРёС‚РѕСЂР°
         if fClickEvent.IsClickFixed then
         begin
-          //при выходе из мониторинга проверяем, что было прицеплено к пункту меню
-          //если это субменю, тогда запускаем поток с субменю
+          //РїСЂРё РІС‹С…РѕРґРµ РёР· РјРѕРЅРёС‚РѕСЂРёРЅРіР° РїСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ Р±С‹Р»Рѕ РїСЂРёС†РµРїР»РµРЅРѕ Рє РїСѓРЅРєС‚Сѓ РјРµРЅСЋ
+          //РµСЃР»Рё СЌС‚Рѕ СЃСѓР±РјРµРЅСЋ, С‚РѕРіРґР° Р·Р°РїСѓСЃРєР°РµРј РїРѕС‚РѕРє СЃ СЃСѓР±РјРµРЅСЋ
           if fClickEvent.PopupMenuThread <> nil then
           begin
             fClickEvent.PopupMenuThread.ToDoCommand := dcMonitoring;
@@ -615,8 +615,8 @@ begin
             DoHold;
           end
           else
-          //если это обработчик события, тогда саму процедуру события запускаем в MenuItemClick
-          //здесь же просто скрываем окна с субменю и меню и холдируем потоки
+          //РµСЃР»Рё СЌС‚Рѕ РѕР±СЂР°Р±РѕС‚С‡РёРє СЃРѕР±С‹С‚РёСЏ, С‚РѕРіРґР° СЃР°РјСѓ РїСЂРѕС†РµРґСѓСЂСѓ СЃРѕР±С‹С‚РёСЏ Р·Р°РїСѓСЃРєР°РµРј РІ MenuItemClick
+          //Р·РґРµСЃСЊ Р¶Рµ РїСЂРѕСЃС‚Рѕ СЃРєСЂС‹РІР°РµРј РѕРєРЅР° СЃ СЃСѓР±РјРµРЅСЋ Рё РјРµРЅСЋ Рё С…РѕР»РґРёСЂСѓРµРј РїРѕС‚РѕРєРё
 //          if fDoCommand = TC_HIDE then
           begin
             TThread.Queue(nil,
@@ -638,7 +638,7 @@ begin
           fClickEvent.PopupMenuThread          := nil;
         end
         else
-        //если на выходе из монитора не было клика, тогда скрываем только текущее субменю или само меню
+        //РµСЃР»Рё РЅР° РІС‹С…РѕРґРµ РёР· РјРѕРЅРёС‚РѕСЂР° РЅРµ Р±С‹Р»Рѕ РєР»РёРєР°, С‚РѕРіРґР° СЃРєСЂС‹РІР°РµРј С‚РѕР»СЊРєРѕ С‚РµРєСѓС‰РµРµ СЃСѓР±РјРµРЅСЋ РёР»Рё СЃР°РјРѕ РјРµРЅСЋ
         begin
           TThread.Queue(nil,
             procedure

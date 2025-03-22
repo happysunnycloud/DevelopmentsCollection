@@ -1,4 +1,4 @@
-{0.1}
+п»ї{0.1}
 unit DBToolsUnit;
 
 interface
@@ -143,7 +143,7 @@ begin
   fFDConnection                            := TFDConnection.Create(nil);
   fFDQuery                                 := TDBQuery.Create(nil);
 
-  //comment: Отвечает за подстановку макроса заместо символов ! и &
+  //comment: РћС‚РІРµС‡Р°РµС‚ Р·Р° РїРѕРґСЃС‚Р°РЅРѕРІРєСѓ РјР°РєСЂРѕСЃР° Р·Р°РјРµСЃС‚Рѕ СЃРёРјРІРѕР»РѕРІ ! Рё &
   fFDQuery.ResourceOptions.MacroCreate     := false;
   fFDQuery.ResourceOptions.MacroExpand     := false;
   //endcomment
@@ -198,7 +198,7 @@ begin
 //  if not Assigned(fFDQuery) then
 //    raise Exception.Create('TDBTools.CreateQuery: DB connection are closed');
 
-  // fFDQuery может быть не создан, по этому проверяем
+  // fFDQuery РјРѕР¶РµС‚ Р±С‹С‚СЊ РЅРµ СЃРѕР·РґР°РЅ, РїРѕ СЌС‚РѕРјСѓ РїСЂРѕРІРµСЂСЏРµРј
   if Assigned(fFDQuery) then
     FreeAndNil(fQuery);
 end;

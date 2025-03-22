@@ -1,4 +1,4 @@
-unit SQLiteHelpmateUnit;
+﻿unit SQLiteHelpmateUnit;
 
 interface
 

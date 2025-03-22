@@ -1,4 +1,4 @@
-{0.5} // Однопоточный вариант
+п»ї{0.5} // РћРґРЅРѕРїРѕС‚РѕС‡РЅС‹Р№ РІР°СЂРёР°РЅС‚
 unit DataBaseToolsUnit;
 
 interface
@@ -120,7 +120,7 @@ begin
   fFDConnection                            := TFDConnection.Create(nil);
   fFDQuery                                 := TFDQuery.Create(nil);
 
-  //comment: Отвечает за подстановку макроса заместо символов ! и &
+  //comment: РћС‚РІРµС‡Р°РµС‚ Р·Р° РїРѕРґСЃС‚Р°РЅРѕРІРєСѓ РјР°РєСЂРѕСЃР° Р·Р°РјРµСЃС‚Рѕ СЃРёРјРІРѕР»РѕРІ ! Рё &
   fFDQuery.ResourceOptions.MacroCreate     := false;
   fFDQuery.ResourceOptions.MacroExpand     := false;
   //endcomment

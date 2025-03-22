@@ -1,4 +1,4 @@
-unit CommandCollectionUnit;
+﻿unit CommandCollectionUnit;
 
 interface
 

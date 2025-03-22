@@ -1,4 +1,4 @@
-unit FMX.PopupMenu.Structures;
+﻿unit FMX.PopupMenu.Structures;
 
 interface
 

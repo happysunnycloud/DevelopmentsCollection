@@ -1,4 +1,4 @@
-unit Android.JNI.PowerManager;
+﻿unit Android.JNI.PowerManager;
 
 interface
 

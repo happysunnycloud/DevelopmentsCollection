@@ -1,4 +1,4 @@
-unit UTClientUnit;
+п»їunit UTClientUnit;
 
 interface
 
@@ -145,7 +145,7 @@ type
     FOnAuthorized:                TNotifyEvent;
 
     FOnPingTimeout:               TEventRefProc;
-    // Внутренни обработчик нужен для запуска Disconnect
+    // Р’РЅСѓС‚СЂРµРЅРЅРё РѕР±СЂР°Р±РѕС‚С‡РёРє РЅСѓР¶РµРЅ РґР»СЏ Р·Р°РїСѓСЃРєР° Disconnect
     FInnerOnPingTimeout:          TEventRefProc;
 
     FHostName:                    String;
@@ -916,7 +916,7 @@ begin
     FClientConnect     := TIdTCPClient.Create(nil);
     ClientConnect.Host := FIp;
     ClientConnect.Port := FPort;
-    // На случай, если хоста вообще нет в сети
+    // РќР° СЃР»СѓС‡Р°Р№, РµСЃР»Рё С…РѕСЃС‚Р° РІРѕРѕР±С‰Рµ РЅРµС‚ РІ СЃРµС‚Рё
     ClientConnect.ConnectTimeout := CONNECT_TIMEOUT;
 
     try
@@ -928,8 +928,8 @@ begin
         //a := e.ClassName;
         if e.ClassType = EIdNotASocket then
         begin
-          // На текущий момент (290924) эксепшн возникает, когда прерывают соединение на моменте попытки подключиться
-          // По этому просто глушим его, без raise.
+          // РќР° С‚РµРєСѓС‰РёР№ РјРѕРјРµРЅС‚ (290924) СЌРєСЃРµРїС€РЅ РІРѕР·РЅРёРєР°РµС‚, РєРѕРіРґР° РїСЂРµСЂС‹РІР°СЋС‚ СЃРѕРµРґРёРЅРµРЅРёРµ РЅР° РјРѕРјРµРЅС‚Рµ РїРѕРїС‹С‚РєРё РїРѕРґРєР»СЋС‡РёС‚СЊСЃСЏ
+          // РџРѕ СЌС‚РѕРјСѓ РїСЂРѕСЃС‚Рѕ РіР»СѓС€РёРј РµРіРѕ, Р±РµР· raise.
           Exit;
         end
         else

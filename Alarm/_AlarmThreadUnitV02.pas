@@ -1,4 +1,4 @@
-{0.2}
+﻿{0.2}
 unit AlarmThreadUnitV02;
 
 interface

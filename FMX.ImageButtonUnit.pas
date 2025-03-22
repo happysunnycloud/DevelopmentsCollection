@@ -1,4 +1,4 @@
-{0.1}
+п»ї{0.1}
 unit FMX.ImageButtonUnit;
 
 interface
@@ -176,7 +176,7 @@ implementation
 uses
     System.SysUtils
   ;
-// Ищет форму, которую будет перерисовывать после изменения своих визуальных свойств
+// РС‰РµС‚ С„РѕСЂРјСѓ, РєРѕС‚РѕСЂСѓСЋ Р±СѓРґРµС‚ РїРµСЂРµСЂРёСЃРѕРІС‹РІР°С‚СЊ РїРѕСЃР»Рµ РёР·РјРµРЅРµРЅРёСЏ СЃРІРѕРёС… РІРёР·СѓР°Р»СЊРЅС‹С… СЃРІРѕР№СЃС‚РІ
 function FindParentForm(AFmxObject: TFmxObject): TForm;
 begin
   Result := nil;
@@ -195,7 +195,7 @@ begin
 
   Assert(Assigned(Result), 'Parent form is nil');
 end;
-// Ищет ближайших контрол на котором можно отрисоваться
+// РС‰РµС‚ Р±Р»РёР¶Р°Р№С€РёС… РєРѕРЅС‚СЂРѕР» РЅР° РєРѕС‚РѕСЂРѕРј РјРѕР¶РЅРѕ РѕС‚СЂРёСЃРѕРІР°С‚СЊСЃСЏ
 function FindParentControl(AControl: TFmxObject): TFmxObject;
 var
   ParentControl: TFmxObject;

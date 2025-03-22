@@ -1,4 +1,4 @@
-unit UClientUnit;
+п»їunit UClientUnit;
 
 interface
 
@@ -399,7 +399,7 @@ procedure TClientThread.Execute;
     except
       on EIdReadTimeout do
       begin
-        //Время на чтение истекло
+        //Р’СЂРµРјСЏ РЅР° С‡С‚РµРЅРёРµ РёСЃС‚РµРєР»Рѕ
         Result := GetSteamSize;
       end
     end;
@@ -413,7 +413,7 @@ begin
     fClientConnect     := TIdTCPClient.Create(nil);
     ClientConnect.Host := fIp;
     ClientConnect.Port := fPort;
-    // На случай, если хоста вообще нет в сети
+    // РќР° СЃР»СѓС‡Р°Р№, РµСЃР»Рё С…РѕСЃС‚Р° РІРѕРѕР±С‰Рµ РЅРµС‚ РІ СЃРµС‚Рё
     ClientConnect.ConnectTimeout := 1000;
     ClientConnect.ReadTimeout    := fReadTimeOut;
 
@@ -428,17 +428,17 @@ begin
   except
     on EIdSocketError do
     begin
-      //Сервер не найден. Ошибка подключения
+      //РЎРµСЂРІРµСЂ РЅРµ РЅР°Р№РґРµРЅ. РћС€РёР±РєР° РїРѕРґРєР»СЋС‡РµРЅРёСЏ
       Terminate;
     end;
 //        on EIdOSSLConnectError do
 //        begin
-//          //Сервер разорвал соединение
+//          //РЎРµСЂРІРµСЂ СЂР°Р·РѕСЂРІР°Р» СЃРѕРµРґРёРЅРµРЅРёРµ
 //          Terminate;
 //        end
     else
     begin
-      //Ошибка подключения
+      //РћС€РёР±РєР° РїРѕРґРєР»СЋС‡РµРЅРёСЏ
       Terminate;
     end;
   end;
@@ -486,21 +486,21 @@ begin
     except
       on EIdClosedSocket do
       begin
-        //Соединение закрыто
+        //РЎРѕРµРґРёРЅРµРЅРёРµ Р·Р°РєСЂС‹С‚Рѕ
         Terminate;
 
         Break;
       end;
       on EIdConnClosedGracefully do
       begin
-        //Соединение закрыто
+        //РЎРѕРµРґРёРЅРµРЅРёРµ Р·Р°РєСЂС‹С‚Рѕ
         Terminate;
 
         Break;
       end;
       else
       begin
-        //Соединение закрыто
+        //РЎРѕРµРґРёРЅРµРЅРёРµ Р·Р°РєСЂС‹С‚Рѕ
         Terminate;
 
         Break;

@@ -1,4 +1,4 @@
-unit FMX.Craft.PopupMenu.Structures;
+﻿unit FMX.Craft.PopupMenu.Structures;
 
 interface
 
