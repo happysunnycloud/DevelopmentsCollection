@@ -1,4 +1,4 @@
-unit FMX.ControlsSupportUnit;
+﻿unit FMX.ControlToolsUnit;
 
 interface
 
@@ -36,7 +36,7 @@ type
 
   TControlEnumeratorCallbackProc = reference to procedure (const AControl: TControl);
 
-  TControlsSupport = class
+  TControlTools = class
   public
     class procedure ControlEnumerator(
       const AComponent: TComponent;
@@ -61,14 +61,14 @@ uses
   System.SysUtils
   ;
 
-class function TControlsSupport.HasProperty(
+class function TControlTools.HasProperty(
   const AObj: TObject;
   const AProp: String): Boolean;
 begin
   Result := Assigned(GetPropInfo(AObj.ClassInfo, AProp));
 end;
 
-class procedure TControlsSupport.CheckHasProperty(
+class procedure TControlTools.CheckHasProperty(
   const AObj: TObject;
   const APropertyName: String);
 begin
@@ -76,7 +76,7 @@ begin
     raise Exception.CreateFmt('Object does not have a "%s" property', [APropertyName]);
 end;
 
-class procedure TControlsSupport.SetTextProperty(
+class procedure TControlTools.SetTextProperty(
   const AObj: TObject;
   const AText: String);
 begin
@@ -85,7 +85,7 @@ begin
   SetStrProp(AObj, TProperties.Text, AText);
 end;
 
-class procedure TControlsSupport.ControlEnumerator(
+class procedure TControlTools.ControlEnumerator(
   const AComponent: TComponent;
   const AControlEnumeratorCallbackProc: TControlEnumeratorCallbackProc);
 var
