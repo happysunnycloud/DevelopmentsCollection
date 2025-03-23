@@ -1,4 +1,4 @@
-﻿{1.04}
+{1.04}
 unit FMX.PopupMenu.Thread.Win;
 
 interface
