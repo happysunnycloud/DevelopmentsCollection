@@ -6,6 +6,7 @@ uses
     System.Classes
   , System.SysUtils
   , System.Generics.Collections
+  , FMX.Graphics
   ;
 
 type
@@ -99,11 +100,15 @@ type
       const AContentDir: String;
       const APackedFileName: String);
 
-    procedure Extract(
-      const AFileName: String;
+    procedure ExtractToMemoryStream(
+      const AExtractingFileName: String;
       const AMemoryStream: TMemoryStream);
+    procedure ExtractToBitmap(
+      const AExtractingFileName: String;
+      const ABitmap: TBitmap);
 
     procedure GetFileList(const AFileList: TStringList);
+    function GetFileListText: String;
   end;
 
 implementation
@@ -351,8 +356,12 @@ var
   i: Word;
   Fat: TFat;
   FileCount: Int64;
+  RootDir: String;
 begin
-  TFileTools.GetFileNames(ARootDir + '\' + AContentDir, '', 'png', FileNames);
+  RootDir := ARootDir;
+  if AContentDir.Length > 0 then
+    RootDir := RootDir + '\' + AContentDir;
+  TFileTools.GetFileNames(RootDir, '', 'png', FileNames);
 //  TFileTools.GetFileNames(ARootDir, AContentDir, 'png', FileNames);
 
   DestFileStream := PackFileStream;
@@ -414,8 +423,8 @@ begin
   end;
 end;
 
-procedure TFilePacker.Extract(
-  const AFileName: String;
+procedure TFilePacker.ExtractToMemoryStream(
+  const AExtractingFileName: String;
   const AMemoryStream: TMemoryStream);
 var
   Fat: TFat;
@@ -423,14 +432,40 @@ begin
   if not Assigned(AMemoryStream) then
     raise Exception.Create('Memory stream reference is nil');
 
-  if not FFatDict.TryGetValue(AFileName, Fat) then
-    raise Exception.CreateFmt('File "%s" not found', [AFileName]);
+  if not FFatDict.TryGetValue(AExtractingFileName, Fat) then
+    raise Exception.CreateFmt('File "%s" not found', [AExtractingFileName]);
 
   try
     FPackFileStream.Position := Fat.Pos;
     AMemoryStream.CopyFrom(FPackFileStream, Fat.Size);
   except
     raise;
+  end;
+end;
+
+procedure TFilePacker.ExtractToBitmap(
+  const AExtractingFileName: String;
+  const ABitmap: TBitmap);
+var
+  MemoryStream: TMemoryStream;
+  Fat: TFat;
+begin
+  if not Assigned(ABitmap) then
+    raise Exception.Create('Memory stream reference is nil');
+
+  if not FFatDict.TryGetValue(AExtractingFileName, Fat) then
+    raise Exception.CreateFmt('File "%s" not found', [AExtractingFileName]);
+
+  MemoryStream := TMemoryStream.Create;
+  try
+    try
+      ExtractToMemoryStream(AExtractingFileName, MemoryStream);
+      ABitmap.LoadFromStream(MemoryStream);
+    except
+      raise;
+    end;
+  finally
+    FreeAndNil(MemoryStream);
   end;
 end;
 
@@ -443,6 +478,19 @@ begin
 
   for FileName in FFatDict.Keys do
     AFileList.Add(FileName);
+end;
+
+function TFilePacker.GetFileListText: String;
+var
+  StringList: TStringList;
+begin
+  StringList := TStringList.Create;
+  try
+    GetFileList(StringList);
+    Result := StringList.Text;
+  finally
+    FreeAndNil(StringList);
+  end;
 end;
 
 end.
