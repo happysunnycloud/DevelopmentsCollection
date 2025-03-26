@@ -16,7 +16,8 @@ uses
 
 type
   TParamsParserProc = procedure of object;
-  TExceptionProc = procedure (const AExceptionMessage: String) of object;
+  TExceptionProc = procedure (
+    const AThreadName: String; const AExceptionMessage: String) of object;
 
   TThreadExt = class;
 
@@ -26,12 +27,16 @@ type
 
   TExceptionMessageThread = class(TThread)
   strict private
+    FThreadName: String;
     FExceptionMessage: String;
     FExceptionProc: TExceptionProc;
   protected
     procedure Execute; override;
   public
-    constructor Create(const AExceptionMessage: String; const AExceptionProc: TExceptionProc);
+    constructor Create(
+      const AThreadName: String;
+      const AExceptionMessage: String;
+      const AExceptionProc: TExceptionProc);
   end;
 
   TThreadExt = class(TThread)
@@ -53,7 +58,11 @@ type
     FExceptionMessage: String;
     FOnException: TExceptionProc;
 
-    procedure OnExceptionInnerHandler(const AExceptionMessage: String);
+    FThreadName: String;
+
+    procedure OnExceptionInnerHandler(
+      const AThreadName: String;
+      const AExceptionMessage: String);
 
     procedure RaiseMustOverloadedException(const AMessage: String);
 
@@ -61,6 +70,9 @@ type
     function GetParams: TParams;
 
     function GetTerminated: Boolean;
+
+    function GetThreadName: String;
+    procedure SetThreadName(const AThreadName: String);
 
     property EventHold: TEvent read GetEventHold;
   protected
@@ -73,13 +85,24 @@ type
     procedure ExecHold;
     procedure Execute; override;
     procedure TryExcept(const AProc: TProc);
+
+    property ThreadName: String read GetThreadName write SetThreadName;
   public
     constructor Create(
       const AExecProc: TExecProc;
       const ARegProc: TRegProc;
       const AUnregProc: TUnRegProc;
       const ASuspended: Boolean = false;
-      const AFreeOnTerminate: Boolean = true);
+      const AFreeOnTerminate: Boolean = true); overload;
+
+    constructor Create(
+      const AThreadName: String;
+      const AExecProc: TExecProc;
+      const ARegProc: TRegProc;
+      const AUnregProc: TUnRegProc;
+      const ASuspended: Boolean = false;
+      const AFreeOnTerminate: Boolean = true); overload;
+
     destructor Destroy; override;
 
     procedure HoldThread;
@@ -115,7 +138,11 @@ type
       const ASuspended: Boolean = false): TThreadExt;
     function CreateFreeOnTerminateThread(
       const AExecProc: TExecProc;
-      const ASuspended: Boolean = false): TThreadExt;
+      const ASuspended: Boolean = false): TThreadExt; overload;
+    function CreateFreeOnTerminateThread(
+      const AThreadName: String;
+      const AExecProc: TExecProc;
+      const ASuspended: Boolean = false): TThreadExt; overload;
 
     function CreateThreadClassOf(
       const AClassThread: TThreadExtClass;
@@ -132,8 +159,12 @@ type
 
 implementation
 
-constructor TExceptionMessageThread.Create(const AExceptionMessage: String; const AExceptionProc: TExceptionProc);
+constructor TExceptionMessageThread.Create(
+  const AThreadName: String;
+  const AExceptionMessage: String;
+  const AExceptionProc: TExceptionProc);
 begin
+  FThreadName := AThreadName;
   FExceptionMessage := AExceptionMessage;
   FExceptionProc := AExceptionProc;
   FreeOnTerminate := true;
@@ -143,15 +174,17 @@ end;
 
 procedure TExceptionMessageThread.Execute;
 var
+  ThreadName: String;
   ExceptionProc: TExceptionProc;
   ExceptionMessage: String;
 begin
+  ThreadName := FThreadName;
   ExceptionProc := FExceptionProc;
   ExceptionMessage := FExceptionMessage;
   Queue(nil,
     procedure
     begin
-      ExceptionProc(ExceptionMessage);
+      ExceptionProc(ThreadName, ExceptionMessage);
     end);
 end;
 
@@ -162,8 +195,29 @@ constructor TThreadExt.Create(
   const ASuspended: Boolean = false;
   const AFreeOnTerminate: Boolean = true);
 begin
+  Create(
+    '',
+    AExecProc,
+    ARegProc,
+    AUnregProc,
+    ASuspended,
+    AFreeOnTerminate);
+end;
+
+constructor TThreadExt.Create(
+  const AThreadName: String;
+  const AExecProc: TExecProc;
+  const ARegProc: TRegProc;
+  const AUnregProc: TUnRegProc;
+  const ASuspended: Boolean = false;
+  const AFreeOnTerminate: Boolean = true);
+begin
   FCriticalSection := TCriticalSection.Create;
   FParamsCriticalSection := TCriticalSection.Create;
+
+  ThreadName := 'Nameless thread';
+  if AThreadName.Length > 0 then
+    ThreadName := AThreadName;
 
   FThreadType := ttInheritable;
   if Assigned(AExecProc) then
@@ -205,14 +259,19 @@ begin
   begin
     if FExceptionMessage.Length > 0 then
     begin
-      TExceptionMessageThread.Create(FExceptionMessage, FOnException);
+      TExceptionMessageThread.Create(
+        FThreadName,
+        FExceptionMessage,
+        FOnException);
     end;
   end;
 end;
 
-procedure TThreadExt.OnExceptionInnerHandler(const AExceptionMessage: String);
+procedure TThreadExt.OnExceptionInnerHandler(
+  const AThreadName: String;
+  const AExceptionMessage: String);
 begin
-  raise Exception.Create(AExceptionMessage);
+  raise Exception.Create(AThreadName + ' -> ' + AExceptionMessage);
 end;
 
 procedure TThreadExt.RaiseMustOverloadedException(const AMessage: String);
@@ -245,6 +304,27 @@ begin
   FParamsCriticalSection.Enter;
   try
     Result := inherited Terminated;
+  finally
+    FParamsCriticalSection.Leave;
+  end;
+end;
+
+function TThreadExt.GetThreadName: String;
+begin
+  FParamsCriticalSection.Enter;
+  try
+    Result := FThreadName;
+  finally
+    FParamsCriticalSection.Leave;
+  end;
+end;
+
+procedure TThreadExt.SetThreadName(const AThreadName: String);
+begin
+  FParamsCriticalSection.Enter;
+  try
+    FThreadName := AThreadName;
+    NameThreadForDebugging(AThreadName);
   finally
     FParamsCriticalSection.Leave;
   end;
@@ -365,6 +445,15 @@ function TThreadFactory.CreateFreeOnTerminateThread(
 begin
   Result := TThreadExt.
     Create(AExecProc, RegThreadProc, UnRegThreadProc, ASuspended, true);
+end;
+
+function TThreadFactory.CreateFreeOnTerminateThread(
+  const AThreadName: String;
+  const AExecProc: TExecProc;
+  const ASuspended: Boolean = false): TThreadExt;
+begin
+  Result := TThreadExt.
+    Create(AThreadName, AExecProc, RegThreadProc, UnRegThreadProc, ASuspended, true);
 end;
 
 function TThreadFactory.CreateThreadClassOf(
