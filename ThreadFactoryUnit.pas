@@ -1,6 +1,8 @@
 ﻿{0.1}
 // 220325 Обновленный юнит по работе с нитями, если и переезжать то на него
 // Должен обрабатывать исключения внутри нитей, нужно проверить
+// 260325 Проверили - обрабатывает
+// Стоит добавть именование потоков, поможет в отладке
 unit ThreadFactoryUnit;
 
 interface
@@ -58,6 +60,8 @@ type
     function GetEventHold: TEvent;
     function GetParams: TParams;
 
+    function GetTerminated: Boolean;
+
     property EventHold: TEvent read GetEventHold;
   protected
     property Params: TParams read GetParams;
@@ -83,6 +87,7 @@ type
 
     property OnException: TExceptionProc read FOnException write FOnException;
     property ExceptionMessage: String read FExceptionMessage;
+    property Terminated: Boolean read GetTerminated;
   end;
 
   TThreadExtClass = class of TThreadExt;
@@ -94,12 +99,13 @@ type
     FThreadRegistry: TThreadRegistry;
     FAfterFinishProc: TProc;
 
+    procedure TerminateAllThreads;
+
     procedure OnTerminateHandler(Sender: TObject);
+    procedure OnFinishAllThreadsTerminateHandler(Sender: TObject);
 
     procedure RegThreadProc(const AThread: TThreadExt);
     procedure UnRegThreadProc(const AThread: TThreadExt);
-
-    procedure OnFinishAllThreadsTerminateHandler(Sender: TObject);
   public
     constructor Create;
     destructor Destroy; override;
@@ -118,8 +124,8 @@ type
       const AClassThread: TThreadExtClass;
       const ASuspended: Boolean = false): Pointer;
 
-    procedure TerminateAllThreads;
     procedure FinishAllThreads(const AAfterFinishProc: TProc);
+    procedure WaitForAllThreadsToFinish(const AAfterFinishProc: TProc);
 
     procedure RegisterThread(const AThread: TThreadExt);
   end;
@@ -234,6 +240,16 @@ begin
   end;
 end;
 
+function TThreadExt.GetTerminated: Boolean;
+begin
+  FParamsCriticalSection.Enter;
+  try
+    Result := inherited Terminated;
+  finally
+    FParamsCriticalSection.Leave;
+  end;
+end;
+
 procedure TThreadExt.HoldThread;
 begin
   EventHold.ResetEvent;
@@ -308,6 +324,9 @@ end;
 
 destructor TThreadFactory.Destroy;
 begin
+  if FThreadRegistry.Count > 0 then
+    raise Exception.Create('There are unfinished threads');
+
   FreeAndNil(FThreadRegistry);
 end;
 
@@ -336,28 +355,32 @@ function TThreadFactory.CreateThread(
   const AExecProc: TExecProc;
   const ASuspended: Boolean = false): TThreadExt;
 begin
-  Result := TThreadExt.Create(AExecProc, RegThreadProc, UnRegThreadProc, ASuspended, false);
+  Result := TThreadExt.
+    Create(AExecProc, RegThreadProc, UnRegThreadProc, ASuspended, false);
 end;
 
 function TThreadFactory.CreateFreeOnTerminateThread(
   const AExecProc: TExecProc;
   const ASuspended: Boolean = false): TThreadExt;
 begin
-  Result := TThreadExt.Create(AExecProc, RegThreadProc, UnRegThreadProc, ASuspended, true);
+  Result := TThreadExt.
+    Create(AExecProc, RegThreadProc, UnRegThreadProc, ASuspended, true);
 end;
 
 function TThreadFactory.CreateThreadClassOf(
   const AClassThread: TThreadExtClass;
   const ASuspended: Boolean = false): Pointer;
 begin
-  Result := AClassThread.Create(nil, RegThreadProc, UnRegThreadProc, ASuspended, false);
+  Result := AClassThread.
+    Create(nil, RegThreadProc, UnRegThreadProc, ASuspended, false);
 end;
 
 function TThreadFactory.CreateFreeOnTerminateThreadClassOf(
   const AClassThread: TThreadExtClass;
   const ASuspended: Boolean = false): Pointer;
 begin
-  Result := AClassThread.Create(nil, RegThreadProc, UnRegThreadProc, ASuspended, true);
+  Result := AClassThread.
+    Create(nil, RegThreadProc, UnRegThreadProc, ASuspended, true);
 end;
 
 procedure TThreadFactory.TerminateAllThreads;
@@ -378,12 +401,17 @@ begin
 end;
 
 procedure TThreadFactory.FinishAllThreads(const AAfterFinishProc: TProc);
+begin
+  WaitForAllThreadsToFinish(AAfterFinishProc);
+
+  TerminateAllThreads;
+end;
+
+procedure TThreadFactory.WaitForAllThreadsToFinish(const AAfterFinishProc: TProc);
 var
   AnonymousThread: TThread;
 begin
   FAfterFinishProc := AAfterFinishProc;
-
-  TerminateAllThreads;
 
   AnonymousThread := TThread.CreateAnonymousThread(
     procedure
@@ -393,6 +421,7 @@ begin
         Sleep(400);
       end;
     end);
+
   AnonymousThread.OnTerminate := OnFinishAllThreadsTerminateHandler;
   AnonymousThread.Start;
 end;
