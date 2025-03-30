@@ -5,7 +5,7 @@ interface
 uses
     DBToolsUnit
   , SQLTemplatesUnit
-  , ParamsClassUnit
+  , ParamsExtUnit
   ;
 
 const
@@ -15,7 +15,7 @@ const
 
 type
   TDBAResultCode = (rcFault = -1, rcOk = 0, rcFolderIsNotEmpty = 1); //DBA = D - data, B - base,  A - access
-  TInOutParamsFuncRef = function(const AInParams: TParams; const AOutParams: TParams): TDBAResultCode of object;
+  TInOutParamsFuncRef = function(const AInParams: TParamsExt; const AOutParams: TParamsExt): TDBAResultCode of object;
 
   TDBAccessClass = class
   protected
@@ -26,8 +26,8 @@ type
   public
     class function DBAParamsFunc(
       const AParamsFuncRef: TInOutParamsFuncRef;
-      const AInParams: TParams;
-      const AOutParams: TParams): TDBAResultCode;
+      const AInParams: TParamsExt;
+      const AOutParams: TParamsExt): TDBAResultCode;
 
     class procedure Init(const ADBFileName: String; const ATemplatesDir: String);
     class procedure UnInit;
@@ -54,14 +54,14 @@ uses
 
 class function TDBAccessClass.DBAParamsFunc(
   const AParamsFuncRef: TInOutParamsFuncRef;
-  const AInParams: TParams;
-  const AOutParams: TParams): TDBAResultCode;
+  const AInParams: TParamsExt;
+  const AOutParams: TParamsExt): TDBAResultCode;
 const
   METHOD = 'TDBAccessClass.DBAParamsFunc';
 var
   ParamsFuncRef: TInOutParamsFuncRef absolute AParamsFuncRef;
-  InParams: TParams;
-  OutParams: TParams;
+  InParams: TParamsExt;
+  OutParams: TParamsExt;
 
   FDCommandExceptionKind: TFDCommandExceptionKind;
   DoExit: Boolean;
@@ -70,8 +70,8 @@ var
 begin
   Result := rcFault;
 
-  InParams := TParams.Create;
-  OutParams := TParams.Create;
+  InParams := TParamsExt.Create;
+  OutParams := TParamsExt.Create;
   try
     InParams.CopyFrom(AInParams);
 

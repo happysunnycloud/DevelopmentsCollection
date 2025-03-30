@@ -12,7 +12,7 @@ uses
   System.SysUtils,
   System.SyncObjs,
   ThreadRegistryUnit,
-  ParamsClassUnit;
+  ParamsExtUnit;
 
 type
   TParamsParserProc = procedure of object;
@@ -48,7 +48,7 @@ type
 
     FThreadType: TThreadType;
 
-    FParams: TParams;
+    FParams: TParamsExt;
 
     FEventHold: TEvent;
     FRegProc: TRegProc;
@@ -67,7 +67,7 @@ type
     procedure RaiseMustOverloadedException(const AMessage: String);
 
     function GetEventHold: TEvent;
-    function GetParams: TParams;
+    function GetParams: TParamsExt;
 
     function GetTerminated: Boolean;
 
@@ -76,7 +76,7 @@ type
 
     property EventHold: TEvent read GetEventHold;
   protected
-    property Params: TParams read GetParams;
+    property Params: TParamsExt read GetParams;
     procedure MountParams; virtual;
 
     procedure Initializing; virtual;
@@ -227,7 +227,7 @@ begin
   FRegProc := ARegProc;
   FUnregProc := AUnregProc;
   FExecProc := AExecProc;
-  FParams := TParams.Create;
+  FParams := TParamsExt.Create;
 
   FreeOnTerminate := AFreeOnTerminate;
 
@@ -289,7 +289,7 @@ begin
   end;
 end;
 
-function TThreadExt.GetParams: TParams;
+function TThreadExt.GetParams: TParamsExt;
 begin
   FParamsCriticalSection.Enter;
   try
