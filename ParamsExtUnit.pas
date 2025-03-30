@@ -23,7 +23,7 @@ type
   strict private
     FParams: TVars;
 
-    function GetIndexByIdent(const AIdent: String): Integer;
+    function GetIndexByIdent(const AIdent: String; const AOffset: Integer = 0): Integer;
   private
     function GetAsInt64    (const AIndex: Word): Int64;         overload;
     function GetAsBoolean  (const AIndex: Word): Boolean;       overload;
@@ -45,7 +45,6 @@ type
     function GetAsByte     (const AIdent: String): Byte;        overload;
     function GetAsPointer  (const AIdent: String): Pointer;     overload;
     function GetAsString   (const AIdent: String): String;      overload;
-
     function GetAsTime     (const AIdent: String): TTime;       overload;
     function GetAsDate     (const AIdent: String): TDate;       overload;
     function GetAsDateTime (const AIdent: String): TDateTime;   overload;
@@ -69,6 +68,7 @@ type
     procedure Add(const AValue: Pointer; const AIdent: String = ''); overload; virtual;
 
     procedure AddAsPointer(AValue: Pointer); deprecated 'Use Add(AValue: Pointer)';
+
     property  AsInt64    [const AIndex: Word]: Int64      read GetAsInt64;
     property  AsString   [const AIndex: Word]: String     read GetAsString;
     property  AsTime     [const AIndex: Word]: TTime      read GetAsTime;
@@ -81,8 +81,21 @@ type
     property  AsPointer  [const AIndex: Word]: Pointer    read GetAsPointer;
     property  AsVariant  [const AIndex: Word]: Variant    read GetAsVariant;
     property  TypeOfVar  [const AIndex: Word]: TVarType   read GetTypeOfVar;
-    property  AsStringByIdent   [const AIndet: String]: String   read GetAsString;
-    property  AsIntegerByIdent  [const AIndet: String]: Integer  read GetAsInteger;
+
+    property  AsInt64ByIdent    [const AIdent: String]: Int64     read GetAsInt64;
+    property  AsStringByIdent   [const AIdent: String]: String    read GetAsString;
+    property  AsTimeByIdent     [const AIdent: String]: TTime     read GetAsTime;
+    property  AsDateByIdent     [const AIdent: String]: TDate     read GetAsDate;
+    property  AsDateTimeByIdent [const AIdent: String]: TDateTime read GetAsDateTime;
+    property  AsBooleanByIdent  [const AIdent: String]: Boolean   read GetAsBoolean;
+    property  AsIntegerByIdent  [const AIdent: String]: Integer   read GetAsInteger;
+    property  AsWordByIdent     [const AIdent: String]: Word      read GetAsWord;
+    property  AsByteByIdent     [const AIdent: String]: Byte      read GetAsByte;
+    property  AsPointerByIdent  [const AIdent: String]: Pointer   read GetAsPointer;
+    property  AsVariantByIdent  [const AIdent: String]: Variant   read GetAsVariant;
+    property  TypeOfVarByIdent  [const AIdent: String]: TVarType  read GetTypeOfVar;
+
+    function IndexOf(const AIdent: String; const AOffset: Integer = 0): Integer;
 
     property  Params: TVars read FParams  write FParams;
 
@@ -99,11 +112,11 @@ uses
 
 { TParamsExt }
 
-function TParamsExt.GetIndexByIdent(const AIdent: String): Integer;
+function TParamsExt.GetIndexByIdent(const AIdent: String; const AOffset: Integer = 0): Integer;
 var
   i: Integer;
 begin
-  for i := 0 to Pred(Length) do
+  for i := AOffset to Pred(Length) do
   begin
     if FParams[i].Ident = AIdent then
       Exit(i);
@@ -420,6 +433,11 @@ begin
 
   SetLength(FParams, System.Length(FParams) + 1);
   FParams[System.Length(FParams) - 1].v := Value;
+end;
+
+function TParamsExt.IndexOf(const AIdent: String; const AOffset: Integer = 0): Integer;
+begin
+  Result := GetIndexByIdent(AIdent, AOffset);
 end;
 
 procedure TParamsExt.CopyFrom(const AParamsObj: TParamsExt);
