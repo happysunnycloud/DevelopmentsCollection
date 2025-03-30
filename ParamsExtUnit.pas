@@ -1,0 +1,472 @@
+﻿{0.0}
+
+// Нужно переехать на этот модуль с ParamsClassUnit
+// Класс для упаковки/распаковки параметров
+// Упрощает передачу параметров, которые передаются как массив констант
+
+unit ParamsExtUnit;
+
+interface
+
+uses
+  System.Classes
+  ;
+
+type
+  TParamRecord = record
+    v: Variant;
+    Ident: String;
+  end;
+
+  TVars = array of TParamRecord;
+  TParamsExt = class
+  strict private
+    FParams: TVars;
+
+    function GetIndexByIdent(const AIdent: String): Integer;
+  private
+    function GetAsInt64    (const AIndex: Word): Int64;         overload;
+    function GetAsBoolean  (const AIndex: Word): Boolean;       overload;
+    function GetAsInteger  (const AIndex: Word): Integer;       overload;
+    function GetAsWord     (const AIndex: Word): Word;          overload;
+    function GetAsByte     (const AIndex: Word): Byte;          overload;
+    function GetAsPointer  (const AIndex: Word): Pointer;       overload;
+    function GetAsString   (const AIndex: Word): String;        overload;
+    function GetAsTime     (const AIndex: Word): TTime;         overload;
+    function GetAsDate     (const AIndex: Word): TDate;         overload;
+    function GetAsDateTime (const AIndex: Word): TDateTime;     overload;
+    function GetAsVariant  (const AIndex: Word): Variant;       overload;
+    function GetTypeOfVar  (const AIndex: Word): TVarType;      overload;
+
+    function GetAsInt64    (const AIdent: String): Int64;       overload;
+    function GetAsBoolean  (const AIdent: String): Boolean;     overload;
+    function GetAsInteger  (const AIdent: String): Integer;     overload;
+    function GetAsWord     (const AIdent: String): Word;        overload;
+    function GetAsByte     (const AIdent: String): Byte;        overload;
+    function GetAsPointer  (const AIdent: String): Pointer;     overload;
+    function GetAsString   (const AIdent: String): String;      overload;
+
+    function GetAsTime     (const AIdent: String): TTime;       overload;
+    function GetAsDate     (const AIdent: String): TDate;       overload;
+    function GetAsDateTime (const AIdent: String): TDateTime;   overload;
+    function GetAsVariant  (const AIdent: String): Variant;     overload;
+    function GetTypeOfVar  (const AIdent: String): TVarType;    overload;
+
+    procedure CheckCorrect(
+      const AMethodName: String;
+      const AIndex: Integer); overload;
+    procedure CheckCorrect(
+      const AMethodName: String;
+      const AIndex: Integer;
+      const AVarType: TVarType); overload;
+  public
+    constructor Create(const AVars: array of Variant); overload;
+
+    function  Length: Word;
+    function  Count: Word; deprecated 'Use Length';
+    procedure Clear; virtual;
+    procedure Add(const AValue: Variant; const AIdent: String = ''); overload; virtual;
+    procedure Add(const AValue: Pointer; const AIdent: String = ''); overload; virtual;
+
+    procedure AddAsPointer(AValue: Pointer); deprecated 'Use Add(AValue: Pointer)';
+    property  AsInt64    [const AIndex: Word]: Int64      read GetAsInt64;
+    property  AsString   [const AIndex: Word]: String     read GetAsString;
+    property  AsTime     [const AIndex: Word]: TTime      read GetAsTime;
+    property  AsDate     [const AIndex: Word]: TDate      read GetAsDate;
+    property  AsDateTime [const AIndex: Word]: TDateTime  read GetAsDateTime;
+    property  AsBoolean  [const AIndex: Word]: Boolean    read GetAsBoolean;
+    property  AsInteger  [const AIndex: Word]: Integer    read GetAsInteger;
+    property  AsWord     [const AIndex: Word]: Word       read GetAsWord;
+    property  AsByte     [const AIndex: Word]: Byte       read GetAsByte;
+    property  AsPointer  [const AIndex: Word]: Pointer    read GetAsPointer;
+    property  AsVariant  [const AIndex: Word]: Variant    read GetAsVariant;
+    property  TypeOfVar  [const AIndex: Word]: TVarType   read GetTypeOfVar;
+    property  AsStringByIdent   [const AIndet: String]: String   read GetAsString;
+    property  AsIntegerByIdent  [const AIndet: String]: Integer  read GetAsInteger;
+
+    property  Params: TVars read FParams  write FParams;
+
+    procedure CopyFrom(const AParamsObj: TParamsExt); virtual;
+    procedure AddFrom(const AParamsObj: TParamsExt); virtual;
+  end;
+
+implementation
+
+uses
+    System.SysUtils
+  , System.Variants
+  ;
+
+{ TParamsExt }
+
+function TParamsExt.GetIndexByIdent(const AIdent: String): Integer;
+var
+  i: Integer;
+begin
+  for i := 0 to Pred(Length) do
+  begin
+    if FParams[i].Ident = AIdent then
+      Exit(i);
+  end;
+
+  raise Exception.CreateFmt('Var of ident "%s" not found', [AIdent]);
+end;
+
+constructor TParamsExt.Create(const AVars: array of Variant);
+var
+  i: Word;
+  _Length: Word;
+begin
+  _Length := System.Length(AVars);
+  if _Length = 0 then
+    raise Exception.Create(Format('TParams.%s: AVars is empty', ['Create']));
+
+  for i := 0 to Pred(_Length) do
+  begin
+    Add(AVars[i]);
+  end;
+
+  inherited Create;
+end;
+
+function TParamsExt.GetAsInteger(const AIndex: Word): Integer;
+begin
+  CheckCorrect('GetAsInteger', AIndex, varInteger);
+
+  Result := Integer(FParams[AIndex].v);
+end;
+
+function TParamsExt.GetAsWord(const AIndex: Word): Word;
+begin
+  CheckCorrect('GetAsWord', AIndex, varWord);
+
+  Result := Word(FParams[AIndex].v);
+end;
+
+function TParamsExt.GetAsByte(const AIndex: Word): Byte;
+begin
+  CheckCorrect('GetAsByte', AIndex, varByte);
+
+  Result := Byte(FParams[AIndex].v);
+end;
+
+function TParamsExt.GetAsInt64(const AIndex: Word): Int64;
+begin
+  CheckCorrect('GetAsInt64', AIndex, varInt64);
+
+  Result := Int64(FParams[AIndex].v);
+end;
+
+function TParamsExt.GetAsBoolean(const AIndex: Word): Boolean;
+begin
+  CheckCorrect('GetAsBoolean', AIndex, varBoolean);
+
+  Result := Boolean(FParams[AIndex].v);
+end;
+
+function TParamsExt.GetAsPointer(const AIndex: Word): Pointer;
+begin
+  CheckCorrect('GetAsPointer', AIndex, varByRef);
+
+  Result := TVarData(FParams[AIndex].v).VPointer;
+end;
+
+function TParamsExt.GetAsString(const AIndex: Word): String;
+begin
+  CheckCorrect('GetAsString', AIndex, varUString);
+
+  Result := String(TVarData(FParams[AIndex].v).VString);
+end;
+
+function TParamsExt.GetAsTime(const AIndex: Word): TTime;
+begin
+  CheckCorrect('GetAsTime', AIndex, varDouble);
+
+  Result := TTime(TVarData(FParams[AIndex].v).VDouble);
+end;
+
+function TParamsExt.GetAsDate(const AIndex: Word): TDate;
+begin
+  CheckCorrect('GetAsDate', AIndex, varDouble);
+
+  Result := TDate(TVarData(FParams[AIndex].v).VDouble);
+end;
+
+function TParamsExt.GetAsDateTime(const AIndex: Word): TDateTime;
+begin
+  CheckCorrect('GetAsDateTime', AIndex, varDate);
+
+  Result := TVarData(FParams[AIndex].v).VDate;
+end;
+
+function TParamsExt.GetAsVariant(const AIndex: Word): Variant;
+begin
+  CheckCorrect('GetAsVariant', AIndex);
+
+  Result := FParams[AIndex].v;
+end;
+
+function TParamsExt.GetTypeOfVar(const AIndex: Word): TVarType;
+begin
+  CheckCorrect('GetTypeOfVar', AIndex);
+
+  Result := TVarData(FParams[AIndex].v).VType;
+end;
+
+function TParamsExt.GetAsInt64(const AIdent: String): Int64;
+var
+  i: Integer;
+begin
+  i := GetIndexByIdent(AIdent);
+
+  CheckCorrect('GetAsInt64', i, varInt64);
+
+  Result := Int64(FParams[i].v);
+end;
+
+function TParamsExt.GetAsBoolean(const AIdent: String): Boolean;
+var
+  i: Integer;
+begin
+  i := GetIndexByIdent(AIdent);
+
+  CheckCorrect('GetAsBoolean', i, varBoolean);
+
+  Result := Boolean(FParams[i].v);
+end;
+
+function TParamsExt.GetAsInteger(const AIdent: String): Integer;
+var
+  i: Integer;
+begin
+  i := GetIndexByIdent(AIdent);
+
+  CheckCorrect('GetAsInteger', i, varInteger);
+
+  Result := Integer(FParams[i].v);
+end;
+
+function TParamsExt.GetAsWord(const AIdent: String): Word;
+var
+  i: Integer;
+begin
+  i := GetIndexByIdent(AIdent);
+
+  CheckCorrect('GetAsWord', i, varWord);
+
+  Result := Word(FParams[i].v);
+end;
+
+function TParamsExt.GetAsByte(const AIdent: String): Byte;
+var
+  i: Integer;
+begin
+  i := GetIndexByIdent(AIdent);
+
+  CheckCorrect('GetAsByte', i, varByte);
+
+  Result := Byte(FParams[i].v);
+end;
+
+function TParamsExt.GetAsPointer(const AIdent: String): Pointer;
+var
+  i: Integer;
+begin
+  i := GetIndexByIdent(AIdent);
+
+  CheckCorrect('GetAsPointer', i, varByRef);
+
+  Result := TVarData(FParams[i].v).VPointer;
+end;
+
+function TParamsExt.GetAsString(const AIdent: String): String;
+var
+  i: Integer;
+begin
+  i := GetIndexByIdent(AIdent);
+
+  CheckCorrect('GetAsString', i, varUString);
+
+  Result := String(TVarData(FParams[i].v).VString);
+end;
+
+function TParamsExt.GetAsTime(const AIdent: String): TTime;
+var
+  i: Integer;
+begin
+  i := GetIndexByIdent(AIdent);
+
+  CheckCorrect('GetAsTime', i, varDouble);
+
+  Result := TTime(TVarData(FParams[i].v).VDouble);
+end;
+
+function TParamsExt.GetAsDate(const AIdent: String): TDate;
+var
+  i: Integer;
+begin
+  i := GetIndexByIdent(AIdent);
+
+  CheckCorrect('GetAsDate', i, varDouble);
+
+  Result := TTime(TVarData(FParams[i].v).VDouble);
+end;
+
+function TParamsExt.GetAsDateTime(const AIdent: String): TDateTime;
+var
+  i: Integer;
+begin
+  i := GetIndexByIdent(AIdent);
+
+  CheckCorrect('GetAsDateTime', i, varDate);
+
+  Result := TVarData(FParams[i].v).VDate;
+end;
+
+function TParamsExt.GetAsVariant(const AIdent: String): Variant;
+var
+  i: Integer;
+begin
+  i := GetIndexByIdent(AIdent);
+
+  CheckCorrect('GetAsVariant', i);
+
+  Result := FParams[i].v;
+end;
+
+function TParamsExt.GetTypeOfVar(const AIdent: String): TVarType;
+var
+  i: Integer;
+begin
+  i := GetIndexByIdent(AIdent);
+
+  CheckCorrect('GetTypeOfVar', i);
+
+  Result := TVarData(FParams[i].v).VType;
+end;
+
+procedure TParamsExt.CheckCorrect(
+  const AMethodName: String;
+  const AIndex: Integer);
+var
+  _Length: Word;
+begin
+  _Length := System.Length(fParams);
+  if _Length = 0 then
+    raise Exception.Create(Format('TParams.%s: Params property is empty', [AMethodName]));
+
+  if AIndex >= _Length then
+    raise Exception.Create(Format('TParams.%s: Index out of range', [AMethodName]));
+
+  if AIndex < 0 then
+    raise Exception.Create(Format('TParams.%s: Index out of range', [AMethodName]));
+end;
+
+procedure TParamsExt.CheckCorrect(
+  const AMethodName: String;
+  const AIndex: Integer;
+  const AVarType: TVarType);
+begin
+  CheckCorrect(AMethodName, AIndex);
+
+  if VarType(FParams[AIndex].v) <> AVarType then
+    raise Exception.Create(
+      Format('TParams.%s: Type mismatch', [AMethodName]));
+end;
+
+function TParamsExt.Length: Word;
+begin
+  Result := System.Length(FParams);
+end;
+
+function TParamsExt.Count: Word;
+begin
+  Result := System.Length(FParams);
+end;
+
+procedure TParamsExt.Clear;
+begin
+  SetLength(FParams, 0);
+end;
+
+procedure TParamsExt.Add(const AValue: Variant; const AIdent: String = '');
+begin
+  SetLength(FParams, System.Length(FParams) + 1);
+  FParams[System.Length(FParams) - 1].v := AValue;
+  FParams[System.Length(FParams) - 1].Ident := AIdent;
+end;
+
+procedure TParamsExt.Add(const AValue: Pointer; const AIdent: String = '');
+var
+  Value: Variant;
+begin
+  // Раньше был VarByRef or VarUnknown.
+  // В: Почему? О: История умалчивает
+  // TVarData(Value).VType := VarByRef or VarUnknown;
+
+  TVarData(Value).VType := VarByRef;
+  TVarData(Value).VPointer := AValue;
+
+  SetLength(fParams, System.Length(FParams) + 1);
+  FParams[System.Length(FParams) - 1].v := Value;
+end;
+
+procedure TParamsExt.AddAsPointer(AValue: Pointer);
+var
+  Value: Variant;
+begin
+  TVarData(Value).VType := VarByRef or VarUnknown;
+  TVarData(Value).VPointer := AValue;
+
+  SetLength(FParams, System.Length(FParams) + 1);
+  FParams[System.Length(FParams) - 1].v := Value;
+end;
+
+procedure TParamsExt.CopyFrom(const AParamsObj: TParamsExt);
+var
+  i: Word;
+  ParamsObj: TParamsExt absolute AParamsObj;
+begin
+  if not Assigned(Self) then
+    raise Exception.Create('TParams.CopyFrom: Params not initialized');
+
+  if not Assigned(AParamsObj) then
+    raise Exception.Create('TParams.CopyFrom: AParamsObj is nil');
+
+  if System.Length(ParamsObj.Params) = 0 then
+    Exit;
+
+  SetLength(FParams, 0);
+  for i := 0 to Pred(System.Length(ParamsObj.Params)) do
+  begin
+    SetLength(FParams, System.Length(FParams) + 1);
+    FParams[System.Length(FParams) - 1] := ParamsObj.Params[i];
+  end;
+end;
+
+procedure TParamsExt.AddFrom(const AParamsObj: TParamsExt);
+var
+  i, j: Word;
+  StartIndex: Word;
+  ParamsObj: TParamsExt absolute AParamsObj;
+begin
+  if not Assigned(Self) then
+    raise Exception.Create('TParams.AddFrom: Params not initialized');
+
+  if not Assigned(AParamsObj) then
+    raise Exception.Create('TParams.AddFrom: AParamsObj is nil');
+
+  if System.Length(ParamsObj.Params) = 0 then
+    Exit;
+
+  StartIndex := System.Length(FParams);
+  SetLength(FParams, System.Length(FParams) + ParamsObj.Length);
+  j := 0;
+  for i := StartIndex to  Pred(System.Length(FParams)) do
+  begin
+    FParams[i] := ParamsObj.Params[j];
+    Inc(j);
+  end;
+end;
+
+end.
