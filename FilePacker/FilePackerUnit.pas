@@ -6,7 +6,7 @@ uses
     System.Classes
   , System.SysUtils
   , System.Generics.Collections
-  , FMX.Graphics
+
   ;
 
 type
@@ -103,9 +103,6 @@ type
     procedure ExtractToMemoryStream(
       const AExtractingFileName: String;
       const AMemoryStream: TMemoryStream);
-    procedure ExtractToBitmap(
-      const AExtractingFileName: String;
-      const ABitmap: TBitmap);
 
     procedure GetFileList(const AFileList: TStringList);
     function GetFileListText: String;
@@ -440,32 +437,6 @@ begin
     AMemoryStream.CopyFrom(FPackFileStream, Fat.Size);
   except
     raise;
-  end;
-end;
-
-procedure TFilePacker.ExtractToBitmap(
-  const AExtractingFileName: String;
-  const ABitmap: TBitmap);
-var
-  MemoryStream: TMemoryStream;
-  Fat: TFat;
-begin
-  if not Assigned(ABitmap) then
-    raise Exception.Create('Memory stream reference is nil');
-
-  if not FFatDict.TryGetValue(AExtractingFileName, Fat) then
-    raise Exception.CreateFmt('File "%s" not found', [AExtractingFileName]);
-
-  MemoryStream := TMemoryStream.Create;
-  try
-    try
-      ExtractToMemoryStream(AExtractingFileName, MemoryStream);
-      ABitmap.LoadFromStream(MemoryStream);
-    except
-      raise;
-    end;
-  finally
-    FreeAndNil(MemoryStream);
   end;
 end;
 
