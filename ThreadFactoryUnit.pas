@@ -24,6 +24,12 @@ type
   TRegProc = reference to procedure (const AThread: TThreadExt);
   TUnRegProc = reference to procedure (const AThread: TThreadExt);
   TExecProc = reference to procedure (const AThread: TThreadExt);
+  TExecuteProc = reference to procedure;
+
+  TRegistringConstructor = reference to
+    procedure (
+      const ARegProc: TRegProc;
+      const AUnRegProc: TUnRegProc);
 
   TExceptionMessageThread = class(TThread)
   strict private
@@ -54,17 +60,27 @@ type
     FRegProc: TRegProc;
     FUnregProc: TUnRegProc;
     FExecProc: TExecProc;
+    FExecuteProc: TExecuteProc;
 
     FExceptionMessage: String;
     FOnException: TExceptionProc;
 
     FThreadName: String;
 
+    procedure DoInit(
+      const AThreadName: String;
+      const AExecProc: TExecProc;
+      const AExecuteProc: TExecuteProc;
+      const ARegProc: TRegProc;
+      const AUnregProc: TUnRegProc;
+      const ASuspended: Boolean = false;
+      const AFreeOnTerminate: Boolean = true);
+
     procedure OnExceptionInnerHandler(
       const AThreadName: String;
       const AExceptionMessage: String);
 
-    procedure RaiseMustOverloadedException(const AMessage: String);
+    procedure RaiseMustOverridedException(const AMessage: String);
 
     function GetEventHold: TEvent;
     function GetParams: TParamsExt;
@@ -77,10 +93,7 @@ type
     property EventHold: TEvent read GetEventHold;
   protected
     property Params: TParamsExt read GetParams;
-    procedure MountParams; virtual;
-
-    procedure Initializing; virtual;
-    procedure UnInitializing; virtual;
+    procedure MountParams; virtual; deprecated 'Лишнее, используется только в Melomaniac, нужно убрать';
 
     procedure ExecHold;
     procedure Execute; override;
@@ -88,6 +101,16 @@ type
 
     property ThreadName: String read GetThreadName write SetThreadName;
   public
+    constructor Create(
+      const ARegProc: TRegProc;
+      const AUnregProc: TUnRegProc;
+      const AExecuteProc: TExecuteProc); overload;
+    constructor Create(
+      const AThreadName: String;
+      const ARegProc: TRegProc;
+      const AUnregProc: TUnRegProc;
+      const AExecuteProc: TExecuteProc); overload;
+
     constructor Create(
       const AExecProc: TExecProc;
       const ARegProc: TRegProc;
@@ -98,6 +121,7 @@ type
     constructor Create(
       const AThreadName: String;
       const AExecProc: TExecProc;
+      const AExecuteProc: TExecuteProc;
       const ARegProc: TRegProc;
       const AUnregProc: TUnRegProc;
       const ASuspended: Boolean = false;
@@ -107,6 +131,8 @@ type
 
     procedure HoldThread;
     procedure UnHoldThread;
+
+    procedure Terminate;
 
     property OnException: TExceptionProc read FOnException write FOnException;
     property ExceptionMessage: String read FExceptionMessage;
@@ -132,7 +158,7 @@ type
   public
     constructor Create;
     destructor Destroy; override;
-
+    { TODO : Перейти от TThreadExt(здесь они не нужны) к обычным TThread }
     function CreateThread(
       const AExecProc: TExecProc;
       const ASuspended: Boolean = false): TThreadExt;
@@ -151,6 +177,9 @@ type
       const AClassThread: TThreadExtClass;
       const ASuspended: Boolean = false): Pointer;
 
+    procedure CreateRegistredThread(
+      const ARegistringConstructor: TRegistringConstructor);
+
     procedure FinishAllThreads(const AAfterFinishProc: TProc);
     procedure WaitForAllThreadsToFinish(const AAfterFinishProc: TProc);
 
@@ -158,6 +187,10 @@ type
   end;
 
 implementation
+//asd debug
+uses
+  Winapi.Windows;
+//asd debug
 
 constructor TExceptionMessageThread.Create(
   const AThreadName: String;
@@ -188,25 +221,10 @@ begin
     end);
 end;
 
-constructor TThreadExt.Create(
-  const AExecProc: TExecProc;
-  const ARegProc: TRegProc;
-  const AUnregProc: TUnRegProc;
-  const ASuspended: Boolean = false;
-  const AFreeOnTerminate: Boolean = true);
-begin
-  Create(
-    '',
-    AExecProc,
-    ARegProc,
-    AUnregProc,
-    ASuspended,
-    AFreeOnTerminate);
-end;
-
-constructor TThreadExt.Create(
+procedure TThreadExt.DoInit(
   const AThreadName: String;
   const AExecProc: TExecProc;
+  const AExecuteProc: TExecuteProc;
   const ARegProc: TRegProc;
   const AUnregProc: TUnRegProc;
   const ASuspended: Boolean = false;
@@ -221,12 +239,23 @@ begin
 
   FThreadType := ttInheritable;
   if Assigned(AExecProc) then
+  begin
     FThreadType := ttAnonymous;
+    FExecProc := AExecProc;
+  end
+  else
+  if Assigned(AExecuteProc) then
+  begin
+    FExecuteProc := AExecuteProc;
+  end
+  else
+  begin
+    raise Exception.Create('Execute proc reference is nil');
+  end;
 
   FEventHold := TEvent.Create(nil, true, not Suspended, '', false);
   FRegProc := ARegProc;
   FUnregProc := AUnregProc;
-  FExecProc := AExecProc;
   FParams := TParamsExt.Create;
 
   FreeOnTerminate := AFreeOnTerminate;
@@ -234,12 +263,115 @@ begin
   FExceptionMessage := '';
   FOnException := OnExceptionInnerHandler;
 
-  Initializing;
-
   if Assigned(FRegProc) then
     FRegProc(Self);
 
   inherited Create(ASuspended);
+end;
+
+constructor TThreadExt.Create(
+  const ARegProc: TRegProc;
+  const AUnregProc: TUnRegProc;
+  const AExecuteProc: TExecuteProc);
+begin
+  DoInit(
+    '',
+    nil,
+    AExecuteProc,
+    ARegProc,
+    AUnregProc,
+    false,
+    true);
+end;
+
+constructor TThreadExt.Create(
+  const AThreadName: String;
+  const ARegProc: TRegProc;
+  const AUnregProc: TUnRegProc;
+  const AExecuteProc: TExecuteProc);
+begin
+  DoInit(
+    AThreadName,
+    nil,
+    AExecuteProc,
+    ARegProc,
+    AUnregProc,
+    false,
+    true);
+end;
+
+constructor TThreadExt.Create(
+  const AExecProc: TExecProc;
+  const ARegProc: TRegProc;
+  const AUnregProc: TUnRegProc;
+  const ASuspended: Boolean = false;
+  const AFreeOnTerminate: Boolean = true);
+begin
+  DoInit(
+    '',
+    AExecProc,
+    nil,
+    ARegProc,
+    AUnregProc,
+    ASuspended,
+    AFreeOnTerminate);
+end;
+
+constructor TThreadExt.Create(
+  const AThreadName: String;
+  const AExecProc: TExecProc;
+  const AExecuteProc: TExecuteProc;
+  const ARegProc: TRegProc;
+  const AUnregProc: TUnRegProc;
+  const ASuspended: Boolean = false;
+  const AFreeOnTerminate: Boolean = true);
+begin
+  DoInit(
+    AThreadName,
+    AExecProc,
+    AExecuteProc,
+    ARegProc,
+    AUnregProc,
+    ASuspended,
+    AFreeOnTerminate);
+
+//  FCriticalSection := TCriticalSection.Create;
+//  FParamsCriticalSection := TCriticalSection.Create;
+//
+//  ThreadName := 'Nameless thread';
+//  if AThreadName.Length > 0 then
+//    ThreadName := AThreadName;
+//
+//  FThreadType := ttInheritable;
+//  if Assigned(AExecProc) then
+//  begin
+//    FThreadType := ttAnonymous;
+//    FExecProc := AExecProc;
+//  end
+//  else
+//  if Assigned(AExecuteProc) then
+//  begin
+//    FExecuteProc := AExecuteProc;
+//  end
+//  else
+//  begin
+//    raise Exception.Create('Execute proc reference is nil');
+//  end;
+//
+//  FEventHold := TEvent.Create(nil, true, not Suspended, '', false);
+//  FRegProc := ARegProc;
+//  FUnregProc := AUnregProc;
+//  FParams := TParamsExt.Create;
+//
+//  FreeOnTerminate := AFreeOnTerminate;
+//
+//  FExceptionMessage := '';
+//  FOnException := OnExceptionInnerHandler;
+//
+//  if Assigned(FRegProc) then
+//    FRegProc(Self);
+//
+//  inherited Create(ASuspended);
 end;
 
 destructor TThreadExt.Destroy;
@@ -249,8 +381,6 @@ begin
 
   FreeAndNil(FCriticalSection);
   FreeAndNil(FParamsCriticalSection);
-
-  UnInitializing;
 
   if Assigned(FUnRegProc) then
     FUnregProc(Self);
@@ -274,9 +404,9 @@ begin
   raise Exception.Create(AThreadName + ' -> ' + AExceptionMessage);
 end;
 
-procedure TThreadExt.RaiseMustOverloadedException(const AMessage: String);
+procedure TThreadExt.RaiseMustOverridedException(const AMessage: String);
 begin
-  raise Exception.CreateFmt('%s: %s', [AMessage, 'The method must be overloaded']);
+  raise Exception.CreateFmt('%s: %s', [AMessage, 'The method must be overrided']);
 end;
 
 function TThreadExt.GetEventHold: TEvent;
@@ -340,6 +470,13 @@ begin
   EventHold.SetEvent;
 end;
 
+procedure TThreadExt.Terminate;
+begin
+  inherited Terminate;
+
+  UnHoldThread;
+end;
+
 procedure TThreadExt.ExecHold;
 begin
   EventHold.WaitFor(INFINITE);
@@ -369,23 +506,16 @@ begin
       begin
         FExecProc(Self);
       end);
-  end;
-end;
-
-procedure TThreadExt.Initializing;
-const
-  METHOD = 'TThreadExt.Initializing';
-begin
-  if FThreadType = ttInheritable then
-    RaiseMustOverloadedException(METHOD);
-end;
-
-procedure TThreadExt.UnInitializing;
-const
-  METHOD = 'TThreadExt.UnInitializing';
-begin
-  if FThreadType = ttInheritable then
-    RaiseMustOverloadedException(METHOD);
+  end
+  else
+  if Assigned(FExecuteProc) then
+  begin
+    TryExcept(
+      procedure
+      begin
+        FExecuteProc;
+      end);
+  end
 end;
 
 procedure TThreadExt.MountParams;
@@ -393,7 +523,7 @@ const
   METHOD = 'TThreadExt.MountParams';
 begin
   if FThreadType = ttInheritable then
-    RaiseMustOverloadedException(METHOD);
+    RaiseMustOverridedException(METHOD);
 end;
 
 constructor TThreadFactory.Create;
@@ -453,7 +583,7 @@ function TThreadFactory.CreateFreeOnTerminateThread(
   const ASuspended: Boolean = false): TThreadExt;
 begin
   Result := TThreadExt.
-    Create(AThreadName, AExecProc, RegThreadProc, UnRegThreadProc, ASuspended, true);
+    Create(AThreadName, AExecProc, nil, RegThreadProc, UnRegThreadProc, ASuspended, true);
 end;
 
 function TThreadFactory.CreateThreadClassOf(
@@ -472,6 +602,15 @@ begin
     Create(nil, RegThreadProc, UnRegThreadProc, ASuspended, true);
 end;
 
+procedure TThreadFactory.CreateRegistredThread(
+  const ARegistringConstructor: TRegistringConstructor);
+begin
+  if not Assigned(ARegistringConstructor) then
+    raise Exception.Create('Registring constructor is nil');
+
+  ARegistringConstructor(RegThreadProc, UnRegThreadProc);
+end;
+
 procedure TThreadFactory.TerminateAllThreads;
 var
   i: Word;
@@ -485,7 +624,7 @@ begin
     Thread := FThreadRegistry.ThreadByIndex(i);
 
     Thread.Terminate;
-    Thread.UnHoldThread;
+//    Thread.UnHoldThread;
   end;
 end;
 
@@ -509,6 +648,7 @@ begin
       begin
         Sleep(400);
       end;
+      //OutputDebugString(PChar('FThreadRegistry.Count = ' + FThreadRegistry.Count.ToString));
     end);
 
   AnonymousThread.OnTerminate := OnFinishAllThreadsTerminateHandler;
