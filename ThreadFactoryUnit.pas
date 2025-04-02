@@ -24,7 +24,6 @@ type
   TRegProc = reference to procedure (const AThread: TThreadExt);
   TUnRegProc = reference to procedure (const AThread: TThreadExt);
   TExecProc = reference to procedure (const AThread: TThreadExt);
-  TExecuteProc = reference to procedure;
 
   TRegistringConstructor = reference to
     procedure (
@@ -46,13 +45,9 @@ type
   end;
 
   TThreadExt = class(TThread)
-  type
-    TThreadType = (ttAnonymous, ttInheritable);
   strict private
     FCriticalSection: TCriticalSection;
     FParamsCriticalSection: TCriticalSection;
-
-    FThreadType: TThreadType;
 
     FParams: TParamsExt;
 
@@ -60,7 +55,6 @@ type
     FRegProc: TRegProc;
     FUnregProc: TUnRegProc;
     FExecProc: TExecProc;
-    FExecuteProc: TExecuteProc;
 
     FExceptionMessage: String;
     FOnException: TExceptionProc;
@@ -70,7 +64,6 @@ type
     procedure DoInit(
       const AThreadName: String;
       const AExecProc: TExecProc;
-      const AExecuteProc: TExecuteProc;
       const ARegProc: TRegProc;
       const AUnregProc: TUnRegProc;
       const ASuspended: Boolean = false;
@@ -104,12 +97,12 @@ type
     constructor Create(
       const ARegProc: TRegProc;
       const AUnregProc: TUnRegProc;
-      const AExecuteProc: TExecuteProc); overload;
+      const AExecProc: TExecProc); overload;
     constructor Create(
       const AThreadName: String;
       const ARegProc: TRegProc;
       const AUnregProc: TUnRegProc;
-      const AExecuteProc: TExecuteProc); overload;
+      const AExecProc: TExecProc); overload;
 
     constructor Create(
       const AExecProc: TExecProc;
@@ -121,7 +114,6 @@ type
     constructor Create(
       const AThreadName: String;
       const AExecProc: TExecProc;
-      const AExecuteProc: TExecuteProc;
       const ARegProc: TRegProc;
       const AUnregProc: TUnRegProc;
       const ASuspended: Boolean = false;
@@ -224,7 +216,6 @@ end;
 procedure TThreadExt.DoInit(
   const AThreadName: String;
   const AExecProc: TExecProc;
-  const AExecuteProc: TExecuteProc;
   const ARegProc: TRegProc;
   const AUnregProc: TUnRegProc;
   const ASuspended: Boolean = false;
@@ -237,16 +228,9 @@ begin
   if AThreadName.Length > 0 then
     ThreadName := AThreadName;
 
-  FThreadType := ttInheritable;
   if Assigned(AExecProc) then
   begin
-    FThreadType := ttAnonymous;
     FExecProc := AExecProc;
-  end
-  else
-  if Assigned(AExecuteProc) then
-  begin
-    FExecuteProc := AExecuteProc;
   end
   else
   begin
@@ -272,12 +256,11 @@ end;
 constructor TThreadExt.Create(
   const ARegProc: TRegProc;
   const AUnregProc: TUnRegProc;
-  const AExecuteProc: TExecuteProc);
+  const AExecProc: TExecProc);
 begin
   DoInit(
     '',
-    nil,
-    AExecuteProc,
+    AExecProc,
     ARegProc,
     AUnregProc,
     false,
@@ -288,12 +271,11 @@ constructor TThreadExt.Create(
   const AThreadName: String;
   const ARegProc: TRegProc;
   const AUnregProc: TUnRegProc;
-  const AExecuteProc: TExecuteProc);
+  const AExecProc: TExecProc);
 begin
   DoInit(
     AThreadName,
-    nil,
-    AExecuteProc,
+    AExecProc,
     ARegProc,
     AUnregProc,
     false,
@@ -310,7 +292,6 @@ begin
   DoInit(
     '',
     AExecProc,
-    nil,
     ARegProc,
     AUnregProc,
     ASuspended,
@@ -320,7 +301,6 @@ end;
 constructor TThreadExt.Create(
   const AThreadName: String;
   const AExecProc: TExecProc;
-  const AExecuteProc: TExecuteProc;
   const ARegProc: TRegProc;
   const AUnregProc: TUnRegProc;
   const ASuspended: Boolean = false;
@@ -329,49 +309,10 @@ begin
   DoInit(
     AThreadName,
     AExecProc,
-    AExecuteProc,
     ARegProc,
     AUnregProc,
     ASuspended,
     AFreeOnTerminate);
-
-//  FCriticalSection := TCriticalSection.Create;
-//  FParamsCriticalSection := TCriticalSection.Create;
-//
-//  ThreadName := 'Nameless thread';
-//  if AThreadName.Length > 0 then
-//    ThreadName := AThreadName;
-//
-//  FThreadType := ttInheritable;
-//  if Assigned(AExecProc) then
-//  begin
-//    FThreadType := ttAnonymous;
-//    FExecProc := AExecProc;
-//  end
-//  else
-//  if Assigned(AExecuteProc) then
-//  begin
-//    FExecuteProc := AExecuteProc;
-//  end
-//  else
-//  begin
-//    raise Exception.Create('Execute proc reference is nil');
-//  end;
-//
-//  FEventHold := TEvent.Create(nil, true, not Suspended, '', false);
-//  FRegProc := ARegProc;
-//  FUnregProc := AUnregProc;
-//  FParams := TParamsExt.Create;
-//
-//  FreeOnTerminate := AFreeOnTerminate;
-//
-//  FExceptionMessage := '';
-//  FOnException := OnExceptionInnerHandler;
-//
-//  if Assigned(FRegProc) then
-//    FRegProc(Self);
-//
-//  inherited Create(ASuspended);
 end;
 
 destructor TThreadExt.Destroy;
@@ -499,31 +440,18 @@ end;
 
 procedure TThreadExt.Execute;
 begin
-  if Assigned(FExecProc) then
-  begin
-    TryExcept(
-      procedure
-      begin
-        FExecProc(Self);
-      end);
-  end
-  else
-  if Assigned(FExecuteProc) then
-  begin
-    TryExcept(
-      procedure
-      begin
-        FExecuteProc;
-      end);
-  end
+  TryExcept(
+    procedure
+    begin
+      FExecProc(Self);
+    end);
 end;
 
 procedure TThreadExt.MountParams;
 const
   METHOD = 'TThreadExt.MountParams';
 begin
-  if FThreadType = ttInheritable then
-    RaiseMustOverridedException(METHOD);
+  RaiseMustOverridedException(METHOD);
 end;
 
 constructor TThreadFactory.Create;
@@ -583,7 +511,7 @@ function TThreadFactory.CreateFreeOnTerminateThread(
   const ASuspended: Boolean = false): TThreadExt;
 begin
   Result := TThreadExt.
-    Create(AThreadName, AExecProc, nil, RegThreadProc, UnRegThreadProc, ASuspended, true);
+    Create(AThreadName, AExecProc, RegThreadProc, UnRegThreadProc, ASuspended, true);
 end;
 
 function TThreadFactory.CreateThreadClassOf(
