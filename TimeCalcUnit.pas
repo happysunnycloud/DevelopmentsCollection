@@ -34,11 +34,14 @@ class function TTimeCalc.CalcTime(
   var
     Hours: Word;
     Minutes: Word;
+    Seconds: Word;
   begin
     Hours := HourOf(ATime);
     Minutes := MinuteOf(ATime);
+    Seconds := SecondOf(ATime);
     Result :=
-      (Hours * MinutesPerHour * SecondsPerMinute) + (Minutes * SecondsPerMinute);
+      (Hours * MinutesPerHour * SecondsPerMinute) + (Minutes * SecondsPerMinute) +
+      Seconds;
   end;
 
 var
@@ -46,6 +49,7 @@ var
   PartSeconds: Integer;
   Hours: Integer;
   Minutes: Integer;
+  Seconds: Integer;
   SecondsRemaining: Integer;
   TotalSeconds: Integer;
 begin
@@ -70,9 +74,11 @@ begin
   Hours := SecondsRemaining div SecondsPerHour;
   Dec(SecondsRemaining, Hours * SecondsPerHour);
   Minutes := SecondsRemaining div SecondsPerMinute;
+  Dec(SecondsRemaining, Minutes * SecondsPerMinute);
+  Seconds := SecondsRemaining;
   if Hours > HoursPerDay then
     Hours := 0;
-  Result := EncodeTime(Hours, Minutes, 0, 0);
+  Result := EncodeTime(Hours, Minutes, Seconds, 0);
 end;
 
 end.
