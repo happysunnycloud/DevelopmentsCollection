@@ -75,7 +75,7 @@ type
 
     procedure RaiseMustOverridedException(const AMessage: String);
 
-    function GetEventHold: TEvent;
+    //function GetEventHold: TEvent;
     function GetParams: TParamsExt;
 
     function GetTerminated: Boolean;
@@ -83,7 +83,7 @@ type
     function GetThreadName: String;
     procedure SetThreadName(const AThreadName: String);
 
-    property EventHold: TEvent read GetEventHold;
+    property EventHold: TEvent read FEventHold;// GetEventHold;
   protected
     property Params: TParamsExt read GetParams;
     procedure MountParams; virtual; deprecated 'Лишнее, используется только в Melomaniac, нужно убрать';
@@ -350,15 +350,15 @@ begin
   raise Exception.CreateFmt('%s: %s', [AMessage, 'The method must be overrided']);
 end;
 
-function TThreadExt.GetEventHold: TEvent;
-begin
-  FCriticalSection.Enter;
-  try
-    Result := FEventHold;
-  finally
-    FCriticalSection.Leave;
-  end;
-end;
+//function TThreadExt.GetEventHold: TEvent;
+//begin
+//  FCriticalSection.Enter;
+//  try
+//    Result := FEventHold;
+//  finally
+//    FCriticalSection.Leave;
+//  end;
+//end;
 
 function TThreadExt.GetParams: TParamsExt;
 begin
@@ -403,24 +403,39 @@ end;
 
 procedure TThreadExt.HoldThread;
 begin
-  EventHold.ResetEvent;
+  FCriticalSection.Enter;
+  try
+    FEventHold.ResetEvent;
+  finally
+    FCriticalSection.Leave;
+  end;
 end;
 
 procedure TThreadExt.UnHoldThread;
 begin
-  EventHold.SetEvent;
+  FCriticalSection.Enter;
+  try
+    FEventHold.SetEvent;
+  finally
+    FCriticalSection.Leave;
+  end;
 end;
 
 procedure TThreadExt.Terminate;
 begin
-  inherited Terminate;
+  FCriticalSection.Enter;
+  try
+    inherited Terminate;
+  finally
+    FCriticalSection.Leave;
+  end;
 
   UnHoldThread;
 end;
 
 procedure TThreadExt.ExecHold;
 begin
-  EventHold.WaitFor(INFINITE);
+  FEventHold.WaitFor(INFINITE);
 
   MountParams;
 end;
