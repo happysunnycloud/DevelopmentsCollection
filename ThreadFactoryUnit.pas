@@ -83,7 +83,7 @@ type
     function GetThreadName: String;
     procedure SetThreadName(const AThreadName: String);
 
-    property EventHold: TEvent read FEventHold;// GetEventHold;
+    //property EventHold: TEvent read FEventHold;// GetEventHold;
   protected
     property Params: TParamsExt read GetParams;
     procedure MountParams; virtual; deprecated 'Лишнее, используется только в Melomaniac, нужно убрать';
@@ -176,6 +176,8 @@ type
     procedure WaitForAllThreadsToFinish(const AAfterFinishProc: TProc);
 
     procedure RegisterThread(const AThread: TThreadExt);
+
+    function GetThreadByName(const AThreadName: String): TThreadExt;
   end;
 
 implementation
@@ -604,6 +606,22 @@ begin
 
   AThread.OnTerminate := OnTerminateHandler;
   AThread.FreeOnTerminate := true;
+end;
+
+function TThreadFactory.GetThreadByName(const AThreadName: String): TThreadExt;
+var
+  Thread: TThreadExt;
+begin
+  Thread := nil;
+
+  FThreadRegistry.Enumerator(
+    procedure (const AThread: TThreadExt)
+    begin
+      if AThread.ThreadName = AThreadName then
+        Thread := AThread;
+    end);
+
+  Result := Thread;
 end;
 
 end.
