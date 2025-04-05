@@ -77,7 +77,10 @@ begin
   Dec(SecondsRemaining, Minutes * SecondsPerMinute);
   Seconds := SecondsRemaining;
   if Hours > HoursPerDay then
-    Hours := 0;
+    Hours := Hours - HoursPerDay - 1;
+//  else
+//  if Hours < 0 then
+//    Hours := HoursPerDay - (HoursPerDay - Hours);
   Result := EncodeTime(Hours, Minutes, Seconds, 0);
 end;
 
