@@ -18,6 +18,8 @@ type
       const AVal: String): Int64;
     function WriteWord(
       const AVal: Word): Int64;
+    function WriteInteger(
+      const AVal: Integer): Int64;
     function WriteInt64(
       const AVal: Int64): Int64;
     function WriteBoolean(
@@ -32,6 +34,8 @@ type
     destructor Destroy; override;
 
     function ReadAsString: String;
+    function ReadAsWord: Word;
+    function ReadAsInteger: Integer;
     function ReadAsInt64: Int64;
     function ReadAsBoolean: Boolean;
 
@@ -95,6 +99,20 @@ begin
   FFileStream.Read(Result[1], SizeOf(Char) * Len);
 end;
 
+function TFileStreamTools.ReadAsWord: Word;
+begin
+  CheckCorrect(ReadValType, varWord);
+
+  FFileStream.Read(Result, SizeOf(Word));
+end;
+
+function TFileStreamTools.ReadAsInteger: Integer;
+begin
+  CheckCorrect(ReadValType, varInteger);
+
+  FFileStream.Read(Result, SizeOf(Integer));
+end;
+
 function TFileStreamTools.ReadAsInt64: Int64;
 begin
   CheckCorrect(ReadValType, varInt64);
@@ -129,6 +147,14 @@ begin
   Result := GetPosition;
 end;
 
+function TFileStreamTools.WriteInteger(
+  const AVal: Integer): Int64;
+begin
+  FFileStream.Write(AVal, SizeOf(Integer));
+
+  Result := GetPosition;
+end;
+
 function TFileStreamTools.WriteInt64(
   const AVal: Int64): Int64;
 begin
@@ -156,6 +182,14 @@ begin
     varUString:
     begin
       WriteString(AVal);
+    end;
+    varWord:
+    begin
+      WriteWord(AVal);
+    end;
+    varInteger:
+    begin
+      WriteInteger(AVal);
     end;
     varInt64:
     begin
