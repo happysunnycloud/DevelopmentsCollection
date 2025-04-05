@@ -105,6 +105,8 @@ end;
 
 procedure TFormExt.OnCloseInternalHandler(Sender: TObject; var Action: TCloseAction);
 begin
+  Action := TCloseAction.caFree;
+
   if Assigned(FOnCloseExternalHandler) then
     FOnCloseExternalHandler(Sender, Action);
 end;
