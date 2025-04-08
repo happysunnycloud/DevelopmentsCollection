@@ -1,6 +1,6 @@
-﻿{0.2}
-//asd debug свойство property FDConnection: TFDConnection read fFDConnection;
-//нужно спрятать и на прямую неиспользовать, незачем это
+﻿{0.0}
+// Юнит адаптирован под SQLITE
+// Перевести проекты на этот юнит, убрать из коллекции старые DataBaseToolsUnit.pas и DBToolsUnit.pas
 unit DBToolsUnit;
 
 interface
@@ -29,9 +29,9 @@ type
   type
     TQuery = class
     private
-      fSQLQuery: String;
+      FSQLQuery: String;
     public
-      property  SQLQueryPrepared: String read fSQLQuery;
+      property  SQLQueryPrepared: String read FSQLQuery;
 
       procedure AddQuery              (const ASQLQuery:      String);
       procedure AddParameterAsString  (
@@ -45,14 +45,14 @@ type
       procedure ClearQuery;
     end;
   private
-    fQuery:             TQuery;
+    FQuery:             TQuery;
 
-    fFDConnection:      TFDConnection;
-    fFDQuery:           TDBQuery;
+    FFDConnection:      TFDConnection;
+    FFDQuery:           TDBQuery;
+
+    property  FDConnection: TFDConnection read FFDConnection;
   public
-    property  FDConnection: TFDConnection read fFDConnection;
-
-    property  Query:        TQuery read fQuery;
+    property  Query:        TQuery read FQuery;
 
     function  CreateQuery:  TQuery;
     procedure FreeQuery;
@@ -61,6 +61,7 @@ type
     procedure ExecuteQuery;
     procedure CloseQuery;
 
+    procedure Begin_;
     procedure Commit;
     procedure Rollback;
 
@@ -70,14 +71,22 @@ type
 
 implementation
 
-procedure PlaceParameterAsInteger(var ASQLQuery: String; const AParameterName: String; const AParameter: Integer);
+procedure PlaceParameterAsInteger(
+  var ASQLQuery: String;
+  const AParameterName: String;
+  const AParameter: Integer);
 begin
-  ASQLQuery := StringReplace(ASQLQuery, AParameterName, IntToStr(AParameter), [rfReplaceAll, rfIgnoreCase]);
+  ASQLQuery :=
+    StringReplace(ASQLQuery, AParameterName, IntToStr(AParameter), [rfReplaceAll, rfIgnoreCase]);
 end;
 
-procedure PlaceParameterAsInt64(var ASQLQuery: String; const AParameterName: String; const AParameter: Int64);
+procedure PlaceParameterAsInt64(
+  var ASQLQuery: String;
+  const AParameterName: String;
+  const AParameter: Int64);
 begin
-  ASQLQuery := StringReplace(ASQLQuery, AParameterName, IntToStr(AParameter), [rfReplaceAll, rfIgnoreCase]);
+  ASQLQuery :=
+    StringReplace(ASQLQuery, AParameterName, IntToStr(AParameter), [rfReplaceAll, rfIgnoreCase]);
 end;
 
 procedure PlaceParameterAsString(
@@ -106,7 +115,7 @@ end;
 
 procedure TDBTools.TQuery.AddQuery(const ASQLQuery: String);
 begin
-  fSQLQuery := ASQLQuery;
+  FSQLQuery := ASQLQuery;
 end;
 
 procedure TDBTools.TQuery.AddParameterAsString(
@@ -114,30 +123,30 @@ procedure TDBTools.TQuery.AddParameterAsString(
   const AParameter: String;
   const ANeedQuotes: Boolean = true);
 begin
-  PlaceParameterAsString(fSQLQuery, AParameterName, AParameter, ANeedQuotes);
+  PlaceParameterAsString(FSQLQuery, AParameterName, AParameter, ANeedQuotes);
 end;
 
 procedure TDBTools.TQuery.AddParameterAsInteger(const AParameterName: String; const AParameter: Integer);
 begin
-  PlaceParameterAsInteger(fSQLQuery, AParameterName, AParameter);
+  PlaceParameterAsInteger(FSQLQuery, AParameterName, AParameter);
 end;
 
 procedure TDBTools.TQuery.AddParameterAsLargeInt(const AParameterName: String; const AParameter: Int64);
 begin
-  PlaceParameterAsInt64(fSQLQuery, AParameterName, AParameter);
+  PlaceParameterAsInt64(FSQLQuery, AParameterName, AParameter);
 end;
 
 procedure TDBTools.TQuery.AddParameterAsBoolean (const AParameterName: String; const AParameter: Boolean);
 begin
   if not AParameter then
-    PlaceParameterAsInteger(fSQLQuery, AParameterName, 0)
+    PlaceParameterAsInteger(FSQLQuery, AParameterName, 0)
   else
-    PlaceParameterAsInteger(fSQLQuery, AParameterName, 1)
+    PlaceParameterAsInteger(FSQLQuery, AParameterName, 1)
 end;
 
 procedure TDBTools.TQuery.ClearQuery;
 begin
-  fSQLQuery := '';
+  FSQLQuery := '';
 end;
 
 constructor TDBTools.Create(const ADBFileName: String);
@@ -153,22 +162,22 @@ begin
   fFDQuery.ResourceOptions.MacroExpand     := false;
   //endcomment
   try
-    fFDConnection.ResourceOptions.SilentMode := true;
-    fFDConnection.DriverName                 := 'SQLITE';
+    FFDConnection.ResourceOptions.SilentMode := true;
+    FFDConnection.DriverName                 := 'SQLITE';
 
-    fFDConnection.Params.Values['Database']  := ADBFileName;
-    //fFDConnection.TxOptions.AutoCommit := false;
-    //fFDConnection.TxOptions.Isolation := TFDTxIsolation.xiSerializible;
+    FFDConnection.Params.Values['Database']  := ADBFileName;
+    //FFDConnection.TxOptions.AutoCommit := false;
+    //FFDConnection.TxOptions.Isolation := TFDTxIsolation.xiSerializible;
 
-    fFDQuery.ResourceOptions.SilentMode := true;
+    FFDQuery.ResourceOptions.SilentMode := true;
 
-    fFDConnection.Open;
+    FFDConnection.Open;
 
-    fFDQuery.Connection := fFDConnection;
+    FFDQuery.Connection := fFDConnection;
   except
     on e:Exception do
     begin
-      fFDQuery := nil;
+      FFDQuery := nil;
       raise Exception.Create(Format('TDataBaseTools.Create: %s', [e.Message]));
     end;
   end;
@@ -177,47 +186,44 @@ end;
 destructor TDBTools.Destroy;
 begin
   if Assigned(fFDQuery) then
-    fFDQuery.Close;
-  FreeAndNil(fFDQuery);
+    FFDQuery.Close;
+  FreeAndNil(FFDQuery);
 
-  if Assigned(fFDConnection) then
+  if Assigned(FFDConnection) then
     fFDConnection.Close;
-  FreeAndNil(fFDConnection);
+  FreeAndNil(FFDConnection);
 end;
 
 function TDBTools.CreateQuery: TQuery;
 begin
-  if not Assigned(fFDQuery) then
+  if not Assigned(FFDQuery) then
     raise Exception.Create('TDBTools.CreateQuery: DB connection are closed');
 
-  if Assigned(fQuery) then
+  if Assigned(FQuery) then
     raise Exception.Create('TDBTools.CreateQuery: Query already exists');
 
-  fQuery := TQuery.Create;
+  FQuery := TQuery.Create;
 
-  Result := fQuery;
+  Result := FQuery;
 end;
 
 procedure TDBTools.FreeQuery;
 begin
-//  if not Assigned(fFDQuery) then
-//    raise Exception.Create('TDBTools.CreateQuery: DB connection are closed');
-
-  // fFDQuery может быть не создан, по этому проверяем
+  // FFDQuery может быть не создан, по этому проверяем
   if Assigned(fFDQuery) then
     FreeAndNil(fQuery);
 end;
 
 function TDBTools.OpenQuery: TDBQuery;
 begin
-  if not Assigned(fQuery) then
+  if not Assigned(FQuery) then
     raise Exception.Create('TDBTools.OpenQuery: Query is nil');
 
-  fFDQuery.SQL.Text := fQuery.SQLQueryPrepared;
+  FFDQuery.SQL.Text := FQuery.SQLQueryPrepared;
   try
-    fFDQuery.Open;
+    FFDQuery.Open;
 
-    Result := fFDQuery;
+    Result := FFDQuery;
   except
     raise;
   end;
@@ -226,8 +232,18 @@ end;
 procedure TDBTools.CloseQuery;
 begin
   try
-    if Assigned(fQuery) then
-      fFDQuery.Close;
+    if Assigned(FQuery) then
+      FFDQuery.Close;
+  except
+    raise;
+  end;
+end;
+
+procedure TDBTools.Begin_;
+begin
+  FFDQuery.SQL.Text := 'begin;';
+  try
+    FFDQuery.ExecSQL;
   except
     raise;
   end;
@@ -245,12 +261,12 @@ end;
 
 procedure TDBTools.ExecuteQuery;
 begin
-  if not Assigned(fQuery) then
+  if not Assigned(FQuery) then
     raise Exception.Create('TDBTools.ExecuteQuery: Query is nil');
 
-  fFDQuery.SQL.Text := fQuery.SQLQueryPrepared;
+  FFDQuery.SQL.Text := FQuery.SQLQueryPrepared;
   try
-    fFDQuery.ExecSQL;
+    FFDQuery.ExecSQL;
   except
     raise;
   end;

@@ -97,9 +97,8 @@ begin
 
   FMessage := AMessage;
 
-  //asd нужно проверить зачем этот "Message"
-  Message := '!' + FMessage + '!';
-  //asd
+  // Промежуточное сообщение для дебагера
+  Message := FMessage;
 end;
 
 constructor TExceptionContainer.Create(
