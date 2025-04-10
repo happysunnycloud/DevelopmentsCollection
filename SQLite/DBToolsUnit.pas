@@ -154,12 +154,12 @@ begin
   if not FileExists(ADBFileName) then
     raise Exception.Create('TDataBaseTools.Create: DB "' + ADBFileName + '" file not exists');
 
-  fFDConnection                            := TFDConnection.Create(nil);
-  fFDQuery                                 := TDBQuery.Create(nil);
+  FFDConnection                            := TFDConnection.Create(nil);
+  FFDQuery                                 := TDBQuery.Create(nil);
 
   //comment: Отвечает за подстановку макроса заместо символов ! и &
-  fFDQuery.ResourceOptions.MacroCreate     := false;
-  fFDQuery.ResourceOptions.MacroExpand     := false;
+  FFDQuery.ResourceOptions.MacroCreate     := false;
+  FFDQuery.ResourceOptions.MacroExpand     := false;
   //endcomment
   try
     FFDConnection.ResourceOptions.SilentMode := true;
@@ -185,7 +185,7 @@ end;
 
 destructor TDBTools.Destroy;
 begin
-  if Assigned(fFDQuery) then
+  if Assigned(FFDQuery) then
     FFDQuery.Close;
   FreeAndNil(FFDQuery);
 
@@ -210,8 +210,8 @@ end;
 procedure TDBTools.FreeQuery;
 begin
   // FFDQuery может быть не создан, по этому проверяем
-  if Assigned(fFDQuery) then
-    FreeAndNil(fQuery);
+  if Assigned(FFDQuery) then
+    FreeAndNil(FQuery);
 end;
 
 function TDBTools.OpenQuery: TDBQuery;
