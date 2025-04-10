@@ -23,6 +23,10 @@ type
     class var FSQLTemplates: TSQLTemplates;
     // Возможно стоит перенести в SQLiteHelpmateUnit
     //class function IntToBool(const AValue: Integer): Boolean;
+    class procedure TransferString(
+      const AValueIdent: String;
+      const ADBQuery: TDBQuery;
+      const AParams: TParamsExt);
   public
     class function DBAParamsFunc(
       const AParamsFuncRef: TInOutParamsFuncRef;
@@ -51,6 +55,17 @@ uses
 //  if AValue > 0 then
 //    Result := true;
 //end;
+
+class procedure TDBAccessClass.TransferString(
+  const AValueIdent: String;
+  const ADBQuery: TDBQuery;
+  const AParams: TParamsExt);
+var
+  Val: String;
+begin
+  Val := ADBQuery.FindField(AValueIdent).AsString;
+  AParams.Add(Val, AValueIdent);
+end;
 
 class function TDBAccessClass.DBAParamsFunc(
   const AParamsFuncRef: TInOutParamsFuncRef;
