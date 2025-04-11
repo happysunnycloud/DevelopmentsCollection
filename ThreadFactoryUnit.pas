@@ -137,8 +137,13 @@ type
 
   TThreadFactory = class
   strict private
+    FCriticalSection: TCriticalSection;
+
     FThreadRegistry: TThreadRegistry;
     FAfterFinishProc: TProc;
+
+    function GetAfterFinishProc: TProc;
+    procedure SetAfterFinishProc(const AAfterFinishProc: TProc);
 
     procedure TerminateAllThreads;
 
@@ -147,6 +152,9 @@ type
 
     procedure RegThreadProc(const AThread: TThreadExt);
     procedure UnRegThreadProc(const AThread: TThreadExt);
+
+    property AfterFinishProc: TProc
+      read GetAfterFinishProc write SetAfterFinishProc;
   public
     constructor Create;
     destructor Destroy; override;
@@ -473,6 +481,7 @@ end;
 
 constructor TThreadFactory.Create;
 begin
+  FCriticalSection := TCriticalSection.Create;
   FThreadRegistry := TThreadRegistry.Create;
   FAfterFinishProc := nil;
 end;
@@ -483,6 +492,7 @@ begin
     raise Exception.Create('There are unfinished threads');
 
   FreeAndNil(FThreadRegistry);
+  FreeAndNil(FCriticalSection);
 end;
 
 procedure TThreadFactory.OnTerminateHandler(Sender: TObject);
@@ -502,8 +512,8 @@ end;
 
 procedure TThreadFactory.OnFinishAllThreadsTerminateHandler(Sender: TObject);
 begin
-  if Assigned(FAfterFinishProc) then
-    FAfterFinishProc;
+  if Assigned(AfterFinishProc) then
+    AfterFinishProc;
 end;
 
 function TThreadFactory.CreateThread(
@@ -556,6 +566,26 @@ begin
   ARegistringConstructor(RegThreadProc, UnRegThreadProc);
 end;
 
+function TThreadFactory.GetAfterFinishProc: TProc;
+begin
+  FCriticalSection.Enter;
+  try
+    Result := FAfterFinishProc;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
+procedure TThreadFactory.SetAfterFinishProc(const AAfterFinishProc: TProc);
+begin
+  FCriticalSection.Enter;
+  try
+    FAfterFinishProc := AAfterFinishProc;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
 procedure TThreadFactory.TerminateAllThreads;
 var
   i: Word;
@@ -584,7 +614,7 @@ procedure TThreadFactory.WaitForAllThreadsToFinish(const AAfterFinishProc: TProc
 var
   AnonymousThread: TThread;
 begin
-  FAfterFinishProc := AAfterFinishProc;
+  AfterFinishProc := AAfterFinishProc;
 
   AnonymousThread := TThread.CreateAnonymousThread(
     procedure
