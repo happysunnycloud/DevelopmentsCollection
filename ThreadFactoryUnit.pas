@@ -511,9 +511,12 @@ begin
 end;
 
 procedure TThreadFactory.OnFinishAllThreadsTerminateHandler(Sender: TObject);
+var
+  Proc: TProc;
 begin
-  if Assigned(AfterFinishProc) then
-    AfterFinishProc;
+  Proc := AfterFinishProc;
+  if Assigned(Proc) then
+    Proc;
 end;
 
 function TThreadFactory.CreateThread(
