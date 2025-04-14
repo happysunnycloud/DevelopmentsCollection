@@ -9,6 +9,7 @@ uses
   , System.UITypes
   , FMX.Forms
 
+  , ThreadFactoryRegistryUnit
   , ThreadFactoryUnit
   ;
 
@@ -21,6 +22,7 @@ type
 
   TFormExt = class(FMX.Forms.TForm)
   strict private
+    FThreadFactoryRegistry: TThreadFactoryRegistry;
     FThreadFactory: TThreadFactory;
     FCanClose: Boolean;
     FOnCloseQueryExternalHandler: TCloseQueryMethod;
@@ -28,6 +30,8 @@ type
 
     procedure OnCloseQueryInternalHandler(Sender: TObject; var CanClose: Boolean);
     procedure OnCloseInternalHandler(Sender: TObject; var Action: TCloseAction);
+
+    procedure OnDestroyedAllFactoryHandler(Sender: TObject);
 
     function GetOnCloseQuery: TCloseQueryMethod;
     procedure SetOnCloseQuery(const AOnCloseQuery: TCloseQueryMethod);
@@ -40,6 +44,8 @@ type
     destructor Destroy; override;
 
     property CanClose: Boolean read FCanClose write FCanClose;
+
+    property ThreadFactoryRegistry: TThreadFactoryRegistry read FThreadFactoryRegistry;
     property ThreadFactory: TThreadFactory read FThreadFactory;
 
     property OnCloseQuery: TCloseQueryMethod read GetOnCloseQuery write SetOnCloseQuery;
@@ -64,6 +70,8 @@ begin
   inherited OnCloseQuery := OnCloseQueryInternalHandler;
   inherited OnClose := OnCloseInternalHandler;
 
+  FThreadFactoryRegistry := TThreadFactoryRegistry.Create;
+  FThreadFactoryRegistry.OnDestroyedAllFactories := OnDestroyedAllFactoryHandler;
   FThreadFactory := TThreadFactory.Create;
 
   PCloseQueryMethodAddr := Self.MethodAddress('FormCloseQuery');
@@ -80,6 +88,7 @@ end;
 destructor TFormExt.Destroy;
 begin
   FreeAndNil(FThreadFactory);
+  FreeAndNil(FThreadFactoryRegistry);
 
   inherited;
 end;
@@ -99,8 +108,15 @@ begin
   FThreadFactory.FinishAllThreads(
     procedure
     begin
-      Self.Close;
+      FThreadFactoryRegistry.FinishAllThreadFactories;
     end);
+
+//    procedure
+//    begin
+//      Self.Close;
+//    end);
+
+//  FThreadFactoryRegistry.FinishAllThreadFactories;
 end;
 
 procedure TFormExt.OnCloseInternalHandler(Sender: TObject; var Action: TCloseAction);
@@ -114,6 +130,15 @@ end;
 function TFormExt.GetOnCloseQuery: TCloseQueryMethod;
 begin
   Result := OnCloseQuery;
+end;
+
+procedure TFormExt.OnDestroyedAllFactoryHandler(Sender: TObject);
+begin
+  TThread.ForceQueue(nil,
+    procedure
+    begin
+      Self.Close;
+    end);
 end;
 
 procedure TFormExt.SetOnCloseQuery(const AOnCloseQuery: TCloseQueryMethod);
