@@ -103,14 +103,12 @@ type
       const ARegProc: TRegProc;
       const AUnregProc: TUnRegProc;
       const AExecProc: TExecProc); overload;
-
     constructor Create(
       const AExecProc: TExecProc;
       const ARegProc: TRegProc;
       const AUnregProc: TUnRegProc;
       const ASuspended: Boolean = false;
       const AFreeOnTerminate: Boolean = true); overload;
-
     constructor Create(
       const AThreadName: String;
       const AExecProc: TExecProc;
@@ -142,23 +140,28 @@ type
     FThreadRegistry: TThreadRegistry;
     FAfterFinishProc: TProc;
 
+    FOnDestroyFactory: TNotifyEvent;
+    FOnFinishAllThreads: TNotifyEvent;
+
     function GetAfterFinishProc: TProc;
     procedure SetAfterFinishProc(const AAfterFinishProc: TProc);
 
     procedure TerminateAllThreads;
-
-    procedure OnTerminateHandler(Sender: TObject);
-    procedure OnFinishAllThreadsTerminateHandler(Sender: TObject);
 
     procedure RegThreadProc(const AThread: TThreadExt);
     procedure UnRegThreadProc(const AThread: TThreadExt);
 
     property AfterFinishProc: TProc
       read GetAfterFinishProc write SetAfterFinishProc;
+
+    procedure CheckThreadZeroCount;
   public
     constructor Create;
     destructor Destroy; override;
-    { TODO : Перейти от TThreadExt(здесь они не нужны) к обычным TThread }
+
+    property OnDestroyFactory: TNotifyEvent write FOnDestroyFactory;
+    property OnFinishAllThreads: TNotifyEvent write FOnFinishAllThreads;
+
     function CreateThread(
       const AExecProc: TExecProc;
       const ASuspended: Boolean = false): TThreadExt;
@@ -180,19 +183,13 @@ type
     procedure CreateRegistredThread(
       const ARegistringConstructor: TRegistringConstructor);
 
+    procedure WaitForAllThreadsAreFinished(const AAfterFinishProc: TProc);
     procedure FinishAllThreads(const AAfterFinishProc: TProc);
-    procedure WaitForAllThreadsToFinish(const AAfterFinishProc: TProc);
-
-    procedure RegisterThread(const AThread: TThreadExt);
 
     function GetThreadByName(const AThreadName: String): TThreadExt;
   end;
 
 implementation
-//asd debug
-uses
-  Winapi.Windows;
-//asd debug
 
 constructor TExceptionMessageThread.Create(
   const AThreadName: String;
@@ -360,16 +357,6 @@ begin
   raise Exception.CreateFmt('%s: %s', [AMessage, 'The method must be overrided']);
 end;
 
-//function TThreadExt.GetEventHold: TEvent;
-//begin
-//  FCriticalSection.Enter;
-//  try
-//    Result := FEventHold;
-//  finally
-//    FCriticalSection.Leave;
-//  end;
-//end;
-
 function TThreadExt.GetParams: TParamsExt;
 begin
   FParamsCriticalSection.Enter;
@@ -484,6 +471,8 @@ begin
   FCriticalSection := TCriticalSection.Create;
   FThreadRegistry := TThreadRegistry.Create;
   FAfterFinishProc := nil;
+  FOnDestroyFactory := nil;
+  FOnFinishAllThreads := nil;
 end;
 
 destructor TThreadFactory.Destroy;
@@ -493,11 +482,9 @@ begin
 
   FreeAndNil(FThreadRegistry);
   FreeAndNil(FCriticalSection);
-end;
 
-procedure TThreadFactory.OnTerminateHandler(Sender: TObject);
-begin
-  FThreadRegistry.UnRegisterThread(TThreadExt(Sender));
+  if Assigned(FOnDestroyFactory) then
+    FOnDestroyFactory(Self);
 end;
 
 procedure TThreadFactory.RegThreadProc(const AThread: TThreadExt);
@@ -505,18 +492,13 @@ begin
   FThreadRegistry.RegisterThread(AThread);
 end;
 
+// Так же проверяем количество нитей в WaitForAllThreadsAreFinished
+// На тот случай, если не было создано ни одной нити
 procedure TThreadFactory.UnRegThreadProc(const AThread: TThreadExt);
 begin
   FThreadRegistry.UnRegisterThread(AThread);
-end;
 
-procedure TThreadFactory.OnFinishAllThreadsTerminateHandler(Sender: TObject);
-var
-  Proc: TProc;
-begin
-  Proc := AfterFinishProc;
-  if Assigned(Proc) then
-    Proc;
+  CheckThreadZeroCount;
 end;
 
 function TThreadFactory.CreateThread(
@@ -589,6 +571,31 @@ begin
   end;
 end;
 
+procedure TThreadFactory.CheckThreadZeroCount;
+var
+  Proc: TProc;
+  Count: Word;
+begin
+  Count := FThreadRegistry.Count;
+  if Count > 0 then
+    Exit;
+
+  Proc := AfterFinishProc;
+  if Assigned(Proc) then
+  begin
+    AfterFinishProc := nil;
+
+    TThread.ForceQueue(nil,
+      procedure
+      begin
+        Proc;
+      end);
+  end;
+
+  if Assigned(FOnFinishAllThreads) then
+    FOnFinishAllThreads(Self);
+end;
+
 procedure TThreadFactory.TerminateAllThreads;
 var
   i: Word;
@@ -608,37 +615,20 @@ end;
 
 procedure TThreadFactory.FinishAllThreads(const AAfterFinishProc: TProc);
 begin
-  WaitForAllThreadsToFinish(AAfterFinishProc);
+  AfterFinishProc := AAfterFinishProc;
 
   TerminateAllThreads;
+
+  CheckThreadZeroCount;
 end;
 
-procedure TThreadFactory.WaitForAllThreadsToFinish(const AAfterFinishProc: TProc);
-var
-  AnonymousThread: TThread;
+// Проверяем здесь количество нитей в WaitForAllThreadsAreFinished
+// На тот случай, если не было создано ни одной нити
+procedure TThreadFactory.WaitForAllThreadsAreFinished(const AAfterFinishProc: TProc);
 begin
   AfterFinishProc := AAfterFinishProc;
 
-  AnonymousThread := TThread.CreateAnonymousThread(
-    procedure
-    begin
-      while FThreadRegistry.Count > 0 do
-      begin
-        Sleep(400);
-      end;
-      //OutputDebugString(PChar('FThreadRegistry.Count = ' + FThreadRegistry.Count.ToString));
-    end);
-
-  AnonymousThread.OnTerminate := OnFinishAllThreadsTerminateHandler;
-  AnonymousThread.Start;
-end;
-
-procedure TThreadFactory.RegisterThread(const AThread: TThreadExt);
-begin
-  FThreadRegistry.RegisterThread(AThread);
-
-  AThread.OnTerminate := OnTerminateHandler;
-  AThread.FreeOnTerminate := true;
+  CheckThreadZeroCount;
 end;
 
 function TThreadFactory.GetThreadByName(const AThreadName: String): TThreadExt;

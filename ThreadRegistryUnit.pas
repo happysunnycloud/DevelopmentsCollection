@@ -20,7 +20,7 @@ type
     destructor Destroy; override;
 
     function RegisterThread(const AThread: T): Boolean;
-    procedure UnRegisterThread(const AThread: T);
+    function UnRegisterThread(const AThread: T): Word;
 
     function ThreadByIndex(const AIndex: Word): T;
     procedure Enumerator(const ACallbackProc: TCallbackProc);
@@ -62,7 +62,7 @@ begin
   end;
 end;
 
-procedure TThreadRegistry<T>.UnRegisterThread(const AThread: T);
+function TThreadRegistry<T>.UnRegisterThread(const AThread: T): Word;
 var
   ThreadList: TList<T>;
 begin
@@ -70,6 +70,8 @@ begin
   try
     try
       ThreadList.Remove(AThread);
+
+      Result := ThreadList.Count;
     except
       raise Exception.Create('UnRegisterThread: remove thread error');
     end;
