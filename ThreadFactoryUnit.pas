@@ -20,6 +20,7 @@ type
     const AThreadName: String; const AExceptionMessage: String) of object;
 
   TThreadExt = class;
+  TThreadFactory = class;
 
   TRegProc = reference to procedure (const AThread: TThreadExt);
   TUnRegProc = reference to procedure (const AThread: TThreadExt);
@@ -29,6 +30,10 @@ type
     procedure (
       const ARegProc: TRegProc;
       const AUnRegProc: TUnRegProc);
+
+  TThreadFactoryRegistringConstructor = reference to
+    procedure (
+      const AThreadFactory: TThreadFactory);
 
   TExceptionMessageThread = class(TThread)
   strict private
@@ -94,26 +99,59 @@ type
 
     property ThreadName: String read GetThreadName write SetThreadName;
   public
-    constructor Create(
-      const ARegProc: TRegProc;
-      const AUnregProc: TUnRegProc;
-      const AExecProc: TExecProc); overload;
-    constructor Create(
-      const AThreadName: String;
-      const ARegProc: TRegProc;
-      const AUnregProc: TUnRegProc;
-      const AExecProc: TExecProc); overload;
+    //    constructor Create(
+    //      const ARegProc: TRegProc;
+    //      const AUnregProc: TUnRegProc;
+    //      const AExecProc: TExecProc); overload;
+    //    constructor Create(
+    //      const AThreadName: String;
+    //      const ARegProc: TRegProc;
+    //      const AUnregProc: TUnRegProc;
+    //      const AExecProc: TExecProc); overload;
+
+    /// <summary>
+    ///   Создает не именованный поток с исполняемым анонимным методом
+    ///   C указанием процедур регистрации и снятия с регистрации
+    ///   Suspended = false, FreeOnTerminate = true
+    /// </summary>
     constructor Create(
       const AExecProc: TExecProc;
       const ARegProc: TRegProc;
       const AUnregProc: TUnRegProc;
       const ASuspended: Boolean = false;
       const AFreeOnTerminate: Boolean = true); overload;
+    /// <summary>
+    ///   Создает именованный поток с исполняемым анонимным методом
+    ///   C указанием процедур регистрации и снятия с регистрации
+    ///   Suspended = false, FreeOnTerminate = true
+    /// </summary>
     constructor Create(
       const AThreadName: String;
       const AExecProc: TExecProc;
       const ARegProc: TRegProc;
       const AUnregProc: TUnRegProc;
+      const ASuspended: Boolean = false;
+      const AFreeOnTerminate: Boolean = true); overload;
+
+    /// <summary>
+    ///   Создает не именованный поток с исполняемым анонимным методом
+    ///   C указанием фабрики регистрирующей нить
+    ///   Suspended = false, FreeOnTerminate = true, ThreadName = Empty
+    /// </summary>
+    constructor Create(
+      const AThreadFactory: TThreadFactory;
+      const AExecProc: TExecProc;
+      const ASuspended: Boolean = false;
+      const AFreeOnTerminate: Boolean = true); overload;
+    /// <summary>
+    ///   Создает именованный поток с исполняемым анонимным методом
+    ///   C указанием фабрики регистрирующей нить
+    ///   Suspended = false, FreeOnTerminate = true, ThreadName <> Empty
+    /// </summary>
+    constructor Create(
+      const AThreadFactory: TThreadFactory;
+      const AThreadName: String;
+      const AExecProc: TExecProc;
       const ASuspended: Boolean = false;
       const AFreeOnTerminate: Boolean = true); overload;
 
@@ -148,13 +186,13 @@ type
 
     procedure TerminateAllThreads;
 
-    procedure RegThreadProc(const AThread: TThreadExt);
-    procedure UnRegThreadProc(const AThread: TThreadExt);
-
     property AfterFinishProc: TProc
       read GetAfterFinishProc write SetAfterFinishProc;
 
     procedure CheckThreadZeroCount;
+  protected
+    procedure RegThreadProc(const AThread: TThreadExt);
+    procedure UnRegThreadProc(const AThread: TThreadExt);
   public
     constructor Create;
     destructor Destroy; override;
@@ -162,12 +200,24 @@ type
     property OnDestroyFactory: TNotifyEvent write FOnDestroyFactory;
     property OnFinishAllThreads: TNotifyEvent write FOnFinishAllThreads;
 
+    /// <summary>
+    ///   Создает поток с исполняемым анонимным методом
+    ///   FreeOnTerminate = false
+    /// </summary>
     function CreateThread(
       const AExecProc: TExecProc;
       const ASuspended: Boolean = false): TThreadExt;
+    /// <summary>
+    ///   Создает поток с исполняемым анонимным методом
+    ///   FreeOnTerminate = true
+    /// </summary>
     function CreateFreeOnTerminateThread(
       const AExecProc: TExecProc;
       const ASuspended: Boolean = false): TThreadExt; overload;
+    /// <summary>
+    ///   Создает именованый поток с исполняемым анонимным методом
+    ///   FreeOnTerminate = true
+    /// </summary>
     function CreateFreeOnTerminateThread(
       const AThreadName: String;
       const AExecProc: TExecProc;
@@ -180,8 +230,19 @@ type
       const AClassThread: TThreadExtClass;
       const ASuspended: Boolean = false): Pointer;
 
+    /// <summary>
+    ///   Создает независимый поток с обязательным указанием
+    ///   методов регистрации и снятия с регистрации
+    ///   FreeOnTerminate = true
+    /// </summary>
     procedure CreateRegistredThread(
-      const ARegistringConstructor: TRegistringConstructor);
+      const ARegistringConstructor: TRegistringConstructor); overload;
+    /// <summary>
+    ///   Создает независимый поток с обязательной регистрацией в фабрике потоков
+    ///   FreeOnTerminate = true
+    /// </summary>
+    procedure CreateRegistredThread(
+      const AThreadFactoryRegistringConstructor: TThreadFactoryRegistringConstructor); overload;
 
     procedure WaitForAllThreadsAreFinished(const AAfterFinishProc: TProc);
     procedure FinishAllThreads(const AAfterFinishProc: TProc);
@@ -260,34 +321,34 @@ begin
   inherited Create(ASuspended);
 end;
 
-constructor TThreadExt.Create(
-  const ARegProc: TRegProc;
-  const AUnregProc: TUnRegProc;
-  const AExecProc: TExecProc);
-begin
-  DoInit(
-    '',
-    AExecProc,
-    ARegProc,
-    AUnregProc,
-    false,
-    true);
-end;
-
-constructor TThreadExt.Create(
-  const AThreadName: String;
-  const ARegProc: TRegProc;
-  const AUnregProc: TUnRegProc;
-  const AExecProc: TExecProc);
-begin
-  DoInit(
-    AThreadName,
-    AExecProc,
-    ARegProc,
-    AUnregProc,
-    false,
-    true);
-end;
+//constructor TThreadExt.Create(
+//  const ARegProc: TRegProc;
+//  const AUnregProc: TUnRegProc;
+//  const AExecProc: TExecProc);
+//begin
+//  DoInit(
+//    '',
+//    AExecProc,
+//    ARegProc,
+//    AUnregProc,
+//    false,
+//    true);
+//end;
+//
+//constructor TThreadExt.Create(
+//  const AThreadName: String;
+//  const ARegProc: TRegProc;
+//  const AUnregProc: TUnRegProc;
+//  const AExecProc: TExecProc);
+//begin
+//  DoInit(
+//    AThreadName,
+//    AExecProc,
+//    ARegProc,
+//    AUnregProc,
+//    false,
+//    true);
+//end;
 
 constructor TThreadExt.Create(
   const AExecProc: TExecProc;
@@ -318,6 +379,37 @@ begin
     AExecProc,
     ARegProc,
     AUnregProc,
+    ASuspended,
+    AFreeOnTerminate);
+end;
+
+constructor TThreadExt.Create(
+  const AThreadFactory: TThreadFactory;
+  const AExecProc: TExecProc;
+  const ASuspended: Boolean = false;
+  const AFreeOnTerminate: Boolean = true);
+begin
+  DoInit(
+    '',
+    AExecProc,
+    AThreadFactory.RegThreadProc,
+    AThreadFactory.UnRegThreadProc,
+    ASuspended,
+    AFreeOnTerminate);
+end;
+
+constructor TThreadExt.Create(
+  const AThreadFactory: TThreadFactory;
+  const AThreadName: String;
+  const AExecProc: TExecProc;
+  const ASuspended: Boolean = false;
+  const AFreeOnTerminate: Boolean = true);
+begin
+  DoInit(
+    AThreadName,
+    AExecProc,
+    AThreadFactory.RegThreadProc,
+    AThreadFactory.UnRegThreadProc,
     ASuspended,
     AFreeOnTerminate);
 end;
@@ -549,6 +641,15 @@ begin
     raise Exception.Create('Registring constructor is nil');
 
   ARegistringConstructor(RegThreadProc, UnRegThreadProc);
+end;
+
+procedure TThreadFactory.CreateRegistredThread(
+  const AThreadFactoryRegistringConstructor: TThreadFactoryRegistringConstructor);
+begin
+  if not Assigned(AThreadFactoryRegistringConstructor) then
+    raise Exception.Create('Registring constructor is nil');
+
+  AThreadFactoryRegistringConstructor(Self);
 end;
 
 function TThreadFactory.GetAfterFinishProc: TProc;
