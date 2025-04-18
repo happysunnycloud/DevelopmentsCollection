@@ -1,4 +1,4 @@
-﻿{0.1}
+﻿{0.2}
 // 220325 Обновленный юнит по работе с нитями, если и переезжать то на него
 // Должен обрабатывать исключения внутри нитей, нужно проверить
 // 260325 Проверили - обрабатывает
@@ -25,6 +25,7 @@ type
   TRegProc = reference to procedure (const AThread: TThreadExt);
   TUnRegProc = reference to procedure (const AThread: TThreadExt);
   TExecProc = reference to procedure (const AThread: TThreadExt);
+  TNotifyEventRef = reference to procedure;
 
   TRegistringConstructor = reference to
     procedure (
@@ -176,29 +177,28 @@ type
     FCriticalSection: TCriticalSection;
 
     FThreadRegistry: TThreadRegistry;
-    FAfterFinishProc: TProc;
+    FAfterAllThreadsAreDestroyedProc: TProc;
 
     FOnDestroyFactory: TNotifyEvent;
-    FOnFinishAllThreads: TNotifyEvent;
+    FOnAllThreadsAreDestroyed: TNotifyEvent;
+    FOnAllThreadsAreDestroyedRef: TNotifyEventRef;
 
-    function GetAfterFinishProc: TProc;
-    procedure SetAfterFinishProc(const AAfterFinishProc: TProc);
+    function GetAfterAllThreadsAreDestroyedProc: TProc;
+    procedure SetAfterAllThreadsAreDestroyedProc(
+      const AAfterAllThreadsAreDestroyedProc: TProc);
 
-    procedure TerminateAllThreads;
-
-    property AfterFinishProc: TProc
-      read GetAfterFinishProc write SetAfterFinishProc;
+    procedure SetTerminateAllThreads;
 
     procedure CheckThreadZeroCount;
+
+    procedure SetOnAllThreadsAreDestroyed(const ANotifyEvent: TNotifyEvent);
+    procedure SetOnAllThreadsAreDestroyedRef(const ANotifyEventRef: TNotifyEventRef);
   protected
     procedure RegThreadProc(const AThread: TThreadExt);
     procedure UnRegThreadProc(const AThread: TThreadExt);
   public
     constructor Create;
     destructor Destroy; override;
-
-    property OnDestroyFactory: TNotifyEvent write FOnDestroyFactory;
-    property OnFinishAllThreads: TNotifyEvent write FOnFinishAllThreads;
 
     /// <summary>
     ///   Создает поток с исполняемым анонимным методом
@@ -244,8 +244,27 @@ type
     procedure CreateRegistredThread(
       const AThreadFactoryRegistringConstructor: TThreadFactoryRegistringConstructor); overload;
 
-    procedure WaitForAllThreadsAreFinished(const AAfterFinishProc: TProc);
-    procedure FinishAllThreads(const AAfterFinishProc: TProc);
+    property OnDestroyFactory: TNotifyEvent
+      write FOnDestroyFactory;
+
+    /// <summary>
+    ///   Вызывается перед AfterAllThreadsAreDestroyedProc
+    /// </summary>
+    property OnAllThreadsAreDestroyed: TNotifyEvent
+      write SetOnAllThreadsAreDestroyed;
+    /// <summary>
+    ///   Вызывается перед AfterAllThreadsAreDestroyedProc
+    /// </summary>
+    property OnAllThreadsAreDestroyedRef: TNotifyEventRef
+      write SetOnAllThreadsAreDestroyedRef;
+    /// <summary>
+    ///   Вызывается после OnAllThreadsAreDestroyed / OnAllThreadsAreDestroyedRef
+    /// </summary>
+    property AfterAllThreadsAreDestroyedProc: TProc
+      read GetAfterAllThreadsAreDestroyedProc
+      write SetAfterAllThreadsAreDestroyedProc;
+
+    procedure TerminateAllThreads;
 
     function GetThreadByName(const AThreadName: String): TThreadExt;
   end;
@@ -562,15 +581,16 @@ constructor TThreadFactory.Create;
 begin
   FCriticalSection := TCriticalSection.Create;
   FThreadRegistry := TThreadRegistry.Create;
-  FAfterFinishProc := nil;
+  FAfterAllThreadsAreDestroyedProc := nil;
   FOnDestroyFactory := nil;
-  FOnFinishAllThreads := nil;
+  FOnAllThreadsAreDestroyed := nil;
+  FOnAllThreadsAreDestroyedRef := nil;
 end;
 
 destructor TThreadFactory.Destroy;
 begin
   if FThreadRegistry.Count > 0 then
-    raise Exception.Create('There are unfinished threads');
+    raise Exception.Create('There are undestroyed threads');
 
   FreeAndNil(FThreadRegistry);
   FreeAndNil(FCriticalSection);
@@ -584,8 +604,6 @@ begin
   FThreadRegistry.RegisterThread(AThread);
 end;
 
-// Так же проверяем количество нитей в WaitForAllThreadsAreFinished
-// На тот случай, если не было создано ни одной нити
 procedure TThreadFactory.UnRegThreadProc(const AThread: TThreadExt);
 begin
   FThreadRegistry.UnRegisterThread(AThread);
@@ -652,21 +670,22 @@ begin
   AThreadFactoryRegistringConstructor(Self);
 end;
 
-function TThreadFactory.GetAfterFinishProc: TProc;
+function TThreadFactory.GetAfterAllThreadsAreDestroyedProc: TProc;
 begin
   FCriticalSection.Enter;
   try
-    Result := FAfterFinishProc;
+    Result := FAfterAllThreadsAreDestroyedProc;
   finally
     FCriticalSection.Leave;
   end;
 end;
 
-procedure TThreadFactory.SetAfterFinishProc(const AAfterFinishProc: TProc);
+procedure TThreadFactory.SetAfterAllThreadsAreDestroyedProc(
+  const AAfterAllThreadsAreDestroyedProc: TProc);
 begin
   FCriticalSection.Enter;
   try
-    FAfterFinishProc := AAfterFinishProc;
+    FAfterAllThreadsAreDestroyedProc := AAfterAllThreadsAreDestroyedProc;
   finally
     FCriticalSection.Leave;
   end;
@@ -681,10 +700,17 @@ begin
   if Count > 0 then
     Exit;
 
-  Proc := AfterFinishProc;
+  Proc := AfterAllThreadsAreDestroyedProc;
+
+  if Assigned(FOnAllThreadsAreDestroyed) then
+    FOnAllThreadsAreDestroyed(Self)
+  else
+  if Assigned(FOnAllThreadsAreDestroyedRef) then
+    FOnAllThreadsAreDestroyedRef;
+
   if Assigned(Proc) then
   begin
-    AfterFinishProc := nil;
+    AfterAllThreadsAreDestroyedProc := nil;
 
     TThread.ForceQueue(nil,
       procedure
@@ -692,12 +718,21 @@ begin
         Proc;
       end);
   end;
-
-  if Assigned(FOnFinishAllThreads) then
-    FOnFinishAllThreads(Self);
 end;
 
-procedure TThreadFactory.TerminateAllThreads;
+procedure TThreadFactory.SetOnAllThreadsAreDestroyed(const ANotifyEvent: TNotifyEvent);
+begin
+  FOnAllThreadsAreDestroyedRef := nil;
+  FOnAllThreadsAreDestroyed := ANotifyEvent;
+end;
+
+procedure TThreadFactory.SetOnAllThreadsAreDestroyedRef(const ANotifyEventRef: TNotifyEventRef);
+begin
+  FOnAllThreadsAreDestroyed := nil;
+  FOnAllThreadsAreDestroyedRef := ANotifyEventRef;
+end;
+
+procedure TThreadFactory.SetTerminateAllThreads;
 var
   i: Word;
   Thread: TThreadExt;
@@ -714,20 +749,9 @@ begin
   end;
 end;
 
-procedure TThreadFactory.FinishAllThreads(const AAfterFinishProc: TProc);
+procedure TThreadFactory.TerminateAllThreads;
 begin
-  AfterFinishProc := AAfterFinishProc;
-
-  TerminateAllThreads;
-
-  CheckThreadZeroCount;
-end;
-
-// Проверяем здесь количество нитей в WaitForAllThreadsAreFinished
-// На тот случай, если не было создано ни одной нити
-procedure TThreadFactory.WaitForAllThreadsAreFinished(const AAfterFinishProc: TProc);
-begin
-  AfterFinishProc := AAfterFinishProc;
+  SetTerminateAllThreads;
 
   CheckThreadZeroCount;
 end;

@@ -1,3 +1,4 @@
+п»ї{0.0}
 unit ThreadFactoryRegistryUnit;
 
 interface
@@ -13,16 +14,15 @@ type
     FOnDestroyedAllFactories: TNotifyEvent;
 
     procedure OnDestroyFactoryHandler(Sender: TObject);
-
-    procedure OnFinishAllThreadsHandler(Sender: TObject);
+    procedure OnAllThreadsAreDestroyedHandler(Sender: TObject);
 
     procedure CheckThreadFactoryZeroCount;
   private
   public
     function CreateThreadFactory: TThreadFactory;
-    // Финишируем все фабрики нитей
-    // Т.е. для всех фабрик вызывает финишер всех нитей
-    procedure FinishAllThreadFactories;
+    // Р¤РёРЅРёС€РёСЂСѓРµРј РІСЃРµ С„Р°Р±СЂРёРєРё РЅРёС‚РµР№
+    // Рў.Рµ. РґР»СЏ РІСЃРµС… С„Р°Р±СЂРёРє РІС‹Р·С‹РІР°РµС‚ С„РёРЅРёС€РµСЂ РІСЃРµС… РЅРёС‚РµР№
+    procedure DestroyAllThreadFactories;
 
     property OnDestroyedAllFactories: TNotifyEvent
       read FOnDestroyedAllFactories write FOnDestroyedAllFactories;
@@ -54,12 +54,12 @@ begin
   CheckThreadFactoryZeroCount;
 end;
 
-procedure TThreadFactoryRegistry.OnFinishAllThreadsHandler(Sender: TObject);
+procedure TThreadFactoryRegistry.OnAllThreadsAreDestroyedHandler(Sender: TObject);
 begin
   Sender.Free;
 end;
 
-procedure TThreadFactoryRegistry.FinishAllThreadFactories;
+procedure TThreadFactoryRegistry.DestroyAllThreadFactories;
 var
   i: Word;
   ThreadFactory: TThreadFactory;
@@ -70,10 +70,14 @@ begin
     Dec(i);
 
     ThreadFactory := ObjectByIndex(i);
-    // Назначим / переназначим OnFinishAllThreads,
-    // Возможно он использовался при работе с нитью
-    ThreadFactory.OnFinishAllThreads := OnFinishAllThreadsHandler;
-    ThreadFactory.FinishAllThreads(nil);
+    // РќР°Р·РЅР°С‡РёРј / РїРµСЂРµРЅР°Р·РЅР°С‡РёРј OnAllThreadsAreDestroyedRef, AfterAllThreadsAreDestroyedProc
+    // Р’РѕР·РјРѕР¶РЅРѕ РѕРЅ РёСЃРїРѕР»СЊР·РѕРІР°Р»СЃСЏ РїСЂРё СЂР°Р±РѕС‚Рµ СЃ РЅРёС‚СЊСЋ
+    // РџРµСЂРµРЅР°Р·РЅР°С‡Р°РµРј OnAllThreadsAreDestroyedHandler
+    ThreadFactory.OnAllThreadsAreDestroyedRef := nil;
+    ThreadFactory.AfterAllThreadsAreDestroyedProc := nil;
+    ThreadFactory.OnAllThreadsAreDestroyed := OnAllThreadsAreDestroyedHandler;
+
+    ThreadFactory.TerminateAllThreads;
   end;
 
   CheckThreadFactoryZeroCount;

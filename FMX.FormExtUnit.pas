@@ -71,7 +71,9 @@ begin
   inherited OnClose := OnCloseInternalHandler;
 
   FThreadFactoryRegistry := TThreadFactoryRegistry.Create;
-  FThreadFactoryRegistry.OnDestroyedAllFactories := OnDestroyedAllFactoryHandler;
+  // Событие должно назначаться при закрытии формы,
+  // Иначе форма начнет закрываться, как только реестр опустеет
+  // FThreadFactoryRegistry.OnDestroyedAllFactories := OnDestroyedAllFactoryHandler;
   FThreadFactory := TThreadFactory.Create;
 
   PCloseQueryMethodAddr := Self.MethodAddress('FormCloseQuery');
@@ -105,11 +107,14 @@ begin
 
   inherited OnCloseQuery := nil;
 
-  FThreadFactory.FinishAllThreads(
+  FThreadFactory.OnAllThreadsAreDestroyedRef := (
     procedure
     begin
-      FThreadFactoryRegistry.FinishAllThreadFactories;
+      FThreadFactoryRegistry.OnDestroyedAllFactories := OnDestroyedAllFactoryHandler;
+      FThreadFactoryRegistry.DestroyAllThreadFactories;
     end);
+
+  FThreadFactory.TerminateAllThreads;
 
 //    procedure
 //    begin
