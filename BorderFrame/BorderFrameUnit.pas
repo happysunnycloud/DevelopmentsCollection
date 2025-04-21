@@ -1,4 +1,5 @@
-﻿{0.3}
+﻿{0.4}
+
 unit BorderFrameUnit;
 
 interface
@@ -105,6 +106,7 @@ implementation
 uses
     Winapi.Windows
   , FMX.Platform.Win
+  , FMX.ImageToolsUnit
   ;
 
 procedure MouseLeaveControl(
@@ -201,9 +203,9 @@ begin
   AContentLayout.Margins.Top := BORDER_OFFSET;
   AContentLayout.Margins.Bottom := BORDER_OFFSET;
 
-  TopBorderRectangle.Fill.Color := ACaptionColor;
-  CaptionRectangle.Fill.Color := ACaptionColor;
-  UnderCaptionRectangle.Fill.Color := ACaptionColor;
+  TopBorderRectangle.Fill.Color := ABorderColor;
+  CaptionRectangle.Fill.Color := ABorderColor;
+  UnderCaptionRectangle.Fill.Color := ABorderColor;
 
   LeftBorderRectangle.Fill.Color := ABorderColor;
   RightBorderRectangle.Fill.Color := ABorderColor;
@@ -214,6 +216,17 @@ begin
 
   CaptionText.Text := ACaption;
   CaptionText.OnMouseMove := CaptionLayoutMouseMove;
+  CaptionText.TextSettings.FontColor := ACaptionColor;
+
+  TImageTools.ReplaceColor(
+    CloseButtonRectangle.Fill.Bitmap.Bitmap,
+    TAlphaColorRec.White,
+    ACaptionColor);
+
+  TImageTools.ReplaceColor(
+    RolldownButtonRectangle.Fill.Bitmap.Bitmap,
+    TAlphaColorRec.White,
+    ACaptionColor);
 
   CaptionLayout.BringToFront;
   BottomLayout.BringToFront;
