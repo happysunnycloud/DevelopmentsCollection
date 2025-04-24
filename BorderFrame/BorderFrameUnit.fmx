@@ -4,10 +4,13 @@ object BorderFrame: TBorderFrame
   Size.PlatformDefault = False
   object TopLayout: TLayout
     Align = Top
+    HitTest = True
     Size.Width = 368.000000000000000000
     Size.Height = 5.000000000000000000
     Size.PlatformDefault = False
     TabOrder = 0
+    OnMouseMove = TopLayoutMouseMove
+    OnMouseEnter = TopLayoutMouseEnter
     object RightTopLayout: TLayout
       Align = Right
       HitTest = True
@@ -41,11 +44,14 @@ object BorderFrame: TBorderFrame
   end
   object BottomLayout: TLayout
     Align = Bottom
+    HitTest = True
     Position.Y = 303.000000000000000000
     Size.Width = 368.000000000000000000
     Size.Height = 5.000000000000000000
     Size.PlatformDefault = False
     TabOrder = 2
+    OnMouseMove = BottomLayoutMouseMove
+    OnMouseEnter = BottomLayoutMouseEnter
     object BottomBorderRectangle: TRectangle
       Align = Contents
       Fill.Color = claCornflowerblue
@@ -102,14 +108,25 @@ object BorderFrame: TBorderFrame
     Size.Height = 278.000000000000000000
     Size.PlatformDefault = False
     TabOrder = 5
+    object ContentBackgroundRectangle: TRectangle
+      Align = Contents
+      Size.Width = 358.000000000000000000
+      Size.Height = 278.000000000000000000
+      Size.PlatformDefault = False
+      Stroke.Kind = None
+      Stroke.Thickness = 0.000000000000000000
+    end
   end
   object LeftLayout: TLayout
     Align = Left
+    HitTest = True
     Position.Y = 25.000000000000000000
     Size.Width = 5.000000000000000000
     Size.Height = 278.000000000000000000
     Size.PlatformDefault = False
     TabOrder = 3
+    OnMouseMove = LeftLayoutMouseMove
+    OnMouseEnter = LeftLayoutMouseEnter
     object LeftBorderRectangle: TRectangle
       Align = Contents
       Fill.Color = claCornflowerblue
@@ -122,12 +139,15 @@ object BorderFrame: TBorderFrame
   end
   object RightLayout: TLayout
     Align = Right
+    HitTest = True
     Position.X = 363.000000000000000000
     Position.Y = 25.000000000000000000
     Size.Width = 5.000000000000000000
     Size.Height = 278.000000000000000000
     Size.PlatformDefault = False
     TabOrder = 1
+    OnMouseMove = RightLayoutMouseMove
+    OnMouseEnter = RightLayoutMouseEnter
     object RightBorderRectangle: TRectangle
       Align = Contents
       Fill.Color = claCornflowerblue
@@ -248,10 +268,9 @@ object BorderFrame: TBorderFrame
         Fill.Bitmap.Bitmap.PNG = {
           89504E470D0A1A0A0000000D494844520000000F0000000F08060000003BD695
           4A000000017352474200AECE1CE90000000467414D410000B18F0BFC61050000
-          002F49444154384F63601805A360D0024606060686FFFFFFFF47972004181919
-          1999A0EC8F687244018A6C4617230900002DE808F6F17B6AB60000000049454E
-          44AE426082}
-        Fill.Bitmap.WrapMode = TileOriginal
+          002A49444154384F63601805A360D0024606060686FFFFFFFF47972004181919
+          1999D00549011469A6080000BC460406236736190000000049454E44AE426082}
+        Fill.Bitmap.WrapMode = Tile
         Fill.Kind = Bitmap
         Size.Width = 15.000000000000000000
         Size.Height = 15.000000000000000000
