@@ -38,8 +38,6 @@ type
     ForegroundRolldownButtonRectangle: TRectangle;
     BackgroundRolldownButtonRectangle: TRectangle;
     ContentBackgroundRectangle: TRectangle;
-    Label1: TLabel;
-    Label2: TLabel;
     procedure RightBottomLayoutMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Single);
     procedure LeftBottomLayoutMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Single);
     procedure RightTopLayoutMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Single);
