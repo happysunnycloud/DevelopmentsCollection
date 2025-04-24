@@ -7,7 +7,7 @@ uses
   System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
   FMX.Types, FMX.Graphics, FMX.Controls, FMX.Forms, FMX.Dialogs, FMX.StdCtrls,
   FMX.Layouts, FMX.Objects, FMX.Effects,
-  FMX.TrayIcon.Win;
+  FMX.TrayIcon.Win, FMX.Controls.Presentation;
 
 type
   TBorderFrame = class(TFrame)
@@ -38,6 +38,8 @@ type
     ForegroundRolldownButtonRectangle: TRectangle;
     BackgroundRolldownButtonRectangle: TRectangle;
     ContentBackgroundRectangle: TRectangle;
+    Label1: TLabel;
+    Label2: TLabel;
     procedure RightBottomLayoutMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Single);
     procedure LeftBottomLayoutMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Single);
     procedure RightTopLayoutMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Single);
@@ -77,6 +79,8 @@ type
     FTrayIcon: TCustomTrayIcon;
     FTrayIconMouseRightButtonDown: TMouseEvent;
     FTrayIconMouseLeftButtonDown: TMouseEvent;
+
+    //FLastTopValue: Integer;
 
     function GetCaption: TText;
     function GetTrayIcon: TCustomTrayIcon;
@@ -347,11 +351,15 @@ begin
   if not FIsMouseDown then
     Exit;
 
-  YDelta := Round(Y - fStartY);
+  YDelta := Trunc(Y - fStartY);
 
   if TForm(Owner).Height + YDelta >= FMinHeight then
   begin
     TForm(Owner).Height := TForm(Owner).Height + YDelta;
+  end
+  else
+  begin
+    TForm(Owner).Height := FMinHeight;
   end;
 end;
 
@@ -398,8 +406,8 @@ begin
   if not fIsMouseDown then
     Exit;
 
-  XDelta := Round(X - FStartX);
-  YDelta := Round(Y - FStartY);
+  XDelta := Trunc(X - FStartX);
+  YDelta := Trunc(Y - FStartY);
 
   TForm(Owner).Left := TForm(Owner).Left + XDelta;
   TForm(Owner).Top := TForm(Owner).Top + YDelta;
@@ -413,19 +421,29 @@ begin
   if not FIsMouseDown then
     Exit;
 
-  XDelta := Round(X - FStartX);
-  YDelta := Round(Y - FStartY);
+  XDelta := Trunc(X - FStartX);
+  YDelta := Trunc(Y - FStartY);
 
   if TForm(Owner).Width - XDelta >= FMinWidth then
   begin
     TForm(Owner).Width := TForm(Owner).Width - XDelta;
     TForm(Owner).Left := TForm(Owner).Left + XDelta;
+  end
+  else
+  begin
+    TForm(Owner).Left := TForm(Owner).Left + TForm(Owner).Width - FMinWidth;
+    TForm(Owner).Width := FMinWidth;
   end;
 
   if TForm(Owner).Height - YDelta >= FMinHeight then
   begin
     TForm(Owner).Top := TForm(Owner).Top + YDelta;
     TForm(Owner).Height := TForm(Owner).Height - YDelta;
+  end
+  else
+  begin
+    TForm(Owner).Top := TForm(Owner).Top + (TForm(Owner).Height - FMinHeight);
+    TForm(Owner).Height := FMinHeight;
   end;
 end;
 
@@ -437,18 +455,27 @@ begin
   if not FIsMouseDown then
     Exit;
 
-  XDelta := Round(X - FStartX);
-  YDelta := Round(Y - FStartY);
+  XDelta := Trunc(X - FStartX);
+  YDelta := Trunc(Y - FStartY);
 
   if TForm(Owner).Width + XDelta >= FMinWidth then
   begin
     TForm(Owner).Width := TForm(Owner).Width + XDelta;
+  end
+  else
+  begin
+    TForm(Owner).Width := FMinWidth;
   end;
 
   if TForm(Owner).Height - YDelta >= FMinHeight then
   begin
     TForm(Owner).Top := TForm(Owner).Top + YDelta;
     TForm(Owner).Height := TForm(Owner).Height - YDelta;
+  end
+  else
+  begin
+    TForm(Owner).Top := TForm(Owner).Top + (TForm(Owner).Height - FMinHeight);
+    TForm(Owner).Height := FMinHeight;
   end;
 end;
 
@@ -460,18 +487,27 @@ begin
   if not FIsMouseDown then
     Exit;
 
-  XDelta := Round(X - fStartX);
-  YDelta := Round(Y - fStartY);
+  XDelta := Trunc(X - FStartX);
+  YDelta := Trunc(Y - FStartY);
 
   if TForm(Owner).Width - XDelta >= FMinWidth then
   begin
     TForm(Owner).Left := TForm(Owner).Left + XDelta;
     TForm(Owner).Width := TForm(Owner).Width - XDelta;
+  end
+  else
+  begin
+    TForm(Owner).Left := TForm(Owner).Left + TForm(Owner).Width - FMinWidth;
+    TForm(Owner).Width := FMinWidth;
   end;
 
   if TForm(Owner).Height + YDelta >= FMinHeight then
   begin
     TForm(Owner).Height := TForm(Owner).Height + YDelta;
+  end
+  else
+  begin
+    TForm(Owner).Height := FMinHeight;
   end;
 end;
 
@@ -488,12 +524,17 @@ begin
   if not FIsMouseDown then
     Exit;
 
-  XDelta := Round(X - FStartX);
+  XDelta := Trunc(X - FStartX);
 
   if TForm(Owner).Width - XDelta >= FMinWidth then
   begin
     TForm(Owner).Width := TForm(Owner).Width - XDelta;
     TForm(Owner).Left := TForm(Owner).Left + XDelta;
+  end
+  else
+  begin
+    TForm(Owner).Left := TForm(Owner).Left + TForm(Owner).Width - FMinWidth;
+    TForm(Owner).Width := FMinWidth;
   end;
 end;
 
@@ -505,17 +546,25 @@ begin
   if not fIsMouseDown then
     Exit;
 
-  XDelta := Round(X - FStartX);
-  YDelta := Round(Y - FStartY);
+  XDelta := Trunc(X - FStartX);
+  YDelta := Trunc(Y - FStartY);
 
   if TForm(Owner).Width + XDelta >= FMinWidth then
   begin
     TForm(Owner).Width := TForm(Owner).Width + XDelta;
+  end
+  else
+  begin
+    TForm(Owner).Width := FMinWidth;
   end;
 
   if TForm(Owner).Height + YDelta >= FMinHeight then
   begin
     TForm(Owner).Height := TForm(Owner).Height + YDelta;
+  end
+  else
+  begin
+    TForm(Owner).Height := FMinHeight;
   end;
 end;
 
@@ -532,11 +581,37 @@ begin
   if not FIsMouseDown then
     Exit;
 
-  XDelta := Round(X - FStartX);
+  XDelta := Trunc(X - FStartX);
 
   if TForm(Owner).Width + XDelta >= FMinWidth then
   begin
     TForm(Owner).Width := TForm(Owner).Width + XDelta;
+  end
+  else
+  begin
+    TForm(Owner).Width := FMinWidth;
+  end;
+end;
+
+procedure TBorderFrame.TopLayoutMouseMove(Sender: TObject; Shift: TShiftState;
+  X, Y: Single);
+var
+  YDelta: Integer;
+begin
+  if not FIsMouseDown then
+    Exit;
+
+  YDelta := Trunc(Y - FStartY);
+
+  if TForm(Owner).Height - YDelta >= FMinHeight then
+  begin
+    TForm(Owner).Top := TForm(Owner).Top + YDelta;
+    TForm(Owner).Height := TForm(Owner).Height - YDelta;
+  end
+  else
+  begin
+    TForm(Owner).Top := TForm(Owner).Top + (TForm(Owner).Height - FMinHeight);
+    TForm(Owner).Height := FMinHeight;
   end;
 end;
 
@@ -608,23 +683,6 @@ end;
 procedure TBorderFrame.TopLayoutMouseEnter(Sender: TObject);
 begin
   Cursor := crSizeNS;
-end;
-
-procedure TBorderFrame.TopLayoutMouseMove(Sender: TObject; Shift: TShiftState;
-  X, Y: Single);
-var
-  YDelta: Integer;
-begin
-  if not FIsMouseDown then
-    Exit;
-
-  YDelta := Round(Y - FStartY);
-
-  if TForm(Owner).Height - YDelta >= FMinHeight then
-  begin
-    TForm(Owner).Top := TForm(Owner).Top + YDelta;
-    TForm(Owner).Height := TForm(Owner).Height - YDelta;
-  end;
 end;
 
 procedure TBorderFrame.SetMinHeight(const AMinHeight: Integer);
