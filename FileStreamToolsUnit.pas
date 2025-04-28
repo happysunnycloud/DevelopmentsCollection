@@ -16,12 +16,16 @@ type
 
     function WriteString(
       const AVal: String): Int64;
+    function WriteByte(
+      const AVal: Byte): Int64;
     function WriteWord(
       const AVal: Word): Int64;
     function WriteInteger(
       const AVal: Integer): Int64;
     function WriteInt64(
       const AVal: Int64): Int64;
+    function WriteUInt32(
+      const AVal: UInt32): UInt32;
     function WriteBoolean(
       const AVal: Boolean): Int64;
 
@@ -34,9 +38,11 @@ type
     destructor Destroy; override;
 
     function ReadAsString: String;
+    function ReadAsByte: Byte;
     function ReadAsWord: Word;
     function ReadAsInteger: Integer;
     function ReadAsInt64: Int64;
+    function ReadAsUInt32: UInt32;
     function ReadAsBoolean: Boolean;
 
     function Write(
@@ -99,6 +105,13 @@ begin
   FFileStream.Read(Result[1], SizeOf(Char) * Len);
 end;
 
+function TFileStreamTools.ReadAsByte: Byte;
+begin
+  CheckCorrect(ReadValType, varByte);
+
+  FFileStream.Read(Result, SizeOf(Byte));
+end;
+
 function TFileStreamTools.ReadAsWord: Word;
 begin
   CheckCorrect(ReadValType, varWord);
@@ -120,6 +133,13 @@ begin
   FFileStream.Read(Result, SizeOf(Int64));
 end;
 
+function TFileStreamTools.ReadAsUInt32: UInt32;
+begin
+  CheckCorrect(ReadValType, varUInt32);
+
+  FFileStream.Read(Result, SizeOf(UInt32));
+end;
+
 function TFileStreamTools.ReadAsBoolean: Boolean;
 begin
   CheckCorrect(ReadValType, varBoolean);
@@ -135,6 +155,14 @@ begin
   Len := AVal.Length;
   FFileStream.Write(Len, SizeOf(Cardinal));
   FFileStream.Write(AVal[1], SizeOf(Char) * Len);
+
+  Result := GetPosition;
+end;
+
+function TFileStreamTools.WriteByte(
+  const AVal: Byte): Int64;
+begin
+  FFileStream.Write(AVal, SizeOf(Byte));
 
   Result := GetPosition;
 end;
@@ -163,6 +191,14 @@ begin
   Result := GetPosition;
 end;
 
+function TFileStreamTools.WriteUInt32(
+  const AVal: UInt32): UInt32;
+begin
+  FFileStream.Write(AVal, SizeOf(UInt32));
+
+  Result := GetPosition;
+end;
+
 function TFileStreamTools.WriteBoolean(
   const AVal: Boolean): Int64;
 begin
@@ -187,6 +223,10 @@ begin
     begin
       WriteWord(AVal);
     end;
+    varByte:
+    begin
+      WriteByte(AVal);
+    end;
     varInteger:
     begin
       WriteInteger(AVal);
@@ -195,6 +235,8 @@ begin
     begin
       WriteInt64(AVal);
     end;
+    varUInt32:
+      WriteUInt32(AVal);
     varBoolean:
     begin
       WriteBoolean(AVal);
