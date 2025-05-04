@@ -47,7 +47,6 @@ type
   TPopupMenuExt = class(TComponent)
   strict private
     FItems: TItems;
-    FPopupForm: TFormExt;
     FPopupMenuThread: TPopupMenuExtThread;
     FDoneEvent: TEvent;
     /// <summary>
@@ -71,7 +70,6 @@ type
       const AForm: TFormExt;
       const AStepDirection: TStepDirection);
   private
-    procedure OnTimerHandler(Sender: TObject);
   public
     constructor Create; reintroduce;
     destructor Destroy; override;
@@ -453,39 +451,11 @@ begin
   end;
 end;
 
-procedure TPopupMenuExt.OnTimerHandler(Sender: TObject);
-var
- i:integer;
- p:TPoint;
- myCursorPos: TPoint;
- Control: TControl;
-begin
- if FPopupForm = nil then
-  Exit;
- OutputDebugString('Start');
- GetCursorPos(myCursorPos);
- for i:=0 to FPopupForm.ComponentCount-1 do
- begin
-  if not (FPopupForm.Components[i] is TControl) then Continue;
-  Control := TControl(FPopupForm.Components[i]);
-  p := FPopupForm.ScreenToClient(myCursorPos).Round;
-//  if PtInRect(Control.BoundsRect.Round, p) then
-//  if
-//    (myCursorPos.X>=p.X)and(myCursorPos.Y>=p.Y) and
-//    (myCursorPos.X<=(p.X+Width))and(myCursorPos.Y<=(p.Y+Height)) then
-  begin
-    OutputDebugString(pwidechar('ClassName -> ' + Control.ClassName + '|' + 'Name -> ' + Control.Name));
-  end
- end;
- OutputDebugString('Finish');
-end;
-
 constructor TPopupMenuExt.Create;
 var
   Timer: TTimer;
 begin
   FItems := TItems.Create;
-  FPopupForm := nil;
   FPopupMenuThread := nil;
   FDoneEvent := TEvent.Create(nil, true, false, '', false);
   FToDoClose := false;
@@ -493,7 +463,6 @@ begin
   Timer := TTimer.Create(Self);
   Timer.Interval := 1000;
   Timer.Enabled := true;
-  Timer.OnTimer := OnTimerHandler;
 end;
 
 destructor TPopupMenuExt.Destroy;
@@ -585,6 +554,7 @@ var
   MaxTextWidth: Single;
   ItemHeight: Word;
   PopupFormWidth: Integer;
+  PopupForm: TFormExt;
   OpenedForm: TFormExt;
 begin
   if not Assigned(AParentItem) then
@@ -602,12 +572,12 @@ begin
 
   FDoneEvent.ResetEvent;
 
-  FPopupForm := TFormExt.CreateNew(Self);
-  FPopupForm.BorderStyle := TFmxFormBorderStyle.None;
-  FPopupForm.Left := Trunc(X);
-  FPopupForm.Top := Trunc(Y);
-  FPopupForm.Height := 100;
-  FPopupForm.Show;
+  PopupForm := TFormExt.CreateNew(Self);
+  PopupForm.BorderStyle := TFmxFormBorderStyle.None;
+  PopupForm.Left := Trunc(X);
+  PopupForm.Top := Trunc(Y);
+  PopupForm.Height := 100;
+  PopupForm.Show;
 
   PopupFormWidth := 0;
   ItemHeight := 30;
@@ -616,8 +586,8 @@ begin
   ItemsByParent := TItems.Create;
   FItems.GetItemsByParent(AParentItem, ItemsByParent);
   try
-    BackgroundRectangle := TRectangle.Create(FPopupForm);
-    BackgroundRectangle.Parent := FPopupForm;
+    BackgroundRectangle := TRectangle.Create(PopupForm);
+    BackgroundRectangle.Parent := PopupForm;
     BackgroundRectangle.Align := TAlignLayout.Client;
     BackgroundRectangle.Stroke.Thickness := 0;
     BackgroundRectangle.Stroke.Kind := TBrushKind.None;
@@ -628,7 +598,7 @@ begin
 
     for Item in ItemsByParent do
     begin
-      Item.FormOwner := FPopupForm;
+      Item.FormOwner := PopupForm;
 
       Layout := TLayout.Create(BackgroundRectangle);
       Layout.Parent := BackgroundRectangle;
@@ -699,17 +669,17 @@ begin
       Inc(ItemCount);
     end;
 
-    FPopupForm.Width := PopupFormWidth;
+    PopupForm.Width := PopupFormWidth;
   finally
     FreeAndNil(ItemsByParent);
   end;
 
-  FPopupForm.Height := ItemCount * ItemHeight;
-  FPopupForm.ParentItem := AParentItem;
-  TaskBarPositionDelta(FPopupForm);
-  SetForegroundWindow(FmxHandleToHWND(FPopupForm.Handle));
+  PopupForm.Height := ItemCount * ItemHeight;
+  PopupForm.ParentItem := AParentItem;
+  TaskBarPositionDelta(PopupForm);
+  SetForegroundWindow(FmxHandleToHWND(PopupForm.Handle));
 
-  StartPopupMenuThread(FPopupForm, sdForward);
+  StartPopupMenuThread(PopupForm, sdForward);
 end;
 
 procedure TPopupMenuExt.StartPopupMenuThread(
@@ -720,7 +690,6 @@ begin
   FPopupMenuThread.FreeOnTerminate := true;
   FPopupMenuThread.OnTerminate := OnTerminatePopupMenuThreadHandler;
   FPopupMenuThread.Start;
-  FPopupMenuThread.FormOwner := FPopupForm;
 end;
 
 end.
