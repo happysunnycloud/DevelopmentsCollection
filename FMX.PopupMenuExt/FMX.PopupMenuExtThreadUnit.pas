@@ -1,4 +1,6 @@
-﻿unit FMX.PopupMenuExtThreadUnit;
+﻿//{$UnDef MSWINDOWS}
+//{$Define ANDROID}
+unit FMX.PopupMenuExtThreadUnit;
 
 interface
 
@@ -18,15 +20,23 @@ type
     FForm: TFormExt;
     FStepDirection: TStepDirection;
     FDoneEvent: TEvent;
+    FCountDown: Integer;
 
     FTimeIsOutFixed: Boolean;
     FClickFixed: Boolean;
+    FGoBackClickFixed: Boolean;
     FClickedItem: TObject;
 
     FFormOwner: TFormExt;
 
     procedure SetClickedItem(const AClickedItem: TObject);
     function GetClickedItem: TObject;
+
+    procedure SetGoBackClickeFixed(const AGoBackClickFixed: Boolean);
+    function GetGoBackClickeFixed: Boolean;
+
+    procedure SetCountDown(const ACountDown: Integer);
+    function GetCountDown: Integer;
   protected
     procedure Execute; override;
   public
@@ -40,16 +50,21 @@ type
 
     property TimeIsOutFixed: Boolean read FTimeIsOutFixed;
     property ClickFixed: Boolean read FClickFixed;
+    property GoBackClickFixed: Boolean
+      read GetGoBackClickeFixed write SetGoBackClickeFixed;
     property Form: TFormExt read FForm;
     property ClickedItem: TObject read GetClickedItem write SetClickedItem;
     property FormOwner: TFormExt read FFormOwner write FFormOwner;
+    property CountDown: Integer read GetCountDown write SetCountDown;
   end;
 
 implementation
 
 uses
     System.Types
+  {$IFDEF MSWINDOWS}
   , Winapi.Windows
+  {$ENDIF}
   ;
 
 { TPopupMenuExtThread }
@@ -65,8 +80,14 @@ begin
   FDoneEvent := TEvent.Create(nil, true, false, '', false);
   FTimeIsOutFixed := false;
   FClickFixed := false;
+  FGoBackClickFixed := false;
   FClickedItem := nil;
   FFormOwner := nil;
+
+  if FStepDirection = sdForward then
+    FCountDown := 600
+  else
+    FCountDown := 200;
 
   inherited Create(ASuspended);
 end;
@@ -104,8 +125,48 @@ begin
   end;
 end;
 
-procedure TPopupMenuExtThread.Execute;
+procedure TPopupMenuExtThread.SetGoBackClickeFixed(const AGoBackClickFixed: Boolean);
+begin
+  FCriticalSection.Enter;
+  try
+    FGoBackClickFixed := AGoBackClickFixed;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
 
+function TPopupMenuExtThread.GetGoBackClickeFixed: Boolean;
+begin
+  FCriticalSection.Enter;
+  try
+    Result := FGoBackClickFixed;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
+procedure TPopupMenuExtThread.SetCountDown(const ACountDown: Integer);
+begin
+  FCriticalSection.Enter;
+  try
+    FCountDown := ACountDown;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
+function TPopupMenuExtThread.GetCountDown: Integer;
+begin
+  FCriticalSection.Enter;
+  try
+    Result := FCountDown;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
+procedure TPopupMenuExtThread.Execute;
+  {$IFDEF MSWINDOWS}
   function _IsMouseOverForm(const AForm: TFormExt): Boolean;
   var
     Point: TPoint;
@@ -127,21 +188,25 @@ procedure TPopupMenuExtThread.Execute;
         Result := true;
       end;
   end;
+  {$ENDIF}
 
+  procedure TimeIsOut;
+  begin
+    Terminate;
+
+    FTimeIsOutFixed := true;
+  end;
+{$IFDEF MSWINDOWS}
 var
   i: Integer;
-  CountDown: Integer;
+{$ENDIF}
 begin
   FDoneEvent.ResetEvent;
 
   if FStepDirection = sdForward then
-  begin
-    CountDown := 600;
     Sleep(400);
-  end
-  else
-    CountDown := 200;
 
+  {$IFDEF MSWINDOWS}
   while not Terminated and not Assigned(ClickedItem) do
   begin
     if not _IsMouseOverForm(FForm) then
@@ -154,18 +219,55 @@ begin
         Dec(i, 100);
 
         if i < 0 then
-        begin
-          Terminate;
-
-          FTimeIsOutFixed := true;
-        end;
+          TimeIsOut;
       end;
     end
     else
-    begin
       Sleep(100);
-    end;
   end;
+  {$ELSE IFDEF ANDROID}
+  while not Terminated and not Assigned(ClickedItem) do
+  begin
+    // В данном случае обратный отсчет может быть сброшен кнопкой закрытия меню
+    // Эта кнопка доступна при сборке под Андроид
+    if GoBackClickFixed then
+      TimeIsOut
+    else
+      Sleep(100);
+//    if CountDown = 0 then
+//      TimeIsOut
+//    else
+//      Sleep(100);
+  end;
+  {$ENDIF}
+
+//  while not Terminated and not Assigned(ClickedItem) do
+//  begin
+//    {$IFDEF MSWINDOWS}
+//    if not _IsMouseOverForm(FForm) then
+//    begin
+//      i := CountDown;
+//      while not Terminated and not _IsMouseOverForm(FForm) and not Assigned(ClickedItem) do
+//      begin
+//        Sleep(100);
+//
+//        Dec(i, 100);
+//
+//        if i < 0 then
+//          TimeIsOut;
+//      end;
+//    end
+//    else
+//    {$ENDIF}
+//    begin
+//      // В данном случае обратный отсчет может быть сброшен кнопкой закрытия меню
+//      // Эта кнопка доступна при сборке под Андроид
+//      if CountDown = 0 then
+//        TimeIsOut
+//      else
+//        Sleep(100);
+//    end;
+//  end;
 
   if Assigned(ClickedItem) then
     FClickFixed := true;

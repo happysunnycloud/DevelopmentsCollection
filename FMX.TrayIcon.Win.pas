@@ -4,8 +4,8 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.UITypes,
-  Winapi.ShellAPI, Winapi.Windows, Winapi.Messages,
-  FMX.Types, FMX.Menus, FMX.Forms, FMX.Platform.Win;
+  FMX.Types, FMX.Menus, FMX.Forms, Winapi.ShellAPI, Winapi.Windows,
+  Winapi.Messages, FMX.Platform.Win;
 
 const
   WM_SYSTEM_TRAY_MESSAGE = WM_USER + 1;

@@ -1,4 +1,6 @@
-﻿unit FMX.PopupMenuExtUnit;
+﻿//{$UnDef MSWINDOWS}
+//{$Define ANDROID}
+unit FMX.PopupMenuExtUnit;
 
 interface
 
@@ -48,7 +50,7 @@ type
   strict private
     FItems: TItems;
     FPopupMenuThread: TPopupMenuExtThread;
-    FDoneEvent: TEvent;
+//    FDoneEvent: TEvent;
     /// <summary>
     ///   Выставляется в случае закрытия всего приложения
     ///   При выставленном флаге, сворачиваем работу меню
@@ -62,7 +64,9 @@ type
     procedure OnItemClickHandler(Sender: TObject);
 
     procedure OnTerminatePopupMenuThreadHandler(Sender: TObject);
-
+    {$IFDEF ANDROID}
+    procedure OnAndroidGoBackButtonClickHandler(Sender: TObject);
+    {$ENDIF}
     procedure TimeIsOutFixed(const AForm: TFormExt);
     procedure ItemClickFixed(const ASender: TObject);
 
@@ -71,7 +75,7 @@ type
       const AStepDirection: TStepDirection);
   private
   public
-    constructor Create; reintroduce;
+    constructor Create(Owner: TComponent); reintroduce;
     destructor Destroy; override;
 
     procedure Add(const AItem: TItem);
@@ -84,17 +88,25 @@ type
 implementation
 
 uses
-    System.SysUtils
-  , System.UITypes
-  , Winapi.Windows
+  {$IFDEF MSWINDOWS}
+    Winapi.Windows
   , Winapi.ShellAPI
+  , FMX.Platform.Win,
+  {$ELSE IFDEF ANDROID}
+    FMX.StdCtrls,
+  {$ENDIF}
+    System.SysUtils
+  , System.Types
+  , System.UITypes
   , FMX.Graphics
   , FMX.Layouts
   , FMX.Types
   , FMX.Objects
   , FMX.Forms
   , FMX.Controls
-  , FMX.Platform.Win
+  //asd debug delete after debug
+  , FMX.Dialogs
+  //asd debug
   ;
 
 type
@@ -114,6 +126,17 @@ type
     property ItemOwner: TItem read GetParentItem write SetParentItem;
   end;
 
+procedure GetCurPos(var APoint: TPoint);
+begin
+  {$IFDEF MSWINDOWS}
+  GetCursorPos(APoint);
+  {$ELSE IFDEF ANDROID}
+  APoint.X := 0;
+  APoint.Y := 0;
+  {$ENDIF}
+end;
+
+{$IFDEF MSWINDOWS}
 // Находит положение панели задач
 // ARect - координаты, результат - положение
 function FindTaskBarPos(var ARect: TRect; var AAutoHide: Boolean): Integer;
@@ -229,6 +252,7 @@ begin
   if AForm.Left + AForm.Width > Screen.Width then
     AForm.Left := ParentForm.Left - AForm.Width;
 end;
+{$ENDIF}
 
 { TFormExtHelper }
 
@@ -384,7 +408,16 @@ begin
   if PopupMenuThread.ClickFixed then
     ItemClickFixed(PopupMenuThread.ClickedItem);
 end;
-
+{$IFDEF ANDROID}
+procedure TPopupMenuExt.OnAndroidGoBackButtonClickHandler(Sender: TObject);
+begin
+  ShowMessage('Go back clicked');
+  if Assigned(FPopupMenuThread) then
+    FPopupMenuThread.GoBackClickFixed := true;
+//  if Assigned(FPopupMenuThread) then
+//    FPopupMenuThread.CountDown := 0;
+end;
+{$ENDIF}
 procedure TPopupMenuExt.TimeIsOutFixed(const AForm: TFormExt);
 var
   ParentItem: TItem;
@@ -399,17 +432,27 @@ begin
 
   if not Assigned(ParentItem) then
   begin
-    FDoneEvent.SetEvent;
+//    FDoneEvent.SetEvent;
 
-    Exit
+    //Exit
+
+    Close;
   end
   else
+  begin
     ParentForm := ParentItem.FormOwner;
+    TThread.ForceQueue(nil,
+      procedure
+      begin
+        ParentForm.Show;
+        ParentForm.Invalidate;
+      end);
 
-  FPopupMenuThread :=  TPopupMenuExtThread.Create(ParentForm, sdBackward, true);
-  FPopupMenuThread.FreeOnTerminate := true;
-  FPopupMenuThread.OnTerminate := OnTerminatePopupMenuThreadHandler;
-  FPopupMenuThread.Start;
+    FPopupMenuThread :=  TPopupMenuExtThread.Create(ParentForm, sdBackward, true);
+    FPopupMenuThread.FreeOnTerminate := true;
+    FPopupMenuThread.OnTerminate := OnTerminatePopupMenuThreadHandler;
+    FPopupMenuThread.Start;
+  end;
 end;
 
 procedure TPopupMenuExt.ItemClickFixed(const ASender: TObject);
@@ -443,11 +486,11 @@ procedure TPopupMenuExt.ItemClickFixed(const ASender: TObject);
   end;
 
 var
-  ItemOwner: TItem;
   Point: TPoint;
+  ItemOwner: TItem;
   OpenedForm: TFormExt;
 begin
-  GetCursorPos(Point);
+  GetCurPos(Point);
 
   ItemOwner := TItem(ASender);
   CloseSameLevelForms(ItemOwner);
@@ -455,7 +498,9 @@ begin
   OpenedForm := FindOpenedForm(ItemOwner);
   if Assigned(OpenedForm) then
   begin
+    {$IFDEF MSWINDOWS}
     SetForegroundWindow(FmxHandleToHWND(OpenedForm.Handle));
+    {$ENDIF}
     StartPopupMenuThread(OpenedForm, sdForward)
   end
   else
@@ -471,18 +516,20 @@ begin
   end;
 end;
 
-constructor TPopupMenuExt.Create;
+constructor TPopupMenuExt.Create(Owner: TComponent);
 var
   Timer: TTimer;
 begin
   FItems := TItems.Create;
   FPopupMenuThread := nil;
-  FDoneEvent := TEvent.Create(nil, true, false, '', false);
+//  FDoneEvent := TEvent.Create(nil, true, false, '', false);
   FToDoClose := false;
 
   Timer := TTimer.Create(Self);
   Timer.Interval := 1000;
   Timer.Enabled := true;
+
+  inherited Create(Owner);
 end;
 
 destructor TPopupMenuExt.Destroy;
@@ -498,7 +545,7 @@ begin
   end;
 
   FreeAndNil(FItems);
-  FreeAndNil(FDoneEvent);
+//  FreeAndNil(FDoneEvent);
 
   inherited;
 end;
@@ -513,6 +560,7 @@ var
   Form: TFormExt;
   i: Word;
 begin
+  ShowMessage('Closing');
   if Assigned(FPopupMenuThread) then
   begin
     FToDoClose := true;
@@ -533,6 +581,13 @@ begin
       Form.Free;
     end;
   end;
+
+  if Owner is TForm then
+    if TForm(Owner).Visible then
+    begin
+      TForm(Owner).Show;
+      TForm(Owner).Invalidate;
+    end;
 end;
 
 procedure TPopupMenuExt.Open(
@@ -576,6 +631,9 @@ var
   PopupFormWidth: Integer;
   PopupForm: TFormExt;
   OpenedForm: TFormExt;
+  {$IFDEF ANDROID}
+  AndroidGoBackButton: TButton;
+  {$ENDIF}
 begin
   if not Assigned(AParentItem) then
   begin
@@ -584,13 +642,14 @@ begin
     begin
       OpenedForm.Left := Trunc(X);
       OpenedForm.Top := Trunc(Y);
+      {$IFDEF MSWINDOWS}
       SetForegroundWindow(FmxHandleToHWND(OpenedForm.Handle));
-
+      {$ENDIF}
       Exit;
     end;
   end;
 
-  FDoneEvent.ResetEvent;
+//  FDoneEvent.ResetEvent;
 
   PopupForm := TFormExt.CreateNew(Self);
   PopupForm.BorderStyle := TFmxFormBorderStyle.None;
@@ -615,6 +674,15 @@ begin
     BackgroundRectangle.Name := 'BackgroundRectangle';
     BackgroundRectangle.HitTest := false;
     BackgroundRectangle.Fill.Color := TAlphaColorRec.Lightgray;
+
+    {$IFDEF ANDROID}
+    AndroidGoBackButton := TButton.Create(BackgroundRectangle);
+    AndroidGoBackButton.Parent := BackgroundRectangle;
+    AndroidGoBackButton.Align := TAlignLayout.Bottom;
+    AndroidGoBackButton.Height := 30;
+    AndroidGoBackButton.Text := 'Go back';
+    AndroidGoBackButton.OnClick := OnAndroidGoBackButtonClickHandler;
+    {$ENDIF}
 
     for Item in ItemsByParent do
     begin
@@ -695,13 +763,15 @@ begin
   end;
 
   PopupForm.ParentItem := AParentItem;
-
   PopupForm.Height := ItemCount * ItemHeight;
+  {$IFDEF MSWINDOWS}
   TaskBarPositionDelta(PopupForm);
   ScreenSizeDelta(PopupForm);
   ParentFormDelta(PopupForm);
   SetForegroundWindow(FmxHandleToHWND(PopupForm.Handle));
-
+  {$ELSE IFDEF ANDROID}
+  PopupForm.FullScreen := true;
+  {$ENDIF}
   StartPopupMenuThread(PopupForm, sdForward);
 end;
 
