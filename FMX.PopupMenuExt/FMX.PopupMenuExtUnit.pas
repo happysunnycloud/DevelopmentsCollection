@@ -210,6 +210,26 @@ begin
   end;
 end;
 
+procedure ScreenSizeDelta(const AForm: TFormExt);
+begin
+  if AForm.Left + AForm.Width > Screen.Width then
+    AForm.Left := Screen.Width - AForm.Width;
+end;
+
+procedure ParentFormDelta(const AForm: TFormExt);
+var
+  ParentForm: TFormExt;
+begin
+  if not Assigned(AForm.ParentItem) then
+    Exit;
+
+  ParentForm := AForm.ParentItem.FormOwner;
+  AForm.Left := ParentForm.Left + ParentForm.Width;
+
+  if AForm.Left + AForm.Width > Screen.Width then
+    AForm.Left := ParentForm.Left - AForm.Width;
+end;
+
 { TFormExtHelper }
 
 procedure TFormExtHelper.SetParentItem(const AParentItem: TItem);
@@ -674,9 +694,12 @@ begin
     FreeAndNil(ItemsByParent);
   end;
 
-  PopupForm.Height := ItemCount * ItemHeight;
   PopupForm.ParentItem := AParentItem;
+
+  PopupForm.Height := ItemCount * ItemHeight;
   TaskBarPositionDelta(PopupForm);
+  ScreenSizeDelta(PopupForm);
+  ParentFormDelta(PopupForm);
   SetForegroundWindow(FmxHandleToHWND(PopupForm.Handle));
 
   StartPopupMenuThread(PopupForm, sdForward);
