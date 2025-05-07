@@ -28,9 +28,6 @@ type
     FOnCloseQueryExternalHandler: TCloseQueryMethod;
     FOnCloseExternalHandler: TCloseMethod;
 
-    procedure OnCloseQueryInternalHandler(Sender: TObject; var CanClose: Boolean);
-    procedure OnCloseInternalHandler(Sender: TObject; var Action: TCloseAction);
-
     procedure OnDestroyedAllFactoryHandler(Sender: TObject);
 
     function GetOnCloseQuery: TCloseQueryMethod;
@@ -38,9 +35,12 @@ type
 
     function GetOnClose: TCloseMethod;
     procedure SetOnClose(const AOnCloseHandler: TCloseMethod);
-  private
+
+    procedure OnCloseQueryInternalHandler(Sender: TObject; var CanClose: Boolean); virtual;
+    procedure OnCloseInternalHandler(Sender: TObject; var Action: TCloseAction); virtual;
   public
     constructor Create(AOwner: TComponent); override;
+
     destructor Destroy; override;
 
     property CanClose: Boolean read FCanClose write FCanClose;

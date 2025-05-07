@@ -8,12 +8,14 @@ uses
     System.Generics.Collections
   , System.Classes
   , System.SyncObjs
-  , FMX.FormExtUnit
+  , FMX.PopupMenuExtFormUnit
   , FMX.PopupMenuExtThreadUnit
   ;
 
 const
   PARENT_ARROW = '>>';
+  SPLITTER = '-';
+  SPLITTER_HEIGHT = 2;
 
 type
   TItem = class;
@@ -29,7 +31,8 @@ type
     FChildren: TItems;
     FText: String;
     FOnClick: TNotifyEvent;
-    FFormOwner: TFormExt;
+    FFormOwner: TPopupMenuExtForm;
+    FTag: NativeInt;
 
     procedure SetParent(const AParent: TItem);
     function GetLevel: Word;
@@ -42,8 +45,10 @@ type
     property Children: TItems read FChildren write FChildren;
     property Text: String read FText write FText;
     property OnClick: TNotifyEvent read FOnClick  write FOnClick;
-    property FormOwner: TFormExt read FFormOwner write FFormOwner;
+    property FormOwner: TPopupMenuExtForm read FFormOwner write FFormOwner;
     property Level: Word read GetLevel;
+
+    property Tag: NativeInt read FTag write FTag;
   end;
 
   TPopupMenuExt = class(TComponent)
@@ -57,7 +62,7 @@ type
     /// </summary>
     FToDoClose: Boolean;
 
-    function FindOpenedForm(const AItem: TItem): TFormExt;
+    function FindOpenedForm(const AItem: TItem): TPopupMenuExtForm;
 
     procedure OnItemMouseEnterHandler(Sender: TObject);
     procedure OnItemMouseLeaveHandler(Sender: TObject);
@@ -67,12 +72,14 @@ type
     {$IFDEF ANDROID}
     procedure OnAndroidGoBackButtonClickHandler(Sender: TObject);
     {$ENDIF}
-    procedure TimeIsOutFixed(const AForm: TFormExt);
+    procedure TimeIsOutFixed(const AForm: TPopupMenuExtForm);
     procedure ItemClickFixed(const ASender: TObject);
 
     procedure StartPopupMenuThread(
-      const AForm: TFormExt;
+      const AForm: TPopupMenuExtForm;
       const AStepDirection: TStepDirection);
+
+   procedure CloseForm(const AForm: TPopupMenuExtForm);
   private
   public
     constructor Create(Owner: TComponent); reintroduce;
@@ -94,23 +101,21 @@ uses
   , FMX.Platform.Win,
   {$ELSE IFDEF ANDROID}
     FMX.StdCtrls,
+
   {$ENDIF}
     System.SysUtils
-  , System.Types
   , System.UITypes
+  , System.Types
   , FMX.Graphics
   , FMX.Layouts
   , FMX.Types
   , FMX.Objects
   , FMX.Forms
   , FMX.Controls
-  //asd debug delete after debug
-  , FMX.Dialogs
-  //asd debug
   ;
 
 type
-  TFormExtHelper = class helper for TFormExt
+  TPopupMenuExtFormHelper = class helper for TPopupMenuExtForm
   private
     procedure SetParentItem(const AParentItem: TItem);
     function GetParentItem: TItem;
@@ -155,7 +160,7 @@ begin
   AAutoHide := (SHAppBarMessage(ABM_GETSTATE, AppData) and ABS_AUTOHIDE) <> 0;
 end;
 
-procedure TaskBarPositionDelta(const AForm: TFormExt);
+procedure TaskBarPositionDelta(const AForm: TPopupMenuExtForm);
 
   function OverlapRects(const R0, R1: TRect): Boolean;
   var
@@ -233,15 +238,17 @@ begin
   end;
 end;
 
-procedure ScreenSizeDelta(const AForm: TFormExt);
+procedure ScreenSizeDelta(const AForm: TPopupMenuExtForm);
 begin
   if AForm.Left + AForm.Width > Screen.Width then
     AForm.Left := Screen.Width - AForm.Width;
+  if AForm.Top + AForm.Height > Screen.Height then
+    AForm.Top := Screen.Height - AForm.Height;
 end;
 
-procedure ParentFormDelta(const AForm: TFormExt);
+procedure ParentFormDelta(const AForm: TPopupMenuExtForm);
 var
-  ParentForm: TFormExt;
+  ParentForm: TPopupMenuExtForm;
 begin
   if not Assigned(AForm.ParentItem) then
     Exit;
@@ -254,19 +261,31 @@ begin
 end;
 {$ENDIF}
 
-{ TFormExtHelper }
+{ TPopupMenuExtFormHelper }
 
-procedure TFormExtHelper.SetParentItem(const AParentItem: TItem);
+procedure TPopupMenuExtFormHelper.SetParentItem(const AParentItem: TItem);
 begin
   Self.TagObject := AParentItem;
 end;
 
-function TFormExtHelper.GetParentItem: TItem;
+function TPopupMenuExtFormHelper.GetParentItem: TItem;
 begin
   Result := TItem(Self.TagObject);
 end;
 
 { TLayoutHelper }
+
+//{ TPopupMenuExtForm }
+//
+//procedure TPopupMenuExtForm.OnCloseQueryInternalHandler(Sender: TObject; var CanClose: Boolean);
+//begin
+//  CanClose := true;
+//end;
+//
+//procedure TPopupMenuExtForm.OnCloseInternalHandler(Sender: TObject; var Action: TCloseAction);
+//begin
+//  Action := TCloseAction.caFree;
+//end;
 
 procedure TLayoutHelper.SetParentItem(const AParentItem: TItem);
 begin
@@ -311,6 +330,7 @@ begin
   FText := '';
   FOnClick := nil;
   FFormOwner := nil;
+  FTag := 0;
 end;
 
 destructor TItem.Destroy;
@@ -344,10 +364,10 @@ end;
 
 { TPopupMenuExt }
 
-function TPopupMenuExt.FindOpenedForm(const AItem: TItem): TFormExt;
+function TPopupMenuExt.FindOpenedForm(const AItem: TItem): TPopupMenuExtForm;
 var
   i: Word;
-  Form: TFormExt;
+  Form: TPopupMenuExtForm;
 begin
   Result := nil;
 
@@ -356,9 +376,9 @@ begin
   begin
     Dec(i);
 
-    if Components[i] is TFormExt then
+    if Components[i] is TPopupMenuExtForm then
     begin
-      Form := TFormExt(Components[i]);
+      Form := TPopupMenuExtForm(Components[i]);
       if Form.ParentItem = AItem then
         Exit(Form);
     end;
@@ -411,21 +431,20 @@ end;
 {$IFDEF ANDROID}
 procedure TPopupMenuExt.OnAndroidGoBackButtonClickHandler(Sender: TObject);
 begin
-  ShowMessage('Go back clicked');
   if Assigned(FPopupMenuThread) then
     FPopupMenuThread.GoBackClickFixed := true;
 //  if Assigned(FPopupMenuThread) then
 //    FPopupMenuThread.CountDown := 0;
 end;
 {$ENDIF}
-procedure TPopupMenuExt.TimeIsOutFixed(const AForm: TFormExt);
+procedure TPopupMenuExt.TimeIsOutFixed(const AForm: TPopupMenuExtForm);
 var
   ParentItem: TItem;
-  ParentForm: TFormExt;
+  ParentForm: TPopupMenuExtForm;
 begin
   ParentItem := AForm.ParentItem;
 
-  AForm.Free;
+  CloseForm(AForm);
 
   if FToDoClose then
     Exit;
@@ -460,8 +479,8 @@ procedure TPopupMenuExt.ItemClickFixed(const ASender: TObject);
   procedure CloseSameLevelForms(const AItemOwner: TItem);
   var
     Level: Word;
-    ParentItemForm: TFormExt;
-    Form: TFormExt;
+    ParentItemForm: TPopupMenuExtForm;
+    Form: TPopupMenuExtForm;
     i: Word;
   begin
     ParentItemForm := FindOpenedForm(AItemOwner);
@@ -472,15 +491,17 @@ procedure TPopupMenuExt.ItemClickFixed(const ASender: TObject);
     begin
       Dec(i);
 
-      if Components[i] is TFormExt then
+      if Components[i] is TPopupMenuExtForm then
       begin
-        Form := TFormExt(Components[i]);
+        Form := TPopupMenuExtForm(Components[i]);
         if not Assigned(Form.ParentItem) then
           Exit;
 
         if Form.ParentItem.Level >= Level then
           if Form <> ParentItemForm then
-            Form.Free;
+          begin
+            CloseForm(Form);
+          end;
       end;
     end;
   end;
@@ -488,7 +509,7 @@ procedure TPopupMenuExt.ItemClickFixed(const ASender: TObject);
 var
   Point: TPoint;
   ItemOwner: TItem;
-  OpenedForm: TFormExt;
+  OpenedForm: TPopupMenuExtForm;
 begin
   GetCurPos(Point);
 
@@ -508,7 +529,11 @@ begin
     if ItemOwner.Children.Count = 0 then
     begin
       if Assigned(ItemOwner.OnClick) then
-        ItemOwner.OnClick(ItemOwner);
+        TThread.ForceQueue(nil,
+          procedure
+          begin
+            ItemOwner.OnClick(ItemOwner);
+          end);
       Close;
     end
     else
@@ -520,6 +545,8 @@ constructor TPopupMenuExt.Create(Owner: TComponent);
 var
   Timer: TTimer;
 begin
+  inherited Create(Owner);
+
   FItems := TItems.Create;
   FPopupMenuThread := nil;
 //  FDoneEvent := TEvent.Create(nil, true, false, '', false);
@@ -528,14 +555,14 @@ begin
   Timer := TTimer.Create(Self);
   Timer.Interval := 1000;
   Timer.Enabled := true;
-
-  inherited Create(Owner);
 end;
 
 destructor TPopupMenuExt.Destroy;
 var
   i: Word;
 begin
+  Close;
+
   i := FItems.Count;
   while i > 0 do
   begin
@@ -557,10 +584,10 @@ end;
 
 procedure TPopupMenuExt.Close;
 var
-  Form: TFormExt;
+  Form: TPopupMenuExtForm;
+  FormOwner: TPopupMenuExtForm;
   i: Word;
 begin
-  ShowMessage('Closing');
   if Assigned(FPopupMenuThread) then
   begin
     FToDoClose := true;
@@ -574,20 +601,22 @@ begin
   begin
     Dec(i);
 
-    if Components[i] is TFormExt then
+    if Components[i] is TPopupMenuExtForm then
     begin
-      Form := TFormExt(Components[i]);
-      RemoveComponent(Form);
-      Form.Free;
+      Form := TPopupMenuExtForm(Components[i]);
+      CloseForm(Form);
     end;
   end;
 
   if Owner is TForm then
-    if TForm(Owner).Visible then
+  begin
+    FormOwner := TPopupMenuExtForm(Owner);
+    if FormOwner.Visible then
     begin
-      TForm(Owner).Show;
-      TForm(Owner).Invalidate;
+      FormOwner.Show;
+      FormOwner.Invalidate;
     end;
+  end;
 end;
 
 procedure TPopupMenuExt.Open(
@@ -607,7 +636,7 @@ procedure TPopupMenuExt.Open(
     i := 0;
     while i < Items.Count do
     begin
-      TextWidth := AText.Canvas.TextWidth(Items[i].Text);
+      TextWidth := AText.Canvas.TextWidth(Items[i].Text + ' ' + PARENT_ARROW);
       if MaxTextWidth < TextWidth then
         MaxTextWidth := TextWidth;
       Inc(i);
@@ -615,10 +644,9 @@ procedure TPopupMenuExt.Open(
 
     Result := MaxTextWidth;
   end;
-
 var
   Item: TItem;
-  ItemCount: Word;
+//  ItemCount: Word;
   Layout: TLayout;
   BackgroundRectangle: TRectangle;
   Rectangle: TRectangle;
@@ -627,13 +655,16 @@ var
   ParentArrowWidth: Single;
   ItemsByParent: TItems;
   MaxTextWidth: Single;
-  ItemHeight: Word;
+  //ItemHeight: Word;
+  ItemsHeight: Single;
   PopupFormWidth: Integer;
-  PopupForm: TFormExt;
-  OpenedForm: TFormExt;
+  PopupForm: TPopupMenuExtForm;
+  OpenedForm: TPopupMenuExtForm;
+  ItemIsSplitter: Boolean;
   {$IFDEF ANDROID}
   AndroidGoBackButton: TButton;
   {$ENDIF}
+//  TestRect: TRectangle;
 begin
   if not Assigned(AParentItem) then
   begin
@@ -651,16 +682,15 @@ begin
 
 //  FDoneEvent.ResetEvent;
 
-  PopupForm := TFormExt.CreateNew(Self);
+  PopupForm := TPopupMenuExtForm.CreateNew(Self);
   PopupForm.BorderStyle := TFmxFormBorderStyle.None;
   PopupForm.Left := Trunc(X);
   PopupForm.Top := Trunc(Y);
   PopupForm.Height := 100;
-  PopupForm.Show;
 
   PopupFormWidth := 0;
-  ItemHeight := 30;
-  ItemCount := 0;
+  ItemsHeight := 0;
+//  ItemCount := 0;
 
   ItemsByParent := TItems.Create;
   FItems.GetItemsByParent(AParentItem, ItemsByParent);
@@ -673,7 +703,9 @@ begin
     BackgroundRectangle.SendToBack;
     BackgroundRectangle.Name := 'BackgroundRectangle';
     BackgroundRectangle.HitTest := false;
-    BackgroundRectangle.Fill.Color := TAlphaColorRec.Lightgray;
+    BackgroundRectangle.Fill.Color := TAlphaColorRec.
+    //Limegreen;
+    Lightgray;
 
     {$IFDEF ANDROID}
     AndroidGoBackButton := TButton.Create(BackgroundRectangle);
@@ -686,17 +718,38 @@ begin
 
     for Item in ItemsByParent do
     begin
+      ItemIsSplitter := Item.Text = SPLITTER;
+
       Item.FormOwner := PopupForm;
 
       Layout := TLayout.Create(BackgroundRectangle);
       Layout.Parent := BackgroundRectangle;
       Layout.ItemOwner := Item;
       Layout.Align := TAlignLayout.Bottom;
-      Layout.Height := ItemHeight;
+      Layout.Height := 30;
+      if Item = ItemsByParent.First then
+      begin
+        Layout.Margins.Top := 2;
+        ItemsHeight := ItemsHeight + Layout.Margins.Top;
+      end;
       Layout.HitTest := true;
       Layout.OnClick := OnItemClickHandler;
       Layout.OnMouseEnter := OnItemMouseEnterHandler;
       Layout.OnMouseLeave := OnItemMouseLeaveHandler;
+      if ItemIsSplitter then
+      begin
+        Layout.Height := SPLITTER_HEIGHT;
+        Layout.HitTest := false;
+        Layout.OnClick := nil;
+        Layout.OnMouseEnter := nil;
+        Layout.OnMouseLeave := nil;
+        Layout.Align := TAlignLayout.Top;
+        ItemsHeight := ItemsHeight + Layout.Height;
+
+        Continue;
+      end;
+
+      ItemsHeight := ItemsHeight + Layout.Height;
 
       Rectangle := TRectangle.Create(Layout);
       Rectangle.Parent := Layout;
@@ -704,10 +757,10 @@ begin
       Rectangle.HitTest := false;
       Rectangle.Stroke.Thickness := 0;
       Rectangle.Stroke.Kind := TBrushKind.None;
-      Rectangle.Margins.Top := 2;
+      Rectangle.Margins.Top := 0;
       Rectangle.Margins.Left := 2;
       Rectangle.Margins.Right := 2;
-      Rectangle.Margins.Bottom := 2;
+      Rectangle.Margins.Bottom := 0;
 
       TextArrow := TText.Create(Rectangle);
       TextArrow.Parent := Rectangle;
@@ -716,6 +769,7 @@ begin
       TextArrow.HitTest := false;
       TextArrow.TextSettings.HorzAlign := TTextAlign.Trailing;
       TextArrow.Margins.Right := 5;
+      TextArrow.AutoSize := true;
 
       ParentArrowWidth := TextArrow.Canvas.TextWidth(TextArrow.Text);
       if Item.Children.Count = 0 then
@@ -726,6 +780,7 @@ begin
         TextArrow.Width := 0;
         TextArrow.Visible := false;
       end;
+//      TextArrow.Width := ParentArrowWidth;
 
       Text := TText.Create(Rectangle);
       Text.Parent := Rectangle;
@@ -733,12 +788,21 @@ begin
       Text.Text := Item.Text;
       Text.HitTest := false;
       Text.TextSettings.HorzAlign := TTextAlign.Leading;
+      Text.TextSettings.VertAlign := TTextAlign.Center;
       Text.Margins.Left := 5;
+      Text.WordWrap := false;
 
       MaxTextWidth := _GetMaxTextWidth(Text, ItemsByParent);
+
+//      TestRect := TRectangle.Create(Layout);
+//      TestRect.Parent := TextArrow;
+//      TestRect.Width := ParentArrowWidth + Text.Margins.Left;
+//      TestRect.Height := 30;
+//      TestRect.Opacity := 0.5;
+
       PopupFormWidth := Trunc(
         (
-          MaxTextWidth + ParentArrowWidth + 50
+          MaxTextWidth + ParentArrowWidth + 10 {just simple}
         ) +
         (
           Text.Margins.Left +
@@ -750,12 +814,14 @@ begin
        )
       );
 
-//      ItemHeight := Trunc(Text.Canvas.TextHeight('W'));
+      //ItemHeight := Trunc(Text.Canvas.TextHeight('W'));
 
       Layout.Align := TAlignLayout.Top;
 
-      Inc(ItemCount);
+//      Inc(ItemCount);
     end;
+
+    ItemsHeight := ItemsHeight + 2;
 
     PopupForm.Width := PopupFormWidth;
   finally
@@ -763,26 +829,52 @@ begin
   end;
 
   PopupForm.ParentItem := AParentItem;
-  PopupForm.Height := ItemCount * ItemHeight;
+  PopupForm.Height := Trunc(ItemsHeight);//ItemCount * ItemHeight;
   {$IFDEF MSWINDOWS}
   TaskBarPositionDelta(PopupForm);
-  ScreenSizeDelta(PopupForm);
   ParentFormDelta(PopupForm);
-  SetForegroundWindow(FmxHandleToHWND(PopupForm.Handle));
+  ScreenSizeDelta(PopupForm);
+//  SetForegroundWindow(FmxHandleToHWND(PopupForm.Handle));
   {$ELSE IFDEF ANDROID}
   PopupForm.FullScreen := true;
   {$ENDIF}
+
+//  SetForegroundWindow(FmxHandleToHWND(PopupForm.Handle));
+//  SetWindowPos(FmxHandleToHWND(PopupForm.Handle), HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE or SWP_NOMOVE);
+//  PopupForm.Invalidate;
+
   StartPopupMenuThread(PopupForm, sdForward);
+
+//  TForm(Owner).SendToBack;
+
+  PopupForm.FormStyle := TFormStyle.StayOnTop;
+  PopupForm.Show;
+  PopupForm.Parent := TForm(Owner);
+  //PopupForm.BringToFront;
+
+//  TThread.Queue(nil,
+//    procedure
+//    begin
+//      PopupForm.Show;
+//      PopupForm.BringToFront;
+//      PopupForm.Invalidate;
+//    end);
 end;
 
 procedure TPopupMenuExt.StartPopupMenuThread(
-  const AForm: TFormExt;
+  const AForm: TPopupMenuExtForm;
   const AStepDirection: TStepDirection);
 begin
   FPopupMenuThread := TPopupMenuExtThread.Create(AForm, AStepDirection, true);
   FPopupMenuThread.FreeOnTerminate := true;
   FPopupMenuThread.OnTerminate := OnTerminatePopupMenuThreadHandler;
   FPopupMenuThread.Start;
+end;
+
+procedure TPopupMenuExt.CloseForm(const AForm: TPopupMenuExtForm);
+begin
+  RemoveComponent(AForm);
+  AForm.Close;
 end;
 
 end.

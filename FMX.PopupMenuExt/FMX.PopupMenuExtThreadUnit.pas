@@ -8,7 +8,7 @@ uses
     System.Classes
   , System.SyncObjs
   , System.SysUtils
-  , FMX.FormExtUnit
+  , FMX.PopupMenuExtFormUnit
   ;
 
 type
@@ -17,7 +17,7 @@ type
   TPopupMenuExtThread = class(TThread)
   strict private
     FCriticalSection: TCriticalSection;
-    FForm: TFormExt;
+    FForm: TPopupMenuExtForm;
     FStepDirection: TStepDirection;
     FDoneEvent: TEvent;
     FCountDown: Integer;
@@ -27,7 +27,7 @@ type
     FGoBackClickFixed: Boolean;
     FClickedItem: TObject;
 
-    FFormOwner: TFormExt;
+    FFormOwner: TPopupMenuExtForm;
 
     procedure SetClickedItem(const AClickedItem: TObject);
     function GetClickedItem: TObject;
@@ -41,7 +41,7 @@ type
     procedure Execute; override;
   public
     constructor Create(
-      const AForm: TFormExt;
+      const AForm: TPopupMenuExtForm;
       const AStepDirection: TStepDirection;
       const ASuspended: Boolean);
     destructor Destroy; override;
@@ -52,9 +52,9 @@ type
     property ClickFixed: Boolean read FClickFixed;
     property GoBackClickFixed: Boolean
       read GetGoBackClickeFixed write SetGoBackClickeFixed;
-    property Form: TFormExt read FForm;
+    property Form: TPopupMenuExtForm read FForm;
     property ClickedItem: TObject read GetClickedItem write SetClickedItem;
-    property FormOwner: TFormExt read FFormOwner write FFormOwner;
+    property FormOwner: TPopupMenuExtForm read FFormOwner write FFormOwner;
     property CountDown: Integer read GetCountDown write SetCountDown;
   end;
 
@@ -70,7 +70,7 @@ uses
 { TPopupMenuExtThread }
 
 constructor TPopupMenuExtThread.Create(
-  const AForm: TFormExt;
+  const AForm: TPopupMenuExtForm;
   const AStepDirection: TStepDirection;
   const ASuspended: Boolean);
 begin
@@ -167,7 +167,7 @@ end;
 
 procedure TPopupMenuExtThread.Execute;
   {$IFDEF MSWINDOWS}
-  function _IsMouseOverForm(const AForm: TFormExt): Boolean;
+  function _IsMouseOverForm(const AForm: TPopupMenuExtForm): Boolean;
   var
     Point: TPoint;
     RectF: TRectF;
@@ -209,6 +209,11 @@ begin
   {$IFDEF MSWINDOWS}
   while not Terminated and not Assigned(ClickedItem) do
   begin
+//    TThread.Queue(nil,
+//      procedure
+//      begin
+//        FForm.BringToFront;
+//      end);
     if not _IsMouseOverForm(FForm) then
     begin
       i := CountDown;
