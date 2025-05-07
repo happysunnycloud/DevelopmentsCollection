@@ -10,12 +10,18 @@ uses
   , System.SyncObjs
   , FMX.PopupMenuExtFormUnit
   , FMX.PopupMenuExtThreadUnit
+  , FMX.ThemeUnit
   ;
 
 const
   PARENT_ARROW = '>>';
   SPLITTER = '-';
   SPLITTER_HEIGHT = 2;
+  {$IFDEF MSWINDOWS}
+  ITEM_HEIGHT = 30;
+  {$ELSE IFDEF ANDROID}
+  ITEM_HEIGHT = 60;
+  {$ENDIF}
 
 type
   TItem = class;
@@ -62,6 +68,8 @@ type
     /// </summary>
     FToDoClose: Boolean;
 
+    FTheme: TTheme;
+
     function FindOpenedForm(const AItem: TItem): TPopupMenuExtForm;
 
     procedure OnItemMouseEnterHandler(Sender: TObject);
@@ -90,6 +98,8 @@ type
     procedure Close;
 
     property Items: TItems read FItems;
+
+    property Theme: TTheme read FTheme write FTheme;
   end;
 
 implementation
@@ -390,7 +400,7 @@ var
   Rectangle: TRectangle;
 begin
   Rectangle := TRectangle(TLayout(Sender).Children[0]);
-  Rectangle.Fill.Color := TAlphaColorRec.Cornflowerblue;
+  Rectangle.Fill.Color := Theme.DarkBackgroundColor;
 end;
 
 procedure TPopupMenuExt.OnItemMouseLeaveHandler(Sender: TObject);
@@ -398,7 +408,7 @@ var
   Rectangle: TRectangle;
 begin
   Rectangle := TRectangle(TLayout(Sender).Children[0]);
-  Rectangle.Fill.Color := $FFE0E0E0;
+  Rectangle.Fill.Color := Theme.LightBackgroundColor;
 end;
 
 procedure TPopupMenuExt.OnItemClickHandler(Sender: TObject);
@@ -528,13 +538,13 @@ begin
   begin
     if ItemOwner.Children.Count = 0 then
     begin
+      Close;
       if Assigned(ItemOwner.OnClick) then
         TThread.ForceQueue(nil,
           procedure
           begin
             ItemOwner.OnClick(ItemOwner);
           end);
-      Close;
     end
     else
       Open(Point.X, Point.Y, ItemOwner);
@@ -551,6 +561,8 @@ begin
   FPopupMenuThread := nil;
 //  FDoneEvent := TEvent.Create(nil, true, false, '', false);
   FToDoClose := false;
+
+  FTheme := TTheme.Create;
 
   Timer := TTimer.Create(Self);
   Timer.Interval := 1000;
@@ -573,6 +585,8 @@ begin
 
   FreeAndNil(FItems);
 //  FreeAndNil(FDoneEvent);
+
+  FreeAndNil(FTheme);
 
   inherited;
 end;
@@ -686,7 +700,7 @@ begin
   PopupForm.BorderStyle := TFmxFormBorderStyle.None;
   PopupForm.Left := Trunc(X);
   PopupForm.Top := Trunc(Y);
-  PopupForm.Height := 100;
+  PopupForm.Height := 0;
 
   PopupFormWidth := 0;
   ItemsHeight := 0;
@@ -703,16 +717,18 @@ begin
     BackgroundRectangle.SendToBack;
     BackgroundRectangle.Name := 'BackgroundRectangle';
     BackgroundRectangle.HitTest := false;
-    BackgroundRectangle.Fill.Color := TAlphaColorRec.
+    BackgroundRectangle.Fill.Color :=
+      Theme.BackgroundColor;
+    //TAlphaColorRec.
     //Limegreen;
-    Lightgray;
+    //Lightgray;
 
     {$IFDEF ANDROID}
     AndroidGoBackButton := TButton.Create(BackgroundRectangle);
     AndroidGoBackButton.Parent := BackgroundRectangle;
     AndroidGoBackButton.Align := TAlignLayout.Bottom;
-    AndroidGoBackButton.Height := 30;
-    AndroidGoBackButton.Text := 'Go back';
+    AndroidGoBackButton.Height := ITEM_HEIGHT;
+    AndroidGoBackButton.Text := 'Back';
     AndroidGoBackButton.OnClick := OnAndroidGoBackButtonClickHandler;
     {$ENDIF}
 
@@ -726,7 +742,7 @@ begin
       Layout.Parent := BackgroundRectangle;
       Layout.ItemOwner := Item;
       Layout.Align := TAlignLayout.Bottom;
-      Layout.Height := 30;
+      Layout.Height := ITEM_HEIGHT;
       if Item = ItemsByParent.First then
       begin
         Layout.Margins.Top := 2;
@@ -761,6 +777,7 @@ begin
       Rectangle.Margins.Left := 2;
       Rectangle.Margins.Right := 2;
       Rectangle.Margins.Bottom := 0;
+      Rectangle.Fill.Color := Theme.LightBackgroundColor;
 
       TextArrow := TText.Create(Rectangle);
       TextArrow.Parent := Rectangle;
@@ -770,6 +787,8 @@ begin
       TextArrow.TextSettings.HorzAlign := TTextAlign.Trailing;
       TextArrow.Margins.Right := 5;
       TextArrow.AutoSize := true;
+      TextArrow.TextSettings.FontColor :=
+        Theme.TextControlSettings.TextSettings.FontColor;
 
       ParentArrowWidth := TextArrow.Canvas.TextWidth(TextArrow.Text);
       if Item.Children.Count = 0 then
@@ -784,6 +803,24 @@ begin
 
       Text := TText.Create(Rectangle);
       Text.Parent := Rectangle;
+      Text.Text := Item.Text;
+
+      FTheme.TextControlSettings.ApplyTo(Text);
+
+      {
+      Text.Align := TAlignLayout.Client;
+      Text.HitTest := false;
+      Text.TextSettings.HorzAlign := TTextAlign.Leading;
+      Text.TextSettings.VertAlign := TTextAlign.Center;
+      Text.Margins.Left := 5;
+      Text.WordWrap := false;
+      Text.TextSettings.FontColor :=
+        FTheme.TextControlSettings.TextSettings.FontColor;
+      }
+
+{
+      Text := TText.Create(Rectangle);
+      Text.Parent := Rectangle;
       Text.Align := TAlignLayout.Client;
       Text.Text := Item.Text;
       Text.HitTest := false;
@@ -791,7 +828,7 @@ begin
       Text.TextSettings.VertAlign := TTextAlign.Center;
       Text.Margins.Left := 5;
       Text.WordWrap := false;
-
+}
       MaxTextWidth := _GetMaxTextWidth(Text, ItemsByParent);
 
 //      TestRect := TRectangle.Create(Layout);
@@ -848,8 +885,8 @@ begin
 //  TForm(Owner).SendToBack;
 
   PopupForm.FormStyle := TFormStyle.StayOnTop;
-  PopupForm.Show;
   PopupForm.Parent := TForm(Owner);
+  PopupForm.Show;
   //PopupForm.BringToFront;
 
 //  TThread.Queue(nil,
