@@ -79,8 +79,10 @@ var
   BitmapData: TBitmapData;
   PixelColor: TAlphaColor;
 begin
-  if ABitMap.PixelFormat <> TPixelFormat.BGRA then
-    raise Exception.Create('Bitmap must be BGRA format');
+{TPixelFormat = (None, RGB, RGBA, BGR, BGRA, RGBA16, BGR_565, BGRA4, BGR4, BGR5_A1, BGR5, BGR10_A2, RGB10_A2, L, LA,
+    LA4, L16, A, R16F, RG16F, RGBA16F, R32F, RG32F, RGBA32F);}
+//  if ABitMap.PixelFormat <> TPixelFormat.BGRA then
+//    raise Exception.Create('Bitmap must be BGRA format');
 
   ImageWidth := ABitMap.Width;
   ImageHeight := ABitMap.Height;
