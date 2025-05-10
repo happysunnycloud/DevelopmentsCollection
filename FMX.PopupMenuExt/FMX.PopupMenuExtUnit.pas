@@ -730,6 +730,8 @@ begin
     AndroidGoBackButton.Height := ITEM_HEIGHT;
     AndroidGoBackButton.Text := 'Back';
     AndroidGoBackButton.OnClick := OnAndroidGoBackButtonClickHandler;
+    AndroidGoBackButton.TextSettings.FontColor :=
+      Theme.TextControlSettings.TextSettings.FontColor;
     {$ENDIF}
 
     for Item in ItemsByParent do
@@ -752,6 +754,7 @@ begin
       Layout.OnClick := OnItemClickHandler;
       Layout.OnMouseEnter := OnItemMouseEnterHandler;
       Layout.OnMouseLeave := OnItemMouseLeaveHandler;
+      Layout.Align := TAlignLayout.Top;
       if ItemIsSplitter then
       begin
         Layout.Height := SPLITTER_HEIGHT;
@@ -759,7 +762,6 @@ begin
         Layout.OnClick := nil;
         Layout.OnMouseEnter := nil;
         Layout.OnMouseLeave := nil;
-        Layout.Align := TAlignLayout.Top;
         ItemsHeight := ItemsHeight + Layout.Height;
 
         Continue;
