@@ -13,6 +13,8 @@ uses
 type
   TPopupMenuExtForm = class(TForm)
   strict private
+    FOnHardwareBackButtonClick: TNotifyEvent;
+
     procedure Paint(Sender: TObject; Canvas: TCanvas;
       const ARect: TRectF);
   protected
@@ -20,8 +22,13 @@ type
       Sender: TObject; var CanClose: Boolean);
     procedure OnCloseInternalHandler(
       Sender: TObject; var Action: TCloseAction);
+    procedure OnKeyUpHandler(Sender: TObject; var Key: Word; var KeyChar: Char;
+      Shift: TShiftState);
   public
     constructor CreateNew(AOwner: TComponent; Dummy: NativeInt = 0); reintroduce;
+
+    property OnHardwareBackButtonClick: TNotifyEvent
+      write FOnHardwareBackButtonClick;
   end;
 
 implementation
@@ -54,6 +61,18 @@ begin
   Action := TCloseAction.caFree;
 end;
 
+procedure TPopupMenuExtForm.OnKeyUpHandler(Sender: TObject; var Key: Word; var KeyChar: Char;
+  Shift: TShiftState);
+var
+  a: String;
+begin
+  if Key = vkHardwareBack then
+    Key := 0;
+
+  if Assigned(FOnHardwareBackButtonClick) then
+    FOnHardwareBackButtonClick(nil);
+end;
+
 constructor TPopupMenuExtForm.CreateNew(AOwner: TComponent; Dummy: NativeInt = 0);
 begin
   inherited;
@@ -62,6 +81,10 @@ begin
 
   OnCloseQuery := OnCloseQueryInternalHandler;
   OnClose := OnCloseInternalHandler;
+
+  OnKeyUp := OnKeyUpHandler;
+
+  FOnHardwareBackButtonClick := nil;
 end;
 
 end.

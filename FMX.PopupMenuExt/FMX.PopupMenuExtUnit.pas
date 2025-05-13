@@ -77,9 +77,8 @@ type
     procedure OnItemClickHandler(Sender: TObject);
 
     procedure OnTerminatePopupMenuThreadHandler(Sender: TObject);
-    {$IFDEF ANDROID}
     procedure OnAndroidGoBackButtonClickHandler(Sender: TObject);
-    {$ENDIF}
+
     procedure TimeIsOutFixed(const AForm: TPopupMenuExtForm);
     procedure ItemClickFixed(const ASender: TObject);
 
@@ -438,7 +437,7 @@ begin
   if PopupMenuThread.ClickFixed then
     ItemClickFixed(PopupMenuThread.ClickedItem);
 end;
-{$IFDEF ANDROID}
+
 procedure TPopupMenuExt.OnAndroidGoBackButtonClickHandler(Sender: TObject);
 begin
   if Assigned(FPopupMenuThread) then
@@ -446,43 +445,79 @@ begin
 //  if Assigned(FPopupMenuThread) then
 //    FPopupMenuThread.CountDown := 0;
 end;
-{$ENDIF}
+
 procedure TPopupMenuExt.TimeIsOutFixed(const AForm: TPopupMenuExtForm);
 var
   ParentItem: TItem;
   ParentForm: TPopupMenuExtForm;
 begin
   ParentItem := AForm.ParentItem;
-
-  CloseForm(AForm);
-
-  if FToDoClose then
-    Exit;
-
-  if not Assigned(ParentItem) then
+  if Assigned(ParentItem) then
   begin
-//    FDoneEvent.SetEvent;
+    if not FToDoClose then
+    begin
+      ParentForm := ParentItem.FormOwner;
+      ParentForm.Show;
+      ParentForm.Invalidate;
 
-    //Exit
+  //    TThread.ForceQueue(nil,
+  //      procedure
+  //      begin
+  //        ParentForm.Show;
+  //        ParentForm.Invalidate;
+  //      end);
 
-    Close;
+      FPopupMenuThread :=  TPopupMenuExtThread.Create(ParentForm, sdBackward, true);
+      FPopupMenuThread.FreeOnTerminate := true;
+      FPopupMenuThread.OnTerminate := OnTerminatePopupMenuThreadHandler;
+      FPopupMenuThread.Start;
+    end;
   end
   else
   begin
-    ParentForm := ParentItem.FormOwner;
-    TThread.ForceQueue(nil,
-      procedure
-      begin
-        ParentForm.Show;
-        ParentForm.Invalidate;
-      end);
+    Close;
 
-    FPopupMenuThread :=  TPopupMenuExtThread.Create(ParentForm, sdBackward, true);
-    FPopupMenuThread.FreeOnTerminate := true;
-    FPopupMenuThread.OnTerminate := OnTerminatePopupMenuThreadHandler;
-    FPopupMenuThread.Start;
+    Exit;
   end;
+
+  CloseForm(AForm);
 end;
+//procedure TPopupMenuExt.TimeIsOutFixed(const AForm: TPopupMenuExtForm);
+//var
+//  ParentItem: TItem;
+//  ParentForm: TPopupMenuExtForm;
+//begin
+//  ParentItem := AForm.ParentItem;
+//
+//  CloseForm(AForm);
+//
+//  if FToDoClose then
+//    Exit;
+//
+//  if not Assigned(ParentItem) then
+//  begin
+////    FDoneEvent.SetEvent;
+//
+//    //Exit
+//
+//    Close;
+//  end
+//  else
+//  begin
+//    ParentForm := ParentItem.FormOwner;
+//    TThread.ForceQueue(nil,
+//      procedure
+//      begin
+//        ParentForm.Show;
+//        ParentForm.Invalidate;
+//      end);
+//
+//    FPopupMenuThread :=  TPopupMenuExtThread.Create(ParentForm, sdBackward, true);
+//    FPopupMenuThread.FreeOnTerminate := true;
+//    FPopupMenuThread.OnTerminate := OnTerminatePopupMenuThreadHandler;
+//    FPopupMenuThread.Start;
+//  end;
+//end;
 
 procedure TPopupMenuExt.ItemClickFixed(const ASender: TObject);
 
@@ -701,6 +736,7 @@ begin
   PopupForm.Left := Trunc(X);
   PopupForm.Top := Trunc(Y);
   PopupForm.Height := 0;
+  PopupForm.OnHardwareBackButtonClick := OnAndroidGoBackButtonClickHandler;
 
   PopupFormWidth := 0;
   ItemsHeight := 0;
