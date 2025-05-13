@@ -89,6 +89,11 @@ type
     procedure SetMinWidth(const AMinWidth: Integer);
     procedure SetMinHeight(const AMinHeight: Integer);
 
+    function GetMinClientWidth: Integer;
+    procedure SetMinClientWidth(const AMinClientWidth: Integer);
+    function GetMinClientHeight: Integer;
+    procedure SetMinClientHeight(const AMinClientHeight: Integer);
+
     procedure SetFormWidth(const AFormWidth: Integer);
     procedure SetFormHeight(const AFormHeight: Integer);
     procedure SetClientWidth(const AClientWidth: Integer);
@@ -132,6 +137,9 @@ type
     property MinWidth: Integer read FMinWidth write SetMinWidth;
     property MinHeight: Integer read FMinHeight write SetMinHeight;
 
+    property MinClientWidth: Integer read GetMinClientWidth write SetMinClientWidth;
+    property MinClientHeight: Integer read GetMinClientHeight write SetMinClientHeight;
+
     /// <summary>
     ///   Ширина окна вместе с бортами
     /// </summary>
@@ -145,7 +153,7 @@ type
     /// </summary>
     property ClientWidth: Integer read GetClientWidth write SetClientWidth;
     /// <summary>
-    ///   Высота окна внутри бортов с заголовком
+    ///   Высота окна внутри бортов
     /// </summary>
     property ClientHeight: Integer read GetClientHeight write SetClientHeight;
   end;
@@ -678,15 +686,37 @@ begin
   FormWidth := FMinWidth;
 end;
 
-procedure TBorderFrame.TopLayoutMouseEnter(Sender: TObject);
-begin
-  Cursor := crSizeNS;
-end;
-
 procedure TBorderFrame.SetMinHeight(const AMinHeight: Integer);
 begin
   FMinHeight := AMinHeight;
   FormHeight := FMinHeight;
+end;
+
+function TBorderFrame.GetMinClientWidth: Integer;
+begin
+  Result := FMinWidth - WidthDelta;
+end;
+
+procedure TBorderFrame.SetMinClientWidth(const AMinClientWidth: Integer);
+begin
+  FMinWidth := AMinClientWidth + WidthDelta;
+  FormWidth := FMinWidth;
+end;
+
+function TBorderFrame.GetMinClientHeight: Integer;
+begin
+  Result := FMinHeight - HeightDelta;
+end;
+
+procedure TBorderFrame.SetMinClientHeight(const AMinClientHeight: Integer);
+begin
+  FMinHeight := AMinClientHeight + HeightDelta;
+  FormHeight := FMinHeight;
+end;
+
+procedure TBorderFrame.TopLayoutMouseEnter(Sender: TObject);
+begin
+  Cursor := crSizeNS;
 end;
 
 procedure TBorderFrame.SetFormWidth(const AFormWidth: Integer);
