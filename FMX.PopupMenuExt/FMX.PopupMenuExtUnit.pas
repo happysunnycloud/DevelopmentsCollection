@@ -61,7 +61,6 @@ type
   strict private
     FItems: TItems;
     FPopupMenuThread: TPopupMenuExtThread;
-//    FDoneEvent: TEvent;
     /// <summary>
     ///   Выставляется в случае закрытия всего приложения
     ///   При выставленном флаге, сворачиваем работу меню
@@ -284,18 +283,6 @@ end;
 
 { TLayoutHelper }
 
-//{ TPopupMenuExtForm }
-//
-//procedure TPopupMenuExtForm.OnCloseQueryInternalHandler(Sender: TObject; var CanClose: Boolean);
-//begin
-//  CanClose := true;
-//end;
-//
-//procedure TPopupMenuExtForm.OnCloseInternalHandler(Sender: TObject; var Action: TCloseAction);
-//begin
-//  Action := TCloseAction.caFree;
-//end;
-
 procedure TLayoutHelper.SetParentItem(const AParentItem: TItem);
 begin
   Self.TagObject := AParentItem;
@@ -442,8 +429,6 @@ procedure TPopupMenuExt.OnAndroidGoBackButtonClickHandler(Sender: TObject);
 begin
   if Assigned(FPopupMenuThread) then
     FPopupMenuThread.GoBackClickFixed := true;
-//  if Assigned(FPopupMenuThread) then
-//    FPopupMenuThread.CountDown := 0;
 end;
 
 procedure TPopupMenuExt.TimeIsOutFixed(const AForm: TPopupMenuExtForm);
@@ -459,13 +444,6 @@ begin
       ParentForm := ParentItem.FormOwner;
       ParentForm.Show;
       ParentForm.Invalidate;
-
-  //    TThread.ForceQueue(nil,
-  //      procedure
-  //      begin
-  //        ParentForm.Show;
-  //        ParentForm.Invalidate;
-  //      end);
 
       FPopupMenuThread :=  TPopupMenuExtThread.Create(ParentForm, sdBackward, true);
       FPopupMenuThread.FreeOnTerminate := true;
@@ -594,7 +572,7 @@ begin
 
   FItems := TItems.Create;
   FPopupMenuThread := nil;
-//  FDoneEvent := TEvent.Create(nil, true, false, '', false);
+
   FToDoClose := false;
 
   FTheme := TTheme.Create;
@@ -619,8 +597,6 @@ begin
   end;
 
   FreeAndNil(FItems);
-//  FreeAndNil(FDoneEvent);
-
   FreeAndNil(FTheme);
 
   inherited;
@@ -695,7 +671,6 @@ procedure TPopupMenuExt.Open(
   end;
 var
   Item: TItem;
-//  ItemCount: Word;
   Layout: TLayout;
   BackgroundRectangle: TRectangle;
   Rectangle: TRectangle;
@@ -704,16 +679,16 @@ var
   ParentArrowWidth: Single;
   ItemsByParent: TItems;
   MaxTextWidth: Single;
-  //ItemHeight: Word;
   ItemsHeight: Single;
   PopupFormWidth: Integer;
   PopupForm: TPopupMenuExtForm;
   OpenedForm: TPopupMenuExtForm;
   ItemIsSplitter: Boolean;
   {$IFDEF ANDROID}
-  AndroidGoBackButton: TButton;
+  AndroidGoBackButtonLayout: TLayout;
+  AndroidGoBackButtonRectangle: TRectangle;
+  AndroidGoBackButtonText: TText;
   {$ENDIF}
-//  TestRect: TRectangle;
 begin
   if not Assigned(AParentItem) then
   begin
@@ -729,8 +704,6 @@ begin
     end;
   end;
 
-//  FDoneEvent.ResetEvent;
-
   PopupForm := TPopupMenuExtForm.CreateNew(Self);
   PopupForm.BorderStyle := TFmxFormBorderStyle.None;
   PopupForm.Left := Trunc(X);
@@ -740,7 +713,6 @@ begin
 
   PopupFormWidth := 0;
   ItemsHeight := 0;
-//  ItemCount := 0;
 
   ItemsByParent := TItems.Create;
   FItems.GetItemsByParent(AParentItem, ItemsByParent);
@@ -758,16 +730,36 @@ begin
     //TAlphaColorRec.
     //Limegreen;
     //Lightgray;
+    { TODO : Создать тему для кнопок меню }
 
     {$IFDEF ANDROID}
-    AndroidGoBackButton := TButton.Create(BackgroundRectangle);
-    AndroidGoBackButton.Parent := BackgroundRectangle;
-    AndroidGoBackButton.Align := TAlignLayout.Bottom;
-    AndroidGoBackButton.Height := ITEM_HEIGHT;
-    AndroidGoBackButton.Text := 'Back';
-    AndroidGoBackButton.OnClick := OnAndroidGoBackButtonClickHandler;
-    AndroidGoBackButton.TextSettings.FontColor :=
-      Theme.TextControlSettings.TextSettings.FontColor;
+    AndroidGoBackButtonLayout := TLayout.Create(BackgroundRectangle);
+    AndroidGoBackButtonLayout.Parent := BackgroundRectangle;
+    AndroidGoBackButtonLayout.Align := TAlignLayout.Bottom;
+    AndroidGoBackButtonLayout.Height := ITEM_HEIGHT;
+    AndroidGoBackButtonLayout.HitTest := true;
+    AndroidGoBackButtonLayout.OnClick := OnAndroidGoBackButtonClickHandler;
+    AndroidGoBackButtonLayout.OnMouseEnter := OnItemMouseEnterHandler;
+    AndroidGoBackButtonLayout.OnMouseLeave := OnItemMouseLeaveHandler;
+
+    AndroidGoBackButtonRectangle := TRectangle.Create(AndroidGoBackButtonLayout);
+    AndroidGoBackButtonRectangle.Parent := AndroidGoBackButtonLayout;
+    AndroidGoBackButtonRectangle.Align := TAlignLayout.Client;
+    AndroidGoBackButtonRectangle.HitTest := false;
+    AndroidGoBackButtonRectangle.Stroke.Thickness := 0;
+    AndroidGoBackButtonRectangle.Stroke.Kind := TBrushKind.None;
+    AndroidGoBackButtonRectangle.Margins.Top := 0;
+    AndroidGoBackButtonRectangle.Margins.Left := 2;
+    AndroidGoBackButtonRectangle.Margins.Right := 2;
+    AndroidGoBackButtonRectangle.Margins.Bottom := 0;
+    AndroidGoBackButtonRectangle.Fill.Color := Theme.LightBackgroundColor;
+
+    AndroidGoBackButtonText := TText.Create(AndroidGoBackButtonRectangle);
+    AndroidGoBackButtonText.Parent := AndroidGoBackButtonRectangle;
+    AndroidGoBackButtonText.Text := 'Back';
+    AndroidGoBackButtonText.HitTest := false;
+    Theme.TextControlSettings.ApplyTo(AndroidGoBackButtonText);
+    AndroidGoBackButtonText.TextSettings.HorzAlign := TTextAlign.Center;
     {$ENDIF}
 
     for Item in ItemsByParent do
@@ -837,43 +829,12 @@ begin
         TextArrow.Width := 0;
         TextArrow.Visible := false;
       end;
-//      TextArrow.Width := ParentArrowWidth;
-
       Text := TText.Create(Rectangle);
       Text.Parent := Rectangle;
       Text.Text := Item.Text;
+      Theme.TextControlSettings.ApplyTo(Text);
 
-      FTheme.TextControlSettings.ApplyTo(Text);
-
-      {
-      Text.Align := TAlignLayout.Client;
-      Text.HitTest := false;
-      Text.TextSettings.HorzAlign := TTextAlign.Leading;
-      Text.TextSettings.VertAlign := TTextAlign.Center;
-      Text.Margins.Left := 5;
-      Text.WordWrap := false;
-      Text.TextSettings.FontColor :=
-        FTheme.TextControlSettings.TextSettings.FontColor;
-      }
-
-{
-      Text := TText.Create(Rectangle);
-      Text.Parent := Rectangle;
-      Text.Align := TAlignLayout.Client;
-      Text.Text := Item.Text;
-      Text.HitTest := false;
-      Text.TextSettings.HorzAlign := TTextAlign.Leading;
-      Text.TextSettings.VertAlign := TTextAlign.Center;
-      Text.Margins.Left := 5;
-      Text.WordWrap := false;
-}
       MaxTextWidth := _GetMaxTextWidth(Text, ItemsByParent);
-
-//      TestRect := TRectangle.Create(Layout);
-//      TestRect.Parent := TextArrow;
-//      TestRect.Width := ParentArrowWidth + Text.Margins.Left;
-//      TestRect.Height := 30;
-//      TestRect.Opacity := 0.5;
 
       PopupFormWidth := Trunc(
         (
@@ -889,11 +850,7 @@ begin
        )
       );
 
-      //ItemHeight := Trunc(Text.Canvas.TextHeight('W'));
-
       Layout.Align := TAlignLayout.Top;
-
-//      Inc(ItemCount);
     end;
 
     ItemsHeight := ItemsHeight + 2;
@@ -904,36 +861,20 @@ begin
   end;
 
   PopupForm.ParentItem := AParentItem;
-  PopupForm.Height := Trunc(ItemsHeight);//ItemCount * ItemHeight;
+  PopupForm.Height := Trunc(ItemsHeight);
   {$IFDEF MSWINDOWS}
   TaskBarPositionDelta(PopupForm);
   ParentFormDelta(PopupForm);
   ScreenSizeDelta(PopupForm);
-//  SetForegroundWindow(FmxHandleToHWND(PopupForm.Handle));
   {$ELSE IFDEF ANDROID}
   PopupForm.FullScreen := true;
   {$ENDIF}
 
-//  SetForegroundWindow(FmxHandleToHWND(PopupForm.Handle));
-//  SetWindowPos(FmxHandleToHWND(PopupForm.Handle), HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE or SWP_NOMOVE);
-//  PopupForm.Invalidate;
-
   StartPopupMenuThread(PopupForm, sdForward);
 
-//  TForm(Owner).SendToBack;
-
   PopupForm.FormStyle := TFormStyle.StayOnTop;
-  PopupForm.Parent := TForm(Owner);
+  PopupForm.Parent := TForm(Owner);  // Чтобы окно было на переднем фоне
   PopupForm.Show;
-  //PopupForm.BringToFront;
-
-//  TThread.Queue(nil,
-//    procedure
-//    begin
-//      PopupForm.Show;
-//      PopupForm.BringToFront;
-//      PopupForm.Invalidate;
-//    end);
 end;
 
 procedure TPopupMenuExt.StartPopupMenuThread(
