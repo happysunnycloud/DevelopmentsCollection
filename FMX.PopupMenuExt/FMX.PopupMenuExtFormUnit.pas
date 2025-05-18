@@ -63,8 +63,6 @@ end;
 
 procedure TPopupMenuExtForm.OnKeyUpHandler(Sender: TObject; var Key: Word; var KeyChar: Char;
   Shift: TShiftState);
-var
-  a: String;
 begin
   if Key = vkHardwareBack then
     Key := 0;

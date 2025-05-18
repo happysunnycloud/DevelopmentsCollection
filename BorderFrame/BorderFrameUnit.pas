@@ -143,11 +143,11 @@ type
     /// <summary>
     ///   Ширина окна вместе с бортами
     /// </summary>
-    property FormWidth: Integer read GetFormWidth write SetFormWidth;
+    property Width: Integer read GetFormWidth write SetFormWidth;
     /// <summary>
     ///   Высота окна вместе с бортами и заголовком
     /// </summary>
-    property FormHeight: Integer read GetFormHeight write SetFormHeight;
+    property Height: Integer read GetFormHeight write SetFormHeight;
     /// <summary>
     ///   Ширина окна внутри бортов
     /// </summary>
@@ -683,13 +683,13 @@ end;
 procedure TBorderFrame.SetMinWidth(const AMinWidth: Integer);
 begin
   FMinWidth := AMinWidth;
-  FormWidth := FMinWidth;
+  Width := FMinWidth;
 end;
 
 procedure TBorderFrame.SetMinHeight(const AMinHeight: Integer);
 begin
   FMinHeight := AMinHeight;
-  FormHeight := FMinHeight;
+  Height := FMinHeight;
 end;
 
 function TBorderFrame.GetMinClientWidth: Integer;
@@ -700,7 +700,7 @@ end;
 procedure TBorderFrame.SetMinClientWidth(const AMinClientWidth: Integer);
 begin
   FMinWidth := AMinClientWidth + WidthDelta;
-  FormWidth := FMinWidth;
+//  Width := FMinWidth;
 end;
 
 function TBorderFrame.GetMinClientHeight: Integer;
@@ -711,7 +711,7 @@ end;
 procedure TBorderFrame.SetMinClientHeight(const AMinClientHeight: Integer);
 begin
   FMinHeight := AMinClientHeight + HeightDelta;
-  FormHeight := FMinHeight;
+//  Height := FMinHeight;
 end;
 
 procedure TBorderFrame.TopLayoutMouseEnter(Sender: TObject);
@@ -731,12 +731,12 @@ end;
 
 procedure TBorderFrame.SetClientWidth(const AClientWidth: Integer);
 begin
-  FormWidth := AClientWidth + WidthDelta;
+  Width := AClientWidth + WidthDelta;
 end;
 
 procedure TBorderFrame.SetClientHeight(const AClientHeight: Integer);
 begin
-  FormHeight := AClientHeight + HeightDelta;
+  Height := AClientHeight + HeightDelta;
 end;
 
 function TBorderFrame.GetWidthDelta: Integer;
