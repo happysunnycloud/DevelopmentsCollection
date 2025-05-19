@@ -39,6 +39,8 @@ type
     FOnClick: TNotifyEvent;
     FFormOwner: TPopupMenuExtForm;
     FTag: NativeInt;
+    FIsChecked: Boolean;
+    FName: String;
 
     procedure SetParent(const AParent: TItem);
     function GetLevel: Word;
@@ -55,6 +57,8 @@ type
     property Level: Word read GetLevel;
 
     property Tag: NativeInt read FTag write FTag;
+    property IsChecked: Boolean read FIsChecked write FIsChecked;
+    property Name: String read FName write FName;
   end;
 
   TPopupMenuExt = class(TComponent)
@@ -90,6 +94,8 @@ type
   public
     constructor Create(Owner: TComponent); reintroduce;
     destructor Destroy; override;
+
+    function FindItem(const AItemName: String): TItem;
 
     procedure Add(const AItem: TItem);
     procedure Open(const X, Y: Single; const AParentItem: TItem = nil);
@@ -327,6 +333,7 @@ begin
   FOnClick := nil;
   FFormOwner := nil;
   FTag := 0;
+  FName := '';
 end;
 
 destructor TItem.Destroy;
@@ -436,6 +443,9 @@ var
   ParentItem: TItem;
   ParentForm: TPopupMenuExtForm;
 begin
+  if not Assigned(AForm) then
+    Exit;
+
   ParentItem := AForm.ParentItem;
   if Assigned(ParentItem) then
   begin
@@ -577,6 +587,21 @@ begin
 
   FTheme := TTheme.Create;
 
+  FTheme.BackgroundColor := $FFB7B7B7;//$FF2A001A;//TAlphaColorRec.Black;
+  FTheme.LightBackgroundColor := $FFE0E0E0;//TAlphaColorRec.Black;//$FFE0E0E0;
+  FTheme.DarkBackgroundColor := TAlphaColorRec.Cornflowerblue;
+
+  FTheme.TextControlSettings.Align := TAlignLayout.Client;
+  FTheme.TextControlSettings.HitTest := false;
+  FTheme.TextControlSettings.TextSettings.FontColor :=
+    TAlphaColorRec.Black;
+  FTheme.TextControlSettings.TextSettings.HorzAlign :=
+    TTextAlign.Leading;
+  FTheme.TextControlSettings.TextSettings.VertAlign :=
+    TTextAlign.Center;
+  FTheme.TextControlSettings.Margins.Left := 5;
+  FTheme.TextControlSettings.WordWrap := false;
+
   Timer := TTimer.Create(Self);
   Timer.Interval := 1000;
   Timer.Enabled := true;
@@ -602,8 +627,34 @@ begin
   inherited;
 end;
 
-procedure TPopupMenuExt.Add(const AItem: TItem);
+function TPopupMenuExt.FindItem(const AItemName: String): TItem;
+var
+  Item: TItem;
 begin
+  Result := nil;
+
+  for Item in FItems do
+  begin
+    if (not Item.Name.IsEmpty) and (Item.Name = AItemName) then
+      Exit(Item);
+  end;
+
+  if not Assigned(Result) then
+    raise Exception.
+      Create('TPopupMenuExt.FindItem: An object with that name not found');
+end;
+
+procedure TPopupMenuExt.Add(const AItem: TItem);
+var
+  Item: TItem;
+begin
+  for Item in FItems do
+  begin
+    if (not AItem.Name.IsEmpty) and (Item.Name = AItem.Name) then
+      raise Exception.
+        Create('TPopupMenuExt.Add: An object with that name already exists');
+  end;
+
   FItems.Add(AItem);
 end;
 
@@ -617,6 +668,7 @@ begin
   begin
     FToDoClose := true;
 
+    FPopupMenuThread.Form := nil;
     FPopupMenuThread.Terminate;
     FPopupMenuThread.WaitForDone;
   end;
@@ -674,6 +726,8 @@ var
   Layout: TLayout;
   BackgroundRectangle: TRectangle;
   Rectangle: TRectangle;
+  RectangleIsCheckedFrame: TRectangle;
+  RectangleIsCheckedTrue: TRectangle;
   Text: TText;
   TextArrow: TText;
   ParentArrowWidth: Single;
@@ -829,6 +883,7 @@ begin
         TextArrow.Width := 0;
         TextArrow.Visible := false;
       end;
+
       Text := TText.Create(Rectangle);
       Text.Parent := Rectangle;
       Text.Text := Item.Text;
@@ -849,6 +904,40 @@ begin
           Rectangle.Margins.Right
        )
       );
+
+      RectangleIsCheckedFrame := TRectangle.Create(Rectangle);
+      RectangleIsCheckedFrame.Parent := Rectangle;
+      RectangleIsCheckedFrame.Align := TAlignLayout.Right;
+      RectangleIsCheckedFrame.HitTest := false;
+      RectangleIsCheckedFrame.Margins.Top := Trunc(Rectangle.Height / 4);
+      RectangleIsCheckedFrame.Margins.Bottom := Trunc(Rectangle.Height / 4);
+      RectangleIsCheckedFrame.Margins.Right := 5;
+      RectangleIsCheckedFrame.Width := RectangleIsCheckedFrame.Height;
+      RectangleIsCheckedFrame.Fill.Color := TAlphaColorRec.Null;
+      RectangleIsCheckedFrame.Stroke.Thickness := 0.5;
+      RectangleIsCheckedFrame.Stroke.Kind := TBrushKind.Solid;
+      RectangleIsCheckedFrame.Stroke.Color :=
+        Theme.TextControlSettings.TextSettings.FontColor;
+      RectangleIsCheckedFrame.Visible := not TextArrow.Visible;
+
+      RectangleIsCheckedTrue := TRectangle.Create(RectangleIsCheckedFrame);
+      RectangleIsCheckedTrue.Parent := RectangleIsCheckedFrame;
+      RectangleIsCheckedTrue.Fill.Color :=
+        Theme.TextControlSettings.TextSettings.FontColor;
+      RectangleIsCheckedTrue.HitTest := false;
+
+
+      RectangleIsCheckedTrue.Position.X := RectangleIsCheckedFrame.Width / 5;
+      RectangleIsCheckedTrue.Position.Y := RectangleIsCheckedTrue.Position.X;
+
+//      RectangleIsCheckedTrue.Position.X := 3 * RectangleIsCheckedTrue.Scale.X;
+//      RectangleIsCheckedTrue.Position.Y := 3 * RectangleIsCheckedTrue.Scale.Y;
+
+      RectangleIsCheckedTrue.Height :=
+        RectangleIsCheckedFrame.Height - (RectangleIsCheckedTrue.Position.X * 2);
+      RectangleIsCheckedTrue.Width := RectangleIsCheckedTrue.Height;
+
+      RectangleIsCheckedFrame.Visible := not TextArrow.Visible and Item.IsChecked;
 
       Layout.Align := TAlignLayout.Top;
     end;

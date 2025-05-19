@@ -37,6 +37,9 @@ type
 
     procedure SetCountDown(const ACountDown: Integer);
     function GetCountDown: Integer;
+
+    procedure SetForm(const AForm: TPopupMenuExtForm);
+    function GetForm: TPopupMenuExtForm;
   protected
     procedure Execute; override;
   public
@@ -52,7 +55,7 @@ type
     property ClickFixed: Boolean read FClickFixed;
     property GoBackClickFixed: Boolean
       read GetGoBackClickeFixed write SetGoBackClickeFixed;
-    property Form: TPopupMenuExtForm read FForm;
+    property Form: TPopupMenuExtForm read GetForm write SetForm;
     property ClickedItem: TObject read GetClickedItem write SetClickedItem;
     property FormOwner: TPopupMenuExtForm read FFormOwner write FFormOwner;
     property CountDown: Integer read GetCountDown write SetCountDown;
@@ -165,6 +168,26 @@ begin
   end;
 end;
 
+procedure TPopupMenuExtThread.SetForm(const AForm: TPopupMenuExtForm);
+begin
+  FCriticalSection.Enter;
+  try
+    FForm := AForm;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
+function TPopupMenuExtThread.GetForm: TPopupMenuExtForm;
+begin
+  FCriticalSection.Enter;
+  try
+    Result := FForm;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
 procedure TPopupMenuExtThread.Execute;
   {$IFDEF MSWINDOWS}
   function _IsMouseOverForm(const AForm: TPopupMenuExtForm): Boolean;
@@ -174,7 +197,7 @@ procedure TPopupMenuExtThread.Execute;
   begin
     Result := false;
 
-    if AForm = nil then
+    if not Assigned(AForm) then
       Exit;
 
     GetCursorPos(Point);
@@ -209,15 +232,10 @@ begin
   {$IFDEF MSWINDOWS}
   while not Terminated and not Assigned(ClickedItem) do
   begin
-//    TThread.Queue(nil,
-//      procedure
-//      begin
-//        FForm.BringToFront;
-//      end);
     if not _IsMouseOverForm(FForm) then
     begin
       i := CountDown;
-      while not Terminated and not _IsMouseOverForm(FForm) and not Assigned(ClickedItem) do
+      while not Terminated and not _IsMouseOverForm(Form) and not Assigned(ClickedItem) do
       begin
         Sleep(100);
 
@@ -239,40 +257,8 @@ begin
       TimeIsOut
     else
       Sleep(100);
-//    if CountDown = 0 then
-//      TimeIsOut
-//    else
-//      Sleep(100);
   end;
   {$ENDIF}
-
-//  while not Terminated and not Assigned(ClickedItem) do
-//  begin
-//    {$IFDEF MSWINDOWS}
-//    if not _IsMouseOverForm(FForm) then
-//    begin
-//      i := CountDown;
-//      while not Terminated and not _IsMouseOverForm(FForm) and not Assigned(ClickedItem) do
-//      begin
-//        Sleep(100);
-//
-//        Dec(i, 100);
-//
-//        if i < 0 then
-//          TimeIsOut;
-//      end;
-//    end
-//    else
-//    {$ENDIF}
-//    begin
-//      // В данном случае обратный отсчет может быть сброшен кнопкой закрытия меню
-//      // Эта кнопка доступна при сборке под Андроид
-//      if CountDown = 0 then
-//        TimeIsOut
-//      else
-//        Sleep(100);
-//    end;
-//  end;
 
   if Assigned(ClickedItem) then
     FClickFixed := true;
