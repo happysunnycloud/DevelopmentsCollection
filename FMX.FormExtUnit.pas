@@ -20,6 +20,10 @@ type
   PCloseMethod = ^TCloseMethod;
   TCloseMethod = procedure(Sender: TObject; var Action: TCloseAction) of object;
 
+  PKeyUpMethod = ^TKeyUpMethod;
+  TKeyUpMethod = procedure(Sender: TObject; var Key: Word; var KeyChar: Char;
+    Shift: TShiftState) of object;
+
   TFormExt = class(FMX.Forms.TForm)
   strict private
     FThreadFactoryRegistry: TThreadFactoryRegistry;
@@ -27,6 +31,12 @@ type
     FCanClose: Boolean;
     FOnCloseQueryExternalHandler: TCloseQueryMethod;
     FOnCloseExternalHandler: TCloseMethod;
+    FOnKeyUpExternalHandler: TKeyUpMethod;
+    /// <summary>
+    ///   Выставляется в случае закрытия, что бы повторно не отрабатывать закрытие
+    ///   Важно для Андроида, как юзер может закликать хардовую кнопку закрытия
+    /// </summary>
+    FToDoClose: Boolean;
 
     procedure OnDestroyedAllFactoryHandler(Sender: TObject);
 
@@ -38,6 +48,8 @@ type
 
     procedure OnCloseQueryInternalHandler(Sender: TObject; var CanClose: Boolean); virtual;
     procedure OnCloseInternalHandler(Sender: TObject; var Action: TCloseAction); virtual;
+    procedure OnKeyUpInternalHandler(Sender: TObject; var Key: Word; var KeyChar: Char;
+      Shift: TShiftState); virtual;
   public
     constructor Create(AOwner: TComponent); override;
 
@@ -50,25 +62,34 @@ type
 
     property OnCloseQuery: TCloseQueryMethod read GetOnCloseQuery write SetOnCloseQuery;
     property OnClose: TCloseMethod read GetOnClose write SetOnClose;
+
+    property ToDoClose: Boolean read FToDoClose write FToDoClose;
   end;
 
 implementation
 
 uses
     System.SysUtils
+  //asd debug
+  , FMX.Types
+  //asd debug
   ;
 
 constructor TFormExt.Create(AOwner: TComponent);
 var
   PCloseQueryMethodAddr: PCloseQueryMethod;
   PCloseMethodAddr: PCloseMethod;
+  PKeyUpAddr: PCloseMethod;
   Method: TMethod;
 begin
   inherited Create(AOwner);
 
   FCanClose := false;
+  FToDoClose := false;
+
   inherited OnCloseQuery := OnCloseQueryInternalHandler;
   inherited OnClose := OnCloseInternalHandler;
+  inherited OnKeyUp := OnKeyUp;
 
   FThreadFactoryRegistry := TThreadFactoryRegistry.Create;
   // Событие должно назначаться при закрытии формы,
@@ -85,10 +106,17 @@ begin
   Method.Code := PCloseMethodAddr;
   Method.Data := Self;
   FOnCloseExternalHandler := TCloseMethod(Method);
+
+  PKeyUpAddr := Self.MethodAddress('FormKeyUp');
+  Method.Code := PKeyUpAddr;
+  Method.Data := Self;
+  FOnKeyUpExternalHandler := TKeyUpMethod(Method);
 end;
 
 destructor TFormExt.Destroy;
 begin
+  Log.d('TFormExt.Destroy');
+
   FreeAndNil(FThreadFactory);
   FreeAndNil(FThreadFactoryRegistry);
 
@@ -97,6 +125,14 @@ end;
 
 procedure TFormExt.OnCloseQueryInternalHandler(Sender: TObject; var CanClose: Boolean);
 begin
+  if FToDoClose then
+    Exit;
+
+  FToDoClose := true;
+
+  //asd debug
+  Log.d('TFormExt.OnCloseQueryInternalHandler');
+  //asd debug
   if Assigned(FOnCloseQueryExternalHandler) then
     FOnCloseQueryExternalHandler(Sender, CanClose);
 
@@ -132,6 +168,24 @@ begin
     FOnCloseExternalHandler(Sender, Action);
 end;
 
+procedure TFormExt.OnKeyUpInternalHandler(Sender: TObject; var Key: Word; var KeyChar: Char;
+  Shift: TShiftState);
+begin
+  // vkHardwareBack - Андроидная кнопка назад
+  if Key = vkHardwareBack then
+  begin
+    if not ToDoClose then
+      Close;
+
+    Key := 0;
+
+    Exit;
+  end;
+
+  if Assigned(FOnKeyUpExternalHandler) then
+    FOnKeyUpExternalHandler(Sender, Key, KeyChar, Shift);
+end;
+
 function TFormExt.GetOnCloseQuery: TCloseQueryMethod;
 begin
   Result := OnCloseQuery;
@@ -139,6 +193,9 @@ end;
 
 procedure TFormExt.OnDestroyedAllFactoryHandler(Sender: TObject);
 begin
+  //asd debug
+  Log.d('TFormExt.OnDestroyedAllFactoryHandler');
+  //asd debug
   TThread.ForceQueue(nil,
     procedure
     begin
