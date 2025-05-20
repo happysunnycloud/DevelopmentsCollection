@@ -470,42 +470,6 @@ begin
 
   CloseForm(AForm);
 end;
-//procedure TPopupMenuExt.TimeIsOutFixed(const AForm: TPopupMenuExtForm);
-//var
-//  ParentItem: TItem;
-//  ParentForm: TPopupMenuExtForm;
-//begin
-//  ParentItem := AForm.ParentItem;
-//
-//  CloseForm(AForm);
-//
-//  if FToDoClose then
-//    Exit;
-//
-//  if not Assigned(ParentItem) then
-//  begin
-////    FDoneEvent.SetEvent;
-//
-//    //Exit
-//
-//    Close;
-//  end
-//  else
-//  begin
-//    ParentForm := ParentItem.FormOwner;
-//    TThread.ForceQueue(nil,
-//      procedure
-//      begin
-//        ParentForm.Show;
-//        ParentForm.Invalidate;
-//      end);
-//
-//    FPopupMenuThread :=  TPopupMenuExtThread.Create(ParentForm, sdBackward, true);
-//    FPopupMenuThread.FreeOnTerminate := true;
-//    FPopupMenuThread.OnTerminate := OnTerminatePopupMenuThreadHandler;
-//    FPopupMenuThread.Start;
-//  end;
-//end;
 
 procedure TPopupMenuExt.ItemClickFixed(const ASender: TObject);
 
@@ -924,15 +888,11 @@ begin
       RectangleIsCheckedTrue.Parent := RectangleIsCheckedFrame;
       RectangleIsCheckedTrue.Fill.Color :=
         Theme.TextControlSettings.TextSettings.FontColor;
+      RectangleIsCheckedTrue.Stroke.Thickness := 0;
+      RectangleIsCheckedTrue.Stroke.Kind := TBrushKind.None;
       RectangleIsCheckedTrue.HitTest := false;
-
-
       RectangleIsCheckedTrue.Position.X := RectangleIsCheckedFrame.Width / 5;
       RectangleIsCheckedTrue.Position.Y := RectangleIsCheckedTrue.Position.X;
-
-//      RectangleIsCheckedTrue.Position.X := 3 * RectangleIsCheckedTrue.Scale.X;
-//      RectangleIsCheckedTrue.Position.Y := 3 * RectangleIsCheckedTrue.Scale.Y;
-
       RectangleIsCheckedTrue.Height :=
         RectangleIsCheckedFrame.Height - (RectangleIsCheckedTrue.Position.X * 2);
       RectangleIsCheckedTrue.Width := RectangleIsCheckedTrue.Height;
