@@ -13,9 +13,8 @@ uses
   ;
 
 type
-  TTextControlSettings = class
+  TCommonControlSettings = class
   strict private
-    FTextSettings: TTextSettings;
     FMargins: TBounds;
     FAlign: TAlignLayout;
     FWordWrap: Boolean;
@@ -24,11 +23,28 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    property TextSettings: TTextSettings read FTextSettings write FTextSettings;
     property Margins: TBounds read FMargins write FMargins;
     property Align: TAlignLayout read FAlign write FAlign;
     property WordWrap: Boolean read FWordWrap write FWordWrap;
     property HitTest: Boolean read FHitTest write FHitTest;
+  end;
+
+  TTextControlSettings = class(TCommonControlSettings)
+  strict private
+    FTextSettings: TTextSettings;
+//    FMargins: TBounds;
+//    FAlign: TAlignLayout;
+    FWordWrap: Boolean;
+//    FHitTest: Boolean;
+  public
+    constructor Create;
+    destructor Destroy; override;
+
+    property TextSettings: TTextSettings read FTextSettings write FTextSettings;
+//    property Margins: TBounds read FMargins write FMargins;
+//    property Align: TAlignLayout read FAlign write FAlign;
+    property WordWrap: Boolean read FWordWrap write FWordWrap;
+//    property HitTest: Boolean read FHitTest write FHitTest;
 
     procedure ApplyTo(const AText: TText);
     procedure Assign(const ATextControlSettings: TTextControlSettings);
@@ -76,34 +92,57 @@ uses
   , FMX.Styles
   ;
 
-{ TTextControlSettings }
+{ TCommonControlSettings }
 
-constructor TTextControlSettings.Create;
+constructor TCommonControlSettings.Create;
 var
   Rect: TRectF;
 begin
   Rect := TRectF.Create(TPointF.Zero);
 
-  FTextSettings := TTextSettings.Create(nil);
   FMargins := TBounds.Create(Rect);
 
   FAlign := TAlignLayout.None;
   FHitTest := false;
 end;
 
+destructor TCommonControlSettings.Destroy;
+begin
+  FreeAndNil(FMargins);
+end;
+
+{ TTextControlSettings }
+
+constructor TTextControlSettings.Create;
+//var
+//  Rect: TRectF;
+begin
+  inherited;
+
+//  Rect := TRectF.Create(TPointF.Zero);
+
+  FTextSettings := TTextSettings.Create(nil);
+//  FMargins := TBounds.Create(Rect);
+
+//  FAlign := TAlignLayout.None;
+//  FHitTest := false;
+end;
+
 destructor TTextControlSettings.Destroy;
 begin
   FreeAndNil(FTextSettings);
-  FreeAndNil(FMargins);
+//  FreeAndNil(FMargins);
+
+  inherited;
 end;
 
 procedure TTextControlSettings.ApplyTo(const AText: TText);
 begin
   AText.TextSettings.Assign(FTextSettings);
-  AText.Margins.Assign(FMargins);
-  AText.Align := FAlign;
+  AText.Margins.Assign(inherited Margins);
+  AText.Align := inherited Align;
   AText.WordWrap := FWordWrap;
-  AText.HitTest := FHitTest;
+  AText.HitTest := inherited HitTest;
 end;
 
 procedure TTextControlSettings.Assign(const ATextControlSettings: TTextControlSettings);
