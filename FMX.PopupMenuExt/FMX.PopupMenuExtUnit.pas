@@ -702,6 +702,7 @@ var
   PopupForm: TPopupMenuExtForm;
   OpenedForm: TPopupMenuExtForm;
   ItemIsSplitter: Boolean;
+  ScrollBox: TScrollBox;
   {$IFDEF ANDROID}
   AndroidGoBackButtonLayout: TLayout;
   AndroidGoBackButtonRectangle: TRectangle;
@@ -780,14 +781,18 @@ begin
     AndroidGoBackButtonText.TextSettings.HorzAlign := TTextAlign.Center;
     {$ENDIF}
 
+    ScrollBox := TScrollBox.Create(BackgroundRectangle);
+    ScrollBox.Parent := BackgroundRectangle;
+    ScrollBox.Align := TAlignLayout.Client;
+
     for Item in ItemsByParent do
     begin
       ItemIsSplitter := Item.Text = SPLITTER;
 
       Item.FormOwner := PopupForm;
 
-      Layout := TLayout.Create(BackgroundRectangle);
-      Layout.Parent := BackgroundRectangle;
+      Layout := TLayout.Create(ScrollBox);
+      Layout.Parent := ScrollBox;
       Layout.ItemOwner := Item;
       Layout.Align := TAlignLayout.Bottom;
       Layout.Height := ITEM_HEIGHT;
