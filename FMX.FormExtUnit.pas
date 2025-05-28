@@ -52,7 +52,6 @@ type
       Shift: TShiftState); virtual;
   public
     constructor Create(AOwner: TComponent); override;
-
     destructor Destroy; override;
 
     property CanClose: Boolean read FCanClose write FCanClose;
@@ -89,7 +88,7 @@ begin
 
   inherited OnCloseQuery := OnCloseQueryInternalHandler;
   inherited OnClose := OnCloseInternalHandler;
-  inherited OnKeyUp := OnKeyUp;
+  inherited OnKeyUp := OnKeyUpInternalHandler;
 
   FThreadFactoryRegistry := TThreadFactoryRegistry.Create;
   // Событие должно назначаться при закрытии формы,
