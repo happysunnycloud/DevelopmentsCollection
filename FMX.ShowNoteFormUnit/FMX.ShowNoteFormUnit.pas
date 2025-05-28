@@ -7,7 +7,8 @@ uses
   System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
   FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs, FMX.Memo.Types,
   FMX.Layouts, FMX.Controls.Presentation, FMX.ScrollBox, FMX.Memo, FMX.Objects,
-  FMX.StdCtrls, System.Generics.Collections;
+  FMX.StdCtrls, System.Generics.Collections
+  , FMX.ThemeUnit;
 
 const
   NOTE_IDENTS_STATE_FILE_NAME = 'NoteIdentsState.xml';
@@ -67,21 +68,6 @@ type
     property _IndexOf[const AIdent: String]: Integer read GetIndexOf;
   end;
 
-//  TTheme = class
-//  strict private
-//    class var FBackgroundColor: TAlphaColor;
-//    class var FMemoColor: TAlphaColor;
-//    class var FTextColor: TAlphaColor;
-//    class var FTextFontSize: Single;
-//  public
-//    class property BackgroundColor: TAlphaColor read FBackgroundColor write FBackgroundColor;
-//    class property MemoColor: TAlphaColor read FMemoColor write FMemoColor;
-//    class property TextColor: TAlphaColor read FTextColor write FTextColor;
-//    class property TextFontSize: Single read FTextFontSize write FTextFontSize;
-//
-//    class constructor Initialize;
-//  end;
-
   TNoteForm = class(TForm)
     NoteMemo: TMemo;
     NoteMemoLayout: TLayout;
@@ -102,6 +88,7 @@ type
     procedure YesButtonClick(Sender: TObject);
     procedure NoButtonClick(Sender: TObject);
   strict private
+    class var FTheme: TTheme;
     class var FNoteIdentList: TNoteIdentList;
 
     class function ShowNote(
@@ -110,22 +97,15 @@ type
       const ANoButtonText: String = '';
       const AOkButtonText: String = ''): TModalResult;
   private
-    { Private declarations }
-//    class var FTheme: TTheme;
   public
-    { Public declarations }
-//    class property Theme: TTheme read FTheme write FTheme;
-
-//    constructor Create(
-//      AOwner: TComponent;
-//      const ACaption: String;
-//      const AButtonKind: TButtonKind); reintroduce; overload;
-
     constructor Create(
       AOwner: TComponent;
       const ANoteIdent: TNoteIdent); reintroduce; overload;
+    destructor Destroy; override;
 
-    class procedure Init(const AIdentsFileName: String);
+    class procedure Init(
+      const AIdentsFileName: String;
+      const ATheme: TTheme = nil);
     class procedure UnInit;
 
     class procedure GenerateTemplate(const ANoteIdentsTemplateFileName: String);
@@ -160,7 +140,6 @@ uses
   , Xml.XMLIntf
   , Xml.XMLDoc
   , BorderFrameUnit
-  , FMX.ThemeUnit
   ;
 
 { Functions }
@@ -242,17 +221,6 @@ begin
   else
     Result := String(Text);
 end;
-
-
-//{ Theme }
-//
-//class constructor TTheme.Initialize;
-//begin
-//  FBackgroundColor := TAlphaColorRec.Gray;
-//  FMemoColor := TAlphaColorRec.Whitesmoke;
-//  FTextColor := TAlphaColorRec.Black;
-//  FTextFontSize := 10;
-//end;
 
 { TButtonKindHelper }
 
@@ -670,7 +638,7 @@ var
 begin
   inherited Create(AOwner);
 
-  TTheme.LoadStyleBook(Self.StyleBook);
+  FTheme.LoadStyleBookTo(Self.StyleBook);
 
   OkButtonLayout.Visible := false;
   YesNoButtonsLayout.Visible := false;
@@ -688,13 +656,13 @@ begin
     $FF9B0060);
 
   Self.Fill.Kind := TBrushKind.Solid;
-  Self.Fill.Color := TTheme.LightBackgroundColor;
+  Self.Fill.Color := FTheme.LightBackgroundColor;
 
   Self.ControlButtonsBackgroundRectangle.Fill.Kind := TBrushKind.Solid;
-  Self.ControlButtonsBackgroundRectangle.Fill.Color := TTheme.DarkBackgroundColor;
+  Self.ControlButtonsBackgroundRectangle.Fill.Color := FTheme.DarkBackgroundColor;
 
-  Self.NoteMemo.TextSettings.FontColor := TTheme.TextColor;
-  Self.NoteMemo.TextSettings.Font.Size := TTheme.TextFontSize;
+  Self.NoteMemo.TextSettings.FontColor := FTheme.TextColor;
+  Self.NoteMemo.TextSettings.Font.Size := FTheme.TextFontSize;
 //  Self.NoteMemo.TextSettings.Font.Family := 'MS Reference Sans Serif';
   Self.NoteMemo.StyledSettings := [];
 
@@ -726,6 +694,13 @@ begin
   NoteMemo.Text := NoteIdent.Text;
 end;
 
+destructor TNoteForm.Destroy;
+begin
+  FreeAndNil(FTheme);
+
+  inherited;
+end;
+
 procedure TNoteForm.NoteMemoApplyStyleLookup(Sender: TObject);
 var
   FmxObject: TFmxObject;
@@ -737,7 +712,7 @@ begin
     if FmxObject is TRectangle then
     begin
       Rectangle := TRectangle(FmxObject);
-      Rectangle.Fill.Color := TTheme.MemoColor;
+      Rectangle.Fill.Color := FTheme.MemoColor;
     end;
   end;
 end;
@@ -800,8 +775,14 @@ begin
   end;
 end;
 
-class procedure TNoteForm.Init(const AIdentsFileName: String);
+class procedure TNoteForm.Init(
+  const AIdentsFileName: String;
+  const ATheme: TTheme = nil);
 begin
+  FTheme := TTheme.Create;
+  if Assigned(ATheme) then
+    ATheme.CopyTo(FTheme);
+
   FNoteIdentList := TNoteIdentList.Create;
   try
     FNoteIdentList.LoadIdents(AIdentsFileName);
@@ -814,6 +795,8 @@ end;
 
 class procedure TNoteForm.UnInit;
 begin
+  FreeAndNil(FTheme);
+
   if Assigned(FNoteIdentList) then
   begin
     try

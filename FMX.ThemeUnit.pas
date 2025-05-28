@@ -52,7 +52,7 @@ type
 
   TTheme = class
   strict private
-    FStyleBook: TMemoryStream;
+    FStyleBookMemoryStream: TMemoryStream;
     FBackgroundColor: TAlphaColor;
     FDarkBackgroundColor: TAlphaColor;
     FLightBackgroundColor: TAlphaColor;
@@ -67,8 +67,8 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    procedure SaveStyleBook(const AStyleBook: TStyleBook);
-    procedure LoadStyleBook(const AStyleBook: TStyleBook);
+    procedure SaveStyleBookFrom(const AStyleBook: TStyleBook);
+    procedure LoadStyleBookTo(const AStyleBook: TStyleBook);
 
     procedure CopyTo(const ATheme: TTheme);
 
@@ -166,7 +166,7 @@ begin
   FTextSettings := TTextSettings.Create(nil);
   FTextControlSettings := TTextControlSettings.Create;
 
-  FStyleBook := TMemoryStream.Create;
+  FStyleBookMemoryStream := TMemoryStream.Create;
 end;
 
 destructor TTheme.Destroy;
@@ -174,36 +174,36 @@ begin
   FreeAndNil(FTextSettings);
   FreeAndNil(FTextControlSettings);
 
-  FreeAndNil(FStyleBook);
+  FreeAndNil(FStyleBookMemoryStream);
 end;
 
-procedure TTheme.SaveStyleBook(const AStyleBook: TStyleBook);
+procedure TTheme.SaveStyleBookFrom(const AStyleBook: TStyleBook);
 const
-  METHOD = 'TTheme.SaveStyleBook';
+  METHOD = 'TTheme.SaveStyleBookFrom';
 begin
   if not Assigned(AStyleBook) then
     Exit;
 
   try
-    FStyleBook.Size := 0;
-    TStyleStreaming.SaveToStream(AStyleBook.Style, FStyleBook);
-    FStyleBook.Position := 0;
+    FStyleBookMemoryStream.Size := 0;
+    TStyleStreaming.SaveToStream(AStyleBook.Style, FStyleBookMemoryStream);
+    FStyleBookMemoryStream.Position := 0;
   except
     on e: Exception do
       raise Exception.CreateFmt('%s -> %s', [METHOD, e.Message]);
   end;
 end;
 
-procedure TTheme.LoadStyleBook(const AStyleBook: TStyleBook);
+procedure TTheme.LoadStyleBookTo(const AStyleBook: TStyleBook);
 const
-  METHOD = 'TTheme.SaveStyleBook';
+  METHOD = 'TTheme.LoadStyleBookTo';
 begin
   if not Assigned(AStyleBook) then
     Exit;
 
   try
-    FStyleBook.Position := 0;
-    AStyleBook.LoadFromStream(FStyleBook);
+    FStyleBookMemoryStream.Position := 0;
+    AStyleBook.LoadFromStream(FStyleBookMemoryStream);
   except
     on e: Exception do
       raise Exception.CreateFmt('%s -> %s', [METHOD, e.Message]);
@@ -219,8 +219,8 @@ begin
   try
     StyleBook := TStyleBook.Create(nil);
     try
-      SaveStyleBook(StyleBook);
-      ATheme.LoadStyleBook(StyleBook);
+      LoadStyleBookTo(StyleBook);
+      ATheme.SaveStyleBookFrom(StyleBook);
     finally
       FreeAndNil(StyleBook);
     end;
