@@ -1,4 +1,5 @@
 ﻿{0.4}
+// Класс TFMXControlTools - перенести из этого модуля в FMX.ControlToolsUnit, здесь установить deprecated
 unit ToolsUnit;
 
 interface
