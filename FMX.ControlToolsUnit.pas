@@ -1,4 +1,6 @@
-﻿unit FMX.ControlToolsUnit;
+﻿// Берем этот модуль за основу для работы с контролами
+
+unit FMX.ControlToolsUnit;
 
 interface
 
