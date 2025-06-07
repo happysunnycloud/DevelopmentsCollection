@@ -13,7 +13,7 @@ uses
   ;
 
 type
-  TCommonControlSettings = class
+  TCommonProperties = class
   strict private
     FMargins: TBounds;
     FAlign: TAlignLayout;
@@ -29,25 +29,20 @@ type
     property HitTest: Boolean read FHitTest write FHitTest;
   end;
 
-  TTextControlSettings = class(TCommonControlSettings)
+  // Класс с темой для контрола TText
+  TTextControl = class(TCommonProperties)
   strict private
     FTextSettings: TTextSettings;
-//    FMargins: TBounds;
-//    FAlign: TAlignLayout;
     FWordWrap: Boolean;
-//    FHitTest: Boolean;
   public
     constructor Create;
     destructor Destroy; override;
 
     property TextSettings: TTextSettings read FTextSettings write FTextSettings;
-//    property Margins: TBounds read FMargins write FMargins;
-//    property Align: TAlignLayout read FAlign write FAlign;
     property WordWrap: Boolean read FWordWrap write FWordWrap;
-//    property HitTest: Boolean read FHitTest write FHitTest;
 
     procedure ApplyTo(const AText: TText);
-    procedure Assign(const ATextControlSettings: TTextControlSettings);
+    procedure Assign(const ATextControl: TTextControl);
   end;
 
   TTheme = class
@@ -57,12 +52,12 @@ type
     FDarkBackgroundColor: TAlphaColor;
     FLightBackgroundColor: TAlphaColor;
     FMemoColor: TAlphaColor;
-    FTextColor: TAlphaColor;
-    FTextFontSize: Single;
+//    FTextColor: TAlphaColor;
+//    FTextFontSize: Single;
 
-    FTextSettings: TTextSettings;
+//    FTextSettings: TTextSettings;
 
-    FTextControlSettings: TTextControlSettings;
+    FTextControl: TTextControl;
   public
     constructor Create;
     destructor Destroy; override;
@@ -76,13 +71,13 @@ type
     property DarkBackgroundColor: TAlphaColor read FDarkBackgroundColor write FDarkBackgroundColor;
     property LightBackgroundColor: TAlphaColor read FLightBackgroundColor write FLightBackgroundColor;
     property MemoColor: TAlphaColor read FMemoColor write FMemoColor;
-    property TextColor: TAlphaColor read FTextColor write FTextColor;
-    property TextFontSize: Single read FTextFontSize write FTextFontSize;
+//    property TextColor: TAlphaColor read FTextColor write FTextColor;
+//    property TextFontSize: Single read FTextFontSize write FTextFontSize;
 
-    property TextSettings: TTextSettings
-      read FTextSettings write FTextSettings;
-    property TextControlSettings: TTextControlSettings
-      read FTextControlSettings write FTextControlSettings;
+//    property TextSettings: TTextSettings
+//      read FTextSettings write FTextSettings;
+    property TextControl: TTextControl
+      read FTextControl write FTextControl;
   end;
 
 implementation
@@ -92,9 +87,9 @@ uses
   , FMX.Styles
   ;
 
-{ TCommonControlSettings }
+{ TCommonProperties }
 
-constructor TCommonControlSettings.Create;
+constructor TCommonProperties.Create;
 var
   Rect: TRectF;
 begin
@@ -106,37 +101,28 @@ begin
   FHitTest := false;
 end;
 
-destructor TCommonControlSettings.Destroy;
+destructor TCommonProperties.Destroy;
 begin
   FreeAndNil(FMargins);
 end;
 
-{ TTextControlSettings }
+{ TTextControl }
 
-constructor TTextControlSettings.Create;
-//var
-//  Rect: TRectF;
+constructor TTextControl.Create;
 begin
   inherited;
-
-//  Rect := TRectF.Create(TPointF.Zero);
 
   FTextSettings := TTextSettings.Create(nil);
-//  FMargins := TBounds.Create(Rect);
-
-//  FAlign := TAlignLayout.None;
-//  FHitTest := false;
 end;
 
-destructor TTextControlSettings.Destroy;
+destructor TTextControl.Destroy;
 begin
   FreeAndNil(FTextSettings);
-//  FreeAndNil(FMargins);
 
   inherited;
 end;
 
-procedure TTextControlSettings.ApplyTo(const AText: TText);
+procedure TTextControl.ApplyTo(const AText: TText);
 begin
   AText.TextSettings.Assign(FTextSettings);
   AText.Margins.Assign(inherited Margins);
@@ -145,34 +131,36 @@ begin
   AText.HitTest := inherited HitTest;
 end;
 
-procedure TTextControlSettings.Assign(const ATextControlSettings: TTextControlSettings);
+procedure TTextControl.Assign(
+  const ATextControl: TTextControl);
 begin
-  FTextSettings.Assign(ATextControlSettings.TextSettings);
-  Margins.Assign(ATextControlSettings.Margins);
-  Align := ATextControlSettings.Align;
-  WordWrap := ATextControlSettings.WordWrap;
-  HitTest := ATextControlSettings.HitTest;
+  FTextSettings.Assign(ATextControl.TextSettings);
+  Margins.Assign(ATextControl.Margins);
+  Align := ATextControl.Align;
+  WordWrap := ATextControl.WordWrap;
+  HitTest := ATextControl.HitTest;
 end;
 
 { TTheme }
 
 constructor TTheme.Create;
 begin
+  FTextControl := TTextControl.Create;
+//  FTextSettings := TTextSettings.Create(nil);
+
   FBackgroundColor := TAlphaColorRec.Gray;
   FMemoColor := TAlphaColorRec.Whitesmoke;
-  FTextColor := TAlphaColorRec.Black;
-  FTextFontSize := 14;
-
-  FTextSettings := TTextSettings.Create(nil);
-  FTextControlSettings := TTextControlSettings.Create;
+//  FTextColor := TAlphaColorRec.Black;
+  FTextControl.TextSettings.Font.Size := 12;
+//  FTextFontSize := 14;
 
   FStyleBookMemoryStream := TMemoryStream.Create;
 end;
 
 destructor TTheme.Destroy;
 begin
-  FreeAndNil(FTextSettings);
-  FreeAndNil(FTextControlSettings);
+//  FreeAndNil(FTextSettings);
+  FreeAndNil(FTextControl);
 
   FreeAndNil(FStyleBookMemoryStream);
 end;
@@ -229,14 +217,10 @@ begin
     ATheme.DarkBackgroundColor := FDarkBackgroundColor;
     ATheme.LightBackgroundColor := FLightBackgroundColor;
     ATheme.MemoColor := FMemoColor;
-    ATheme.TextColor := FTextColor;
-    ATheme.TextFontSize := FTextFontSize;
-    ATheme.TextSettings.Assign(FTextSettings);
-    ATheme.TextControlSettings.Assign(FTextControlSettings);
-
-//  FSettingsPopupMenuExt.Theme.TextControlSettings.
-//    Assign(TState.MenuTheme.TextControlSettings);
-
+//    ATheme.TextColor := FTextColor;
+//    ATheme.TextFontSize := FTextFontSize;
+//    ATheme.TextSettings.Assign(FTextSettings);
+    ATheme.TextControl.Assign(FTextControl);
   except
     on e: Exception do
       raise Exception.CreateFmt('%s -> %s', [METHOD, e.Message]);
