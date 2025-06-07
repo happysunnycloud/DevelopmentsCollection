@@ -1,4 +1,5 @@
-﻿unit FileToolsUnit;
+﻿{0.0}
+unit FileToolsUnit;
 
 interface
 
@@ -8,6 +9,12 @@ uses
   , System.SysUtils
   ;
 
+const
+  {$IFDEF MSWINDOWS}
+  PATH_SPLITTER = '\';
+  {$ELSE IFDEF ANDROID}
+  PATH_SPLITTER = '/';
+  {$ENDIF}
 type
   TSearchRecList = TList<TSearchRec>;
   TCopyFileResult = (crOk = 0, crFileNotExists = 1, crCopyError = 2);
@@ -17,6 +24,10 @@ type
   public
     class procedure GetFileNameListByDir(
       const ADir: String;
+      const AFileNameList: TStringList);
+    class procedure GetFileNameListByDirAndExt(
+      const ADir: String;
+      const AExt: String;
       const AFileNameList: TStringList);
     class procedure GetFileSearchRecListByDir(
       const ADir: String;
@@ -36,18 +47,33 @@ implementation
 { TFileTools }
 
 class procedure TFileTools.GetFileNameListByDir(
-  const aDir: String;
-  const aFileNameList: TStringList);
+  const ADir: String;
+  const AFileNameList: TStringList);
+begin
+  TFileTools.GetFileNameListByDirAndExt(
+    ADir,
+    '',
+    AFileNameList);
+end;
+
+class procedure TFileTools.GetFileNameListByDirAndExt(
+  const ADir: String;
+  const AExt: String;
+  const AFileNameList: TStringList);
 var
   SearchRec: System.SysUtils.TSearchRec;
   IsFound: Boolean;
+  MustAdd: Boolean;
 begin
+  if not Assigned(AFileNameList) then
+    raise Exception.Create('AFileNameList is nil');
+
   aFileNameList.Clear;
 
   if aDir = '' then
     Exit;
 
-  IsFound := FindFirst(aDir + '\*.*', faAnyFile, SearchRec) = 0;
+  IsFound := FindFirst(aDir + PATH_SPLITTER + '*.*', faAnyFile, SearchRec) = 0;
   while IsFound do
   begin
     if (SearchRec.Name <> '.') and
@@ -55,7 +81,18 @@ begin
     then
     begin
       if (SearchRec.Attr and faDirectory) <> faDirectory then
-        aFileNameList.Add(Concat(aDir, '\', SearchRec.Name));
+      begin
+        MustAdd := false;
+        if AExt.IsEmpty then
+          MustAdd := true
+        else
+        if not AExt.IsEmpty then
+          if ExtractFileExt(SearchRec.Name) = '.' + AExt then
+            MustAdd := true;
+
+        if MustAdd then
+          aFileNameList.Add(Concat(aDir, PATH_SPLITTER, SearchRec.Name))
+      end;
     end;
     IsFound := FindNext(SearchRec) = 0;
   end;
@@ -69,12 +106,15 @@ var
   SearchRec: TSearchRec;
   IsFound: Boolean;
 begin
+  if not Assigned(ASearchRecList) then
+    raise Exception.Create('ASearchRecList is nil');
+
   ASearchRecList.Clear;
 
   if ADir = '' then
     Exit;
 
-  IsFound := FindFirst(aDir + '\*.*', faAnyFile, SearchRec) = 0;
+  IsFound := FindFirst(aDir + PATH_SPLITTER + '*.*', faAnyFile, SearchRec) = 0;
   while IsFound do
   begin
     if (SearchRec.Name <> '.') and
@@ -98,14 +138,14 @@ var
   sRec: TSearchRec;
   isFound: Boolean;
 begin
-  isFound := FindFirst(ARootDir + '\*.*', faAnyFile, sRec ) = 0;
+  isFound := FindFirst(ARootDir + PATH_SPLITTER + '*.*', faAnyFile, sRec ) = 0;
   while isFound do
   begin
     if (sRec.Name <> '.') and (sRec.Name <> '..') then
     begin
       if (sRec.Attr and faDirectory) = faDirectory then
       begin
-        GetFileNames(ARootDir + '\' + sRec.Name, ASubDir, AExt, AFileNames);
+        GetFileNames(ARootDir + PATH_SPLITTER + sRec.Name, ASubDir, AExt, AFileNames);
       end;
       if (LowerCase(ExtractFileExt(sRec.Name)) = '.' + AExt)
           or
@@ -123,7 +163,7 @@ begin
         then
         begin
           SetLength(AFileNames, Length(AFileNames) + 1);
-          AFileNames[Length(AFileNames) - 1] := ARootDir + '\' + sRec.Name;
+          AFileNames[Length(AFileNames) - 1] := ARootDir + PATH_SPLITTER + sRec.Name;
         end;
       end;
     end;
@@ -141,9 +181,7 @@ var
   DirTo: String;
 begin
   if not FileExists(AFileNameFrom) then
-  begin
     Exit(crFileNotExists);
-  end;
 
   DirTo := ExtractFilePath(AFileNameTo);
   if not DirectoryExists(DirTo) then
