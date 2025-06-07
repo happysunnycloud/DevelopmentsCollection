@@ -555,16 +555,16 @@ begin
   FTheme.LightBackgroundColor := $FFE0E0E0;//TAlphaColorRec.Black;//$FFE0E0E0;
   FTheme.DarkBackgroundColor := TAlphaColorRec.Cornflowerblue;
 
-  FTheme.TextControlSettings.Align := TAlignLayout.Client;
-  FTheme.TextControlSettings.HitTest := false;
-  FTheme.TextControlSettings.TextSettings.FontColor :=
+  FTheme.TextControl.Align := TAlignLayout.Client;
+  FTheme.TextControl.HitTest := false;
+  FTheme.TextControl.TextSettings.FontColor :=
     TAlphaColorRec.Black;
-  FTheme.TextControlSettings.TextSettings.HorzAlign :=
+  FTheme.TextControl.TextSettings.HorzAlign :=
     TTextAlign.Leading;
-  FTheme.TextControlSettings.TextSettings.VertAlign :=
+  FTheme.TextControl.TextSettings.VertAlign :=
     TTextAlign.Center;
-  FTheme.TextControlSettings.Margins.Left := 5;
-  FTheme.TextControlSettings.WordWrap := false;
+  FTheme.TextControl.Margins.Left := 5;
+  FTheme.TextControl.WordWrap := false;
 
   Timer := TTimer.Create(Self);
   Timer.Interval := 1000;
@@ -777,7 +777,7 @@ begin
     AndroidGoBackButtonText.Parent := AndroidGoBackButtonRectangle;
     AndroidGoBackButtonText.Text := 'Back';
     AndroidGoBackButtonText.HitTest := false;
-    Theme.TextControlSettings.ApplyTo(AndroidGoBackButtonText);
+    Theme.TextControl.ApplyTo(AndroidGoBackButtonText);
     AndroidGoBackButtonText.TextSettings.HorzAlign := TTextAlign.Center;
     {$ENDIF}
 
@@ -841,7 +841,7 @@ begin
       TextArrow.Margins.Right := 5;
       TextArrow.AutoSize := true;
       TextArrow.TextSettings.FontColor :=
-        Theme.TextControlSettings.TextSettings.FontColor;
+        Theme.TextControl.TextSettings.FontColor;
 
       ParentArrowWidth := TextArrow.Canvas.TextWidth(TextArrow.Text);
       if Item.Children.Count = 0 then
@@ -856,7 +856,7 @@ begin
       Text := TText.Create(Rectangle);
       Text.Parent := Rectangle;
       Text.Text := Item.Text;
-      Theme.TextControlSettings.ApplyTo(Text);
+      Theme.TextControl.ApplyTo(Text);
 
       MaxTextWidth := _GetMaxTextWidth(Text, ItemsByParent);
 
@@ -886,13 +886,13 @@ begin
       RectangleIsCheckedFrame.Stroke.Thickness := 0.5;
       RectangleIsCheckedFrame.Stroke.Kind := TBrushKind.Solid;
       RectangleIsCheckedFrame.Stroke.Color :=
-        Theme.TextControlSettings.TextSettings.FontColor;
+        Theme.TextControl.TextSettings.FontColor;
       RectangleIsCheckedFrame.Visible := not TextArrow.Visible;
 
       RectangleIsCheckedTrue := TRectangle.Create(RectangleIsCheckedFrame);
       RectangleIsCheckedTrue.Parent := RectangleIsCheckedFrame;
       RectangleIsCheckedTrue.Fill.Color :=
-        Theme.TextControlSettings.TextSettings.FontColor;
+        Theme.TextControl.TextSettings.FontColor;
       RectangleIsCheckedTrue.Stroke.Thickness := 0;
       RectangleIsCheckedTrue.Stroke.Kind := TBrushKind.None;
       RectangleIsCheckedTrue.HitTest := false;
