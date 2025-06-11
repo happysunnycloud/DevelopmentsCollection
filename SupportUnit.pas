@@ -1,4 +1,5 @@
 ﻿{0.8}
+// Что касается FMX свойств контролов, их нужно перевести в FMX.ControlToolsUnit
 unit SupportUnit;
 
 interface

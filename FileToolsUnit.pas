@@ -1,4 +1,5 @@
 ﻿{0.0}
+// Используется в FilePackerUnit
 unit FileToolsUnit;
 
 interface
