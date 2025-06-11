@@ -1,3 +1,4 @@
+﻿// Класс извлечения изображений из файла с упакованными изображениями
 unit FMX.ImageExtractorUnit;
 
 interface
