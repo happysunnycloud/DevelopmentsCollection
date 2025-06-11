@@ -555,16 +555,16 @@ begin
   FTheme.LightBackgroundColor := $FFE0E0E0;//TAlphaColorRec.Black;//$FFE0E0E0;
   FTheme.DarkBackgroundColor := TAlphaColorRec.Cornflowerblue;
 
-  FTheme.TextControl.Align := TAlignLayout.Client;
-  FTheme.TextControl.HitTest := false;
-  FTheme.TextControl.TextSettings.FontColor :=
+  FTheme.CommonTextProps.Align := TAlignLayout.Client;
+  FTheme.CommonTextProps.HitTest := false;
+  FTheme.CommonTextProps.TextSettings.FontColor :=
     TAlphaColorRec.Black;
-  FTheme.TextControl.TextSettings.HorzAlign :=
+  FTheme.CommonTextProps.TextSettings.HorzAlign :=
     TTextAlign.Leading;
-  FTheme.TextControl.TextSettings.VertAlign :=
+  FTheme.CommonTextProps.TextSettings.VertAlign :=
     TTextAlign.Center;
-  FTheme.TextControl.Margins.Left := 5;
-  FTheme.TextControl.WordWrap := false;
+  FTheme.CommonTextProps.Margins.Left := 5;
+  FTheme.CommonTextProps.WordWrap := false;
 
   Timer := TTimer.Create(Self);
   Timer.Interval := 1000;
@@ -841,7 +841,7 @@ begin
       TextArrow.Margins.Right := 5;
       TextArrow.AutoSize := true;
       TextArrow.TextSettings.FontColor :=
-        Theme.TextControl.TextSettings.FontColor;
+        Theme.CommonTextProps.TextSettings.FontColor;
 
       ParentArrowWidth := TextArrow.Canvas.TextWidth(TextArrow.Text);
       if Item.Children.Count = 0 then
@@ -856,7 +856,7 @@ begin
       Text := TText.Create(Rectangle);
       Text.Parent := Rectangle;
       Text.Text := Item.Text;
-      Theme.TextControl.ApplyTo(Text);
+      Theme.CommonTextProps.ApplyTo(Text);
 
       MaxTextWidth := _GetMaxTextWidth(Text, ItemsByParent);
 
@@ -886,13 +886,13 @@ begin
       RectangleIsCheckedFrame.Stroke.Thickness := 0.5;
       RectangleIsCheckedFrame.Stroke.Kind := TBrushKind.Solid;
       RectangleIsCheckedFrame.Stroke.Color :=
-        Theme.TextControl.TextSettings.FontColor;
+        Theme.CommonTextProps.TextSettings.FontColor;
       RectangleIsCheckedFrame.Visible := not TextArrow.Visible;
 
       RectangleIsCheckedTrue := TRectangle.Create(RectangleIsCheckedFrame);
       RectangleIsCheckedTrue.Parent := RectangleIsCheckedFrame;
       RectangleIsCheckedTrue.Fill.Color :=
-        Theme.TextControl.TextSettings.FontColor;
+        Theme.CommonTextProps.TextSettings.FontColor;
       RectangleIsCheckedTrue.Stroke.Thickness := 0;
       RectangleIsCheckedTrue.Stroke.Kind := TBrushKind.None;
       RectangleIsCheckedTrue.HitTest := false;
