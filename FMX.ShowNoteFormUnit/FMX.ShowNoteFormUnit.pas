@@ -662,9 +662,9 @@ begin
   Self.ControlButtonsBackgroundRectangle.Fill.Color := FTheme.DarkBackgroundColor;
 
   Self.NoteMemo.TextSettings.FontColor :=
-    FTheme.TextControl.TextSettings.FontColor;
+    FTheme.CommonTextProps.TextSettings.FontColor;
   Self.NoteMemo.TextSettings.Font.Size :=
-    FTheme.TextControl.TextSettings.Font.Size;
+    FTheme.CommonTextProps.TextSettings.Font.Size;
   //FTheme.TextFontSize;
 //  Self.NoteMemo.TextSettings.Font.Family := 'MS Reference Sans Serif';
   Self.NoteMemo.StyledSettings := [];
