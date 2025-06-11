@@ -27,22 +27,23 @@ type
     property Align: TAlignLayout read FAlign write FAlign;
     property WordWrap: Boolean read FWordWrap write FWordWrap;
     property HitTest: Boolean read FHitTest write FHitTest;
+
+    procedure CopyFrom(const ACommonProperties: TCommonProperties); virtual;
   end;
 
-  // Класс с темой для контрола TText
-  TTextControl = class(TCommonProperties)
+  TCommonTextProps = class(TCommonProperties)
   strict private
     FTextSettings: TTextSettings;
-    FWordWrap: Boolean;
   public
     constructor Create;
     destructor Destroy; override;
 
     property TextSettings: TTextSettings read FTextSettings write FTextSettings;
-    property WordWrap: Boolean read FWordWrap write FWordWrap;
 
-    procedure ApplyTo(const AText: TText);
-    procedure Assign(const ATextControl: TTextControl);
+    procedure ApplyTo(const AText: TText); //(const AControl: TControl);
+    procedure Assign(const ACommonTextProps: TCommonTextProps);
+    procedure CopyFrom(const ACommonTextProps: TCommonTextProps); reintroduce;
+    procedure CopyFromOrigin(const AControl: TControl);
   end;
 
   TTheme = class
@@ -57,7 +58,7 @@ type
 
 //    FTextSettings: TTextSettings;
 
-    FTextControl: TTextControl;
+    FCommonTextProps: TCommonTextProps;
   public
     constructor Create;
     destructor Destroy; override;
@@ -76,8 +77,8 @@ type
 
 //    property TextSettings: TTextSettings
 //      read FTextSettings write FTextSettings;
-    property TextControl: TTextControl
-      read FTextControl write FTextControl;
+    property CommonTextProps: TCommonTextProps
+      read FCommonTextProps write FCommonTextProps;
   end;
 
 implementation
@@ -85,6 +86,7 @@ implementation
 uses
     System.SysUtils
   , FMX.Styles
+  , FMX.ControlToolsUnit
   ;
 
 { TCommonProperties }
@@ -106,52 +108,110 @@ begin
   FreeAndNil(FMargins);
 end;
 
-{ TTextControl }
+procedure TCommonProperties.CopyFrom(const ACommonProperties: TCommonProperties);
+begin
+  FMargins.Assign(ACommonProperties.Margins);
+  FAlign := ACommonProperties.Align;
+  FWordWrap := ACommonProperties.WordWrap;
+  FHitTest := ACommonProperties.HitTest;
+end;
 
-constructor TTextControl.Create;
+{ TCommonTextProps }
+
+constructor TCommonTextProps.Create;
+var
+  SampleText: TText;
 begin
   inherited;
 
   FTextSettings := TTextSettings.Create(nil);
+  // Задаем дефолтные значения, через создание экземпляра контрола
+  SampleText := TText.Create(nil);
+  try
+    TextSettings.Assign(SampleText.TextSettings);
+    Margins.Assign(SampleText.Margins);
+    Align := SampleText.Align;
+    WordWrap := SampleText.WordWrap;
+    HitTest := SampleText.HitTest;
+  finally
+    FreeAndNil(SampleText);
+  end;
 end;
 
-destructor TTextControl.Destroy;
+destructor TCommonTextProps.Destroy;
 begin
   FreeAndNil(FTextSettings);
 
   inherited;
 end;
 
-procedure TTextControl.ApplyTo(const AText: TText);
+procedure TCommonTextProps.ApplyTo(const AText: TText);
 begin
+//  AText.Margins.Assign(inherited Margins);
+//  AText.Align := inherited Align;
+//  AText.WordWrap := inherited WordWrap;
+//  AText.HitTest := inherited HitTest;
+
+  AText.Margins.Assign(Margins);
+  AText.Align := Align;
+  AText.WordWrap := WordWrap;
+  AText.HitTest := HitTest;
+
   AText.TextSettings.Assign(FTextSettings);
-  AText.Margins.Assign(inherited Margins);
-  AText.Align := inherited Align;
-  AText.WordWrap := FWordWrap;
-  AText.HitTest := inherited HitTest;
 end;
 
-procedure TTextControl.Assign(
-  const ATextControl: TTextControl);
+procedure TCommonTextProps.Assign(
+  const ACommonTextProps: TCommonTextProps);
 begin
-  FTextSettings.Assign(ATextControl.TextSettings);
-  Margins.Assign(ATextControl.Margins);
-  Align := ATextControl.Align;
-  WordWrap := ATextControl.WordWrap;
-  HitTest := ATextControl.HitTest;
+  Margins.Assign(ACommonTextProps.Margins);
+  Align := ACommonTextProps.Align;
+  WordWrap := ACommonTextProps.WordWrap;
+  HitTest := ACommonTextProps.HitTest;
+
+  FTextSettings.Assign(ACommonTextProps.TextSettings);
+end;
+
+procedure TCommonTextProps.CopyFrom(const ACommonTextProps: TCommonTextProps);
+begin
+  inherited CopyFrom(ACommonTextProps);
+
+  Self.TextSettings.Assign(ACommonTextProps.TextSettings);
+end;
+
+procedure TCommonTextProps.CopyFromOrigin(const AControl: TControl);
+begin
+  if TControlTools.HasProperty(AControl, TProperties.TextSettings) then
+    Self.TextSettings.Assign(TPersistent(
+      TControlTools.GetPropertyAsObject(AControl, TProperties.TextSettings)));
+
+  if TControlTools.HasProperty(AControl, TProperties.Margins) then
+    Self.Margins.Assign(TPersistent(
+      TControlTools.GetPropertyAsObject(AControl, TProperties.Margins)));
+
+  if TControlTools.HasProperty(AControl, TProperties.Align) then
+    Self.Align := TAlignLayout(
+      TControlTools.GetPropertyAsInteger(AControl, TProperties.Align));
+
+  if TControlTools.HasProperty(AControl, TProperties.WordWrap) then
+    Self.WordWrap :=
+      TControlTools.GetPropertyAsBoolean(AControl, TProperties.WordWrap);
+
+  if TControlTools.HasProperty(AControl, TProperties.HitTest) then
+    Self.HitTest :=
+      TControlTools.GetPropertyAsBoolean(AControl, TProperties.HitTest);
 end;
 
 { TTheme }
 
 constructor TTheme.Create;
 begin
-  FTextControl := TTextControl.Create;
+  FCommonTextProps := TCommonTextProps.Create;
 //  FTextSettings := TTextSettings.Create(nil);
 
   FBackgroundColor := TAlphaColorRec.Gray;
   FMemoColor := TAlphaColorRec.Whitesmoke;
 //  FTextColor := TAlphaColorRec.Black;
-  FTextControl.TextSettings.Font.Size := 12;
+  FCommonTextProps.TextSettings.Font.Size := 12;
 //  FTextFontSize := 14;
 
   FStyleBookMemoryStream := TMemoryStream.Create;
@@ -160,7 +220,7 @@ end;
 destructor TTheme.Destroy;
 begin
 //  FreeAndNil(FTextSettings);
-  FreeAndNil(FTextControl);
+  FreeAndNil(FCommonTextProps);
 
   FreeAndNil(FStyleBookMemoryStream);
 end;
@@ -220,7 +280,7 @@ begin
 //    ATheme.TextColor := FTextColor;
 //    ATheme.TextFontSize := FTextFontSize;
 //    ATheme.TextSettings.Assign(FTextSettings);
-    ATheme.TextControl.Assign(FTextControl);
+    ATheme.CommonTextProps.Assign(FCommonTextProps);
   except
     on e: Exception do
       raise Exception.CreateFmt('%s -> %s', [METHOD, e.Message]);
