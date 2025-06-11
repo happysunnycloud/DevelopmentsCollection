@@ -1,5 +1,4 @@
 ﻿// Берем этот модуль за основу для работы с контролами
-
 unit FMX.ControlToolsUnit;
 
 interface
@@ -22,6 +21,8 @@ type
     IsChecked       = 'IsChecked';
     StyledSettings  = 'StyledSettings';
     TextSettings    = 'TextSettings';
+    WordWrap        = 'WordWrap';
+    Margins         = 'Margins';
     HitTest         = 'HitTest';
     Fill            = 'Fill';
     Strore          = 'Strore';
@@ -55,6 +56,42 @@ type
     class procedure SetTextProperty(
       const AObj: TObject;
       const AText: String);
+
+    class function GetPropertyAsObject(
+      const ASourceComponent: TComponent;
+      const APropertyName: String): TObject;
+
+    class procedure SetPropertyAsObject(
+      const ASourceComponent: TComponent;
+      const APropertyName: String;
+      const AObject: TObject);
+
+    class function GetPropertyAsVariant(
+      const ASourceComponent: TComponent;
+      const APropertyName: String): Variant;
+
+    class procedure SetPropertyAsVariant(
+      const ASourceComponent: TComponent;
+      const APropertyName: String;
+      const AVariant: Variant);
+
+    class function GetPropertyAsInteger(
+      const ASourceComponent: TComponent;
+      const APropertyName: String): Integer;
+
+    class procedure SetPropertyAsInteger(
+      const ASourceComponent: TComponent;
+      const APropertyName: String;
+      const AValue: Integer);
+
+    class function GetPropertyAsBoolean(
+      const ASourceComponent: TComponent;
+      const APropertyName: String): Boolean;
+
+    class procedure SetPropertyAsBoolean(
+      const ASourceComponent: TComponent;
+      const APropertyName: String;
+      const AValue: Boolean);
   end;
 
 implementation
@@ -107,6 +144,82 @@ begin
 
     ControlEnumerator(AComponent.Components[i], AControlEnumeratorCallbackProc);
   end;
+end;
+
+class function TControlTools.GetPropertyAsObject(
+  const ASourceComponent: TComponent;
+  const APropertyName: String): TObject;
+begin
+  CheckHasProperty(ASourceComponent, APropertyName);
+
+  Result := GetObjectProp(ASourceComponent, APropertyName);
+end;
+
+class procedure TControlTools.SetPropertyAsObject(
+  const ASourceComponent: TComponent;
+  const APropertyName: String;
+  const AObject: TObject);
+begin
+  CheckHasProperty(ASourceComponent, APropertyName);
+
+  SetObjectProp(ASourceComponent, APropertyName, AObject);
+end;
+
+class function TControlTools.GetPropertyAsVariant(
+  const ASourceComponent: TComponent;
+  const APropertyName: String): Variant;
+begin
+  CheckHasProperty(ASourceComponent, APropertyName);
+
+  Result := GetPropValue(ASourceComponent, APropertyName);
+end;
+
+class procedure TControlTools.SetPropertyAsVariant(
+  const ASourceComponent: TComponent;
+  const APropertyName: String;
+  const AVariant: Variant);
+begin
+  CheckHasProperty(ASourceComponent, APropertyName);
+
+  SetPropValue(ASourceComponent, APropertyName, AVariant);
+end;
+
+class function TControlTools.GetPropertyAsInteger(
+  const ASourceComponent: TComponent;
+  const APropertyName: String): Integer;
+begin
+  CheckHasProperty(ASourceComponent, APropertyName);
+
+  Result := Integer(GetPropValue(ASourceComponent, APropertyName, false));
+end;
+
+class procedure TControlTools.SetPropertyAsInteger(
+  const ASourceComponent: TComponent;
+  const APropertyName: String;
+  const AValue: Integer);
+begin
+  CheckHasProperty(ASourceComponent, APropertyName);
+
+  SetPropValue(ASourceComponent, APropertyName, AValue);
+end;
+
+class function TControlTools.GetPropertyAsBoolean(
+  const ASourceComponent: TComponent;
+  const APropertyName: String): Boolean;
+begin
+  CheckHasProperty(ASourceComponent, APropertyName);
+
+  Result := Boolean(GetPropValue(ASourceComponent, APropertyName));
+end;
+
+class procedure TControlTools.SetPropertyAsBoolean(
+  const ASourceComponent: TComponent;
+  const APropertyName: String;
+  const AValue: Boolean);
+begin
+  CheckHasProperty(ASourceComponent, APropertyName);
+
+  SetPropValue(ASourceComponent, APropertyName, AValue);
 end;
 
 end.
