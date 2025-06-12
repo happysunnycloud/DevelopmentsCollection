@@ -79,6 +79,7 @@ var
   Height: Single;
   ResBitmapList: TResBitmapList;
   MemoryStream: TMemoryStream;
+  BitmapIdent: String;
 begin
   if not FileExists(APackFileName) then
     raise Exception.CreateFmt('File "%s" not exists', [APackFileName]);
@@ -110,7 +111,13 @@ begin
 
       MemoryStream.Size := 0;
       ImagesFile.ExtractToMemoryStream(FileName, MemoryStream);
-      ResBitmapList.CreateFromMemoryStream(MemoryStream);
+      BitmapIdent := ExtractFileName(FileName);
+      BitmapIdent := StringReplace(
+        BitmapIdent,
+        ExtractFileExt(FileName),
+        '',
+        [rfReplaceAll, rfIgnoreCase]);
+      ResBitmapList.CreateFromMemoryStream(MemoryStream, BitmapIdent);
     end;
   finally
     FreeAndNil(ImagesFile);

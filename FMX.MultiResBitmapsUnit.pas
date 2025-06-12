@@ -9,14 +9,14 @@ uses
   FMX.Graphics;
 
 type
-//  TBitmapExt = class(TBitmap)
-//  strict private
-//    FIdent: String;
-//  public
-//    property Ident: String read FIdent write FIdent;
-//  end;
+  TBitmapExt = class(TBitmap)
+  strict private
+    FIdent: String;
+  public
+    property Ident: String read FIdent write FIdent;
+  end;
 
-  TResBitmapList = class(TList<TBitmap>)
+  TResBitmapList = class(TList<TBitmapExt>)
   strict private
     FResIdent: String;
     FWidth: Single;
@@ -28,9 +28,14 @@ type
     property Width: Single read FWidth write FWidth;
     property Height: Single read FHeight write FHeight;
 
-    procedure CreateFromFile(const AFileName: String);
+    procedure CreateFromFile(
+      const AFileName: String;
+      const AIdent: String = '');
     procedure CreateFromMemoryStream(
-      const AMemoryStream: TMemoryStream);
+      const AMemoryStream: TMemoryStream;
+      const AIdent: String = '');
+
+    function FindBitmapByIden(const AIdent: String): TBitmap;
   end;
 
   TResBitmapLists = TList<TResBitmapList>;
@@ -271,16 +276,20 @@ begin
   inherited;
 end;
 
-procedure TResBitmapList.CreateFromFile(const AFileName: String);
+procedure TResBitmapList.CreateFromFile(
+  const AFileName: String;
+  const AIdent: String = '');
 var
-  Bitmap: TBitmap;
+  Bitmap: TBitmapExt;
 begin
   if not FileExists(AFileName) then
     raise Exception.CreateFmt('File "%s" not exists', [AFileName]);
 
-  Bitmap := TBitmap.Create;
+  Bitmap := TBitmapExt.Create;
   try
     Bitmap.LoadFromFile(AFileName);
+
+    Bitmap.Ident := AIdent;
 
     Self.Add(Bitmap);
   except
@@ -289,19 +298,34 @@ begin
 end;
 
 procedure TResBitmapList.CreateFromMemoryStream(
-  const AMemoryStream: TMemoryStream);
+  const AMemoryStream: TMemoryStream;
+  const AIdent: String = '');
 var
-  Bitmap: TBitmap;
+  Bitmap: TBitmapExt;
 begin
   if not Assigned(AMemoryStream) then
     raise Exception.Create('Memory stream reference is nil');
 
   AMemoryStream.Position := 0;
 
-  Bitmap := TBitmap.Create;
+  Bitmap := TBitmapExt.Create;
   Bitmap.LoadFromStream(AMemoryStream);
 
+  Bitmap.Ident := AIdent;
+
   Self.Add(Bitmap);
+end;
+
+function TResBitmapList.FindBitmapByIden(const AIdent: String): TBitmap;
+var
+  Bitmap: TBitmapExt;
+begin
+  Result := nil;
+  for Bitmap in Self do
+  begin
+    if Bitmap.Ident = AIdent then
+      Exit(Bitmap);
+  end;
 end;
 
 end.
