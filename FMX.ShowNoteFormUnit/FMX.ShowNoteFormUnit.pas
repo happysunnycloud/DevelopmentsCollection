@@ -660,7 +660,7 @@ begin
     NoteIdent.Caption,
     Round(loScreen.Width * SCALE_VALUE) + 50,
     Round(loScreen.Height * SCALE_VALUE) + 10,
-    $FF2A001A,
+    TAlphaColorRec.White,
     $FF2A001A,
     $FF4C002F,
     $FF9B0060);
@@ -808,7 +808,8 @@ end;
 
 class procedure TNoteForm.UnInit;
 begin
-  FreeAndNil(FThemeOfClass);
+  if Assigned(FThemeOfClass) then
+    FreeAndNil(FThemeOfClass);
 
   if Assigned(FNoteIdentList) then
   begin
