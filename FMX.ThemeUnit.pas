@@ -63,10 +63,11 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    procedure SaveStyleBookFrom(const AStyleBook: TStyleBook);
-    procedure LoadStyleBookTo(const AStyleBook: TStyleBook);
+    procedure LoadStyleBookFrom(const AStyleBook: TStyleBook);
+    procedure SaveStyleBookTo(const AStyleBook: TStyleBook);
 
     procedure CopyTo(const ATheme: TTheme);
+    procedure CopyFrom(const ATheme: TTheme);
 
     property BackgroundColor: TAlphaColor read FBackgroundColor write FBackgroundColor;
     property DarkBackgroundColor: TAlphaColor read FDarkBackgroundColor write FDarkBackgroundColor;
@@ -225,9 +226,9 @@ begin
   FreeAndNil(FStyleBookMemoryStream);
 end;
 
-procedure TTheme.SaveStyleBookFrom(const AStyleBook: TStyleBook);
+procedure TTheme.LoadStyleBookFrom(const AStyleBook: TStyleBook);
 const
-  METHOD = 'TTheme.SaveStyleBookFrom';
+  METHOD = 'TTheme.LoadStyleBookFrom';
 begin
   if not Assigned(AStyleBook) then
     Exit;
@@ -242,9 +243,9 @@ begin
   end;
 end;
 
-procedure TTheme.LoadStyleBookTo(const AStyleBook: TStyleBook);
+procedure TTheme.SaveStyleBookTo(const AStyleBook: TStyleBook);
 const
-  METHOD = 'TTheme.LoadStyleBookTo';
+  METHOD = 'TTheme.SaveStyleBookTo';
 begin
   if not Assigned(AStyleBook) then
     Exit;
@@ -267,8 +268,8 @@ begin
   try
     StyleBook := TStyleBook.Create(nil);
     try
-      LoadStyleBookTo(StyleBook);
-      ATheme.SaveStyleBookFrom(StyleBook);
+      SaveStyleBookTo(StyleBook);
+      ATheme.LoadStyleBookFrom(StyleBook);
     finally
       FreeAndNil(StyleBook);
     end;
@@ -281,6 +282,32 @@ begin
 //    ATheme.TextFontSize := FTextFontSize;
 //    ATheme.TextSettings.Assign(FTextSettings);
     ATheme.CommonTextProps.Assign(FCommonTextProps);
+  except
+    on e: Exception do
+      raise Exception.CreateFmt('%s -> %s', [METHOD, e.Message]);
+  end;
+end;
+
+procedure TTheme.CopyFrom(const ATheme: TTheme);
+const
+  METHOD = 'TTheme.CopyFrom';
+var
+  StyleBook: TStyleBook;
+begin
+  try
+    StyleBook := TStyleBook.Create(nil);
+    try
+      ATheme.SaveStyleBookTo(StyleBook);
+      LoadStyleBookFrom(StyleBook);
+    finally
+      FreeAndNil(StyleBook);
+    end;
+
+    FBackgroundColor := ATheme.BackgroundColor;
+    FDarkBackgroundColor := ATheme.DarkBackgroundColor;
+    FLightBackgroundColor := ATheme.LightBackgroundColor;
+    FMemoColor := ATheme.MemoColor;
+    FCommonTextProps.Assign(ATheme.CommonTextProps);
   except
     on e: Exception do
       raise Exception.CreateFmt('%s -> %s', [METHOD, e.Message]);

@@ -88,7 +88,9 @@ type
     procedure YesButtonClick(Sender: TObject);
     procedure NoButtonClick(Sender: TObject);
   strict private
-    class var FTheme: TTheme;
+    FTheme: TTheme;
+
+    class var FThemeOfClass: TTheme;
     class var FNoteIdentList: TNoteIdentList;
 
     class function ShowNote(
@@ -97,10 +99,12 @@ type
       const ANoButtonText: String = '';
       const AOkButtonText: String = ''): TModalResult;
   private
+    class property ThemeOfClass: TTheme read FThemeOfClass write FThemeOfClass;
   public
     constructor Create(
       AOwner: TComponent;
-      const ANoteIdent: TNoteIdent); reintroduce; overload;
+      const ANoteIdent: TNoteIdent;
+      const ATheme: TTheme = nil); reintroduce; overload;
     destructor Destroy; override;
 
     class procedure Init(
@@ -630,7 +634,8 @@ end;
 
 constructor TNoteForm.Create(
   AOwner: TComponent;
-  const ANoteIdent: TNoteIdent);
+  const ANoteIdent: TNoteIdent;
+  const ATheme: TTheme = nil);
 const
   SCALE_VALUE = 1;
 var
@@ -638,7 +643,12 @@ var
 begin
   inherited Create(AOwner);
 
-  FTheme.LoadStyleBookTo(Self.StyleBook);
+  FTheme := TTheme.Create;
+
+  if Assigned(ATheme) then
+    FTheme.CopyFrom(ATheme);
+
+  FTheme.SaveStyleBookTo(Self.StyleBook);
 
   OkButtonLayout.Visible := false;
   YesNoButtonsLayout.Visible := false;
@@ -699,7 +709,7 @@ end;
 
 destructor TNoteForm.Destroy;
 begin
-//  FreeAndNil(FTheme);
+  FreeAndNil(FTheme);
 
   inherited;
 end;
@@ -748,7 +758,7 @@ begin
   if not ANoteIdent.ShowNextTime then
     Exit(ANoteIdent.DefaultResult);
 
-  NoteForm := TNoteForm.Create(nil, ANoteIdent);
+  NoteForm := TNoteForm.Create(nil, ANoteIdent, ThemeOfClass);
   try
     if AYesButtonText.Length > 0 then
       NoteForm.YesButton.Text := AYesButtonText;
@@ -782,9 +792,9 @@ class procedure TNoteForm.Init(
   const AIdentsFileName: String;
   const ATheme: TTheme = nil);
 begin
-  FTheme := TTheme.Create;
+  FThemeOfClass := TTheme.Create;
   if Assigned(ATheme) then
-    ATheme.CopyTo(FTheme);
+    ATheme.CopyTo(FThemeOfClass);
 
   FNoteIdentList := TNoteIdentList.Create;
   try
@@ -798,7 +808,7 @@ end;
 
 class procedure TNoteForm.UnInit;
 begin
-  FreeAndNil(FTheme);
+  FreeAndNil(FThemeOfClass);
 
   if Assigned(FNoteIdentList) then
   begin
@@ -907,5 +917,8 @@ begin
   NoteIdent.CheckboxText := '';
   Result := ShowNote(NoteIdent, AYesButtonText, ANoButtonText);
 end;
+
+initialization
+  TNoteForm.ThemeOfClass := nil;
 
 end.
