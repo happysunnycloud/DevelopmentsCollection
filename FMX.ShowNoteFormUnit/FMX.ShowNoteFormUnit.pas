@@ -699,7 +699,7 @@ end;
 
 destructor TNoteForm.Destroy;
 begin
-  FreeAndNil(FTheme);
+//  FreeAndNil(FTheme);
 
   inherited;
 end;
