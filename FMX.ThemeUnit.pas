@@ -7,6 +7,7 @@ uses
   , System.Types
   , System.UITypes
   , FMX.Controls
+  , FMX.StdCtrls
   , FMX.Types
   , FMX.Graphics
   , FMX.Objects
@@ -40,7 +41,8 @@ type
 
     property TextSettings: TTextSettings read FTextSettings write FTextSettings;
 
-    procedure ApplyTo(const AText: TText); //(const AControl: TControl);
+    procedure ApplyTo(const AText: TText); overload;
+    procedure ApplyTo(const ALabel: TLabel); overload;
     procedure Assign(const ACommonTextProps: TCommonTextProps);
     procedure CopyFrom(const ACommonTextProps: TCommonTextProps); reintroduce;
     procedure CopyFromOrigin(const AControl: TControl);
@@ -159,6 +161,16 @@ begin
   AText.HitTest := HitTest;
 
   AText.TextSettings.Assign(FTextSettings);
+end;
+
+procedure TCommonTextProps.ApplyTo(const ALabel: TLabel);
+begin
+  ALabel.Margins.Assign(Margins);
+  ALabel.Align := Align;
+//  ALabel.WordWrap := WordWrap;
+  ALabel.HitTest := HitTest;
+
+  ALabel.TextSettings.Assign(FTextSettings);
 end;
 
 procedure TCommonTextProps.Assign(
