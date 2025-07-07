@@ -777,7 +777,7 @@ begin
     AndroidGoBackButtonText.Parent := AndroidGoBackButtonRectangle;
     AndroidGoBackButtonText.Text := 'Back';
     AndroidGoBackButtonText.HitTest := false;
-    Theme.TextControl.ApplyTo(AndroidGoBackButtonText);
+    Theme.CommonTextProps.ApplyTo(AndroidGoBackButtonText);
     AndroidGoBackButtonText.TextSettings.HorzAlign := TTextAlign.Center;
     {$ENDIF}
 
