@@ -36,7 +36,7 @@ var
 begin
   Result := '';
 
-  SplitterPos := Pos('\', AFileName);
+  SplitterPos := Pos(INNER_SPLITTER, AFileName);
 
   Result := Copy(AFileName, 1, SplitterPos - 1);
 end;
@@ -47,17 +47,18 @@ class procedure TMultiResBitmapExtractor.ExtractWidthHeight(
   var AHeight: Single);
 var
   SplitterPos: Integer;
+  ResolutionString: String;
 begin
   AWidth := 0;
   AHeight := 0;
 
-  if AResString.IsEmpty then
+  ResolutionString := UpperCase(AResString);
+  if ResolutionString.IsEmpty then
     Exit;
 
-  SplitterPos := Pos('x', AResString);
-
+  SplitterPos := Pos('X', ResolutionString);
   if SplitterPos = 0 then
-    raise Exception.Create('Resolution splitter "x" not found');
+    raise Exception.Create('Resolution splitter "x/X" not found');
 
   AWidth := (Copy(AResString, 1, SplitterPos - 1)).ToSingle;
   AHeight := (Copy(AResString, SplitterPos + 1, AResString.Length)).ToSingle;
@@ -69,6 +70,30 @@ class procedure TMultiResBitmapExtractor.Extract(
   const AMultiResBitmaps: TMultiResBitmaps);
 type
   TResolutionsDict = TDictionary<String, String>;
+
+  function _ExtractInsertedFileName(const AInsertedFileName: String): String;
+  var
+    i: Integer;
+    c: Char;
+  begin
+    Result := '';
+
+    if AInsertedFileName.IsEmpty then
+      raise Exception.Create('File name is empty');
+
+    i := Length(AInsertedFileName);
+    while i > 0 do
+    begin
+      c := AInsertedFileName[i];
+      if c = INNER_SPLITTER then
+        Break;
+
+      Result := c + Result;
+
+      Dec(i);
+    end;
+  end;
+
 var
   ResolutionsDict: TResolutionsDict;
   ImagesFile: TFilePacker;
@@ -111,7 +136,7 @@ begin
 
       MemoryStream.Size := 0;
       ImagesFile.ExtractToMemoryStream(FileName, MemoryStream);
-      BitmapIdent := ExtractFileName(FileName);
+      BitmapIdent := _ExtractInsertedFileName(FileName);
       BitmapIdent := StringReplace(
         BitmapIdent,
         ExtractFileExt(FileName),

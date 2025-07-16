@@ -6,8 +6,10 @@ uses
     System.Classes
   , System.SysUtils
   , System.Generics.Collections
-
   ;
+
+const
+  INNER_SPLITTER = '\';
 
 type
   TFat = record
@@ -357,7 +359,7 @@ var
 begin
   RootDir := ARootDir;
   if AContentDir.Length > 0 then
-    RootDir := RootDir + '\' + AContentDir;
+    RootDir := RootDir + INNER_SPLITTER + AContentDir;
   TFileTools.GetFileNames(RootDir, '', 'png', FileNames);
 //  TFileTools.GetFileNames(ARootDir, AContentDir, 'png', FileNames);
 
@@ -377,7 +379,7 @@ begin
         Continue
       end;
 
-      FileName := StringReplace(FileName, ARootDir + '\', '', [rfReplaceAll, rfIgnoreCase]);
+      FileName := StringReplace(FileName, ARootDir + INNER_SPLITTER, '', [rfReplaceAll, rfIgnoreCase]);
 
       WriteFileName(DestFileStream, FileName);
       WriteFilePos(DestFileStream, -1);
@@ -394,7 +396,7 @@ begin
 
     for FileName in FFatDict.Keys do
     begin
-      SourceFileStream := TFileStream.Create(ARootDir + '\' + FileName, fmOpenRead);
+      SourceFileStream := TFileStream.Create(ARootDir + INNER_SPLITTER + FileName, fmOpenRead);
       try
         FFatDict.TryGetValue(FileName, Fat);
 
