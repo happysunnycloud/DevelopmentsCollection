@@ -17,18 +17,18 @@ type
   strict private
     FParams: TVars;
   private
-    function GetAsInt64    (AIndex: Word): Int64;
-    function GetAsBoolean  (AIndex: Word): Boolean;
-    function GetAsInteger  (AIndex: Word): Integer;
-    function GetAsWord     (AIndex: Word): Word;
-    function GetAsByte     (AIndex: Word): Byte;
-    function GetAsPointer  (AIndex: Word): Pointer;
-    function GetAsString   (AIndex: Word): String;
-    function GetAsTime     (AIndex: Word): TTime;
-    function GetAsDate     (AIndex: Word): TDate;
-    function GetAsDateTime (AIndex: Word): TDateTime;
-    function GetAsVariant  (AIndex: Word): Variant;
-    function GetTypeOfVar  (AIndex: Word): TVarType;
+    function GetAsInt64    (AIndex: Word): Int64;           deprecated 'Use ParamsExtUnit';
+    function GetAsBoolean  (AIndex: Word): Boolean;         deprecated 'Use ParamsExtUnit';
+    function GetAsInteger  (AIndex: Word): Integer;         deprecated 'Use ParamsExtUnit';
+    function GetAsWord     (AIndex: Word): Word;            deprecated 'Use ParamsExtUnit';
+    function GetAsByte     (AIndex: Word): Byte;            deprecated 'Use ParamsExtUnit';
+    function GetAsPointer  (AIndex: Word): Pointer;         deprecated 'Use ParamsExtUnit';
+    function GetAsString   (AIndex: Word): String;          deprecated 'Use ParamsExtUnit';
+    function GetAsTime     (AIndex: Word): TTime;           deprecated 'Use ParamsExtUnit';
+    function GetAsDate     (AIndex: Word): TDate;           deprecated 'Use ParamsExtUnit';
+    function GetAsDateTime (AIndex: Word): TDateTime;       deprecated 'Use ParamsExtUnit';
+    function GetAsVariant  (AIndex: Word): Variant;         deprecated 'Use ParamsExtUnit';
+    function GetTypeOfVar  (AIndex: Word): TVarType;        deprecated 'Use ParamsExtUnit';
 
     procedure CheckCorrect(const AMethodName: String; const AIndex: Word); overload;
     procedure CheckCorrect(const AMethodName: String; const AIndex: Word; const AVarType: TVarType); overload;
@@ -42,6 +42,7 @@ type
     procedure Add(AValue: Pointer); overload; virtual;
     //procedure Add(AValue: TObject); overload;
     procedure AddAsPointer(AValue: Pointer); deprecated 'Use Add(AValue: Pointer)';
+
     property  AsInt64    [AIndex: Word]: Int64      read GetAsInt64;
     property  AsString   [AIndex: Word]: String     read GetAsString;
     property  AsTime     [AIndex: Word]: TTime      read GetAsTime;
