@@ -19,6 +19,7 @@ type
   end;
 
   TVars = array of TParamRecord;
+
   TParamsExt = class
   strict private
     FParams: TVars;
@@ -97,7 +98,7 @@ type
 
     function IndexOf(const AIdent: String; const AOffset: Integer = 0): Integer;
 
-    property  Params: TVars read FParams  write FParams;
+    property  Params: TVars read FParams write FParams;
 
     procedure CopyFrom(const AParamsObj: TParamsExt); virtual;
     procedure AddFrom(const AParamsObj: TParamsExt); virtual;
