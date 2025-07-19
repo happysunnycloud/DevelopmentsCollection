@@ -73,7 +73,7 @@ begin
     // Назначим / переназначим OnAllThreadsAreDestroyedRef, AfterAllThreadsAreDestroyedProc
     // Возможно он использовался при работе с нитью
     // Переназначаем OnAllThreadsAreDestroyedHandler
-    ThreadFactory.OnAllThreadsAreDestroyedRef := nil;
+    ThreadFactory.OnAllThreadsAreDestroyedProcRef := nil;
     ThreadFactory.AfterAllThreadsAreDestroyedProc := nil;
     ThreadFactory.OnAllThreadsAreDestroyed := OnAllThreadsAreDestroyedHandler;
 

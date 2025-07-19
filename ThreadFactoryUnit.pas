@@ -252,7 +252,7 @@ type
     /// <summary>
     ///   Вызывается перед AfterAllThreadsAreDestroyedProc
     /// </summary>
-    property OnAllThreadsAreDestroyedRef: TNotifyEventProcRef
+    property OnAllThreadsAreDestroyedProcRef: TNotifyEventProcRef
       write SetOnAllThreadsAreDestroyedProcRef;
     /// <summary>
     ///   Вызывается после OnAllThreadsAreDestroyed / OnAllThreadsAreDestroyedRef
@@ -587,7 +587,19 @@ end;
 destructor TThreadFactory.Destroy;
 begin
   if FThreadRegistry.Count > 0 then
+  begin
+    //asd debug
+    //    FThreadRegistry.Enumerator(
+    //      procedure (const AThread: TThreadExt)
+    //      var
+    //        a: String;
+    //      begin
+    //        a := AThread.ThreadName;
+    //        a := a;
+    //      end);
+    //asd debug
     raise Exception.Create('There are undestroyed threads');
+  end;
 
   FreeAndNil(FThreadRegistry);
   FreeAndNil(FCriticalSection);

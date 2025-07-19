@@ -28,7 +28,7 @@ type
   strict private
     FThreadFactoryRegistry: TThreadFactoryRegistry;
     FThreadFactory: TThreadFactory;
-    FCanClose: Boolean;
+    //FCanClose: Boolean;
     FOnCloseQueryExternalHandler: TCloseQueryMethod;
     FOnCloseExternalHandler: TCloseMethod;
     FOnKeyUpExternalHandler: TKeyUpMethod;
@@ -54,7 +54,7 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
-    property CanClose: Boolean read FCanClose write FCanClose;
+    //property CanClose: Boolean read FCanClose write FCanClose;
 
     property ThreadFactoryRegistry: TThreadFactoryRegistry read FThreadFactoryRegistry;
     property ThreadFactory: TThreadFactory read FThreadFactory;
@@ -83,7 +83,7 @@ var
 begin
   inherited Create(AOwner);
 
-  FCanClose := false;
+//  FCanClose := false;
   FToDoClose := false;
 
   inherited OnCloseQuery := OnCloseQueryInternalHandler;
@@ -124,10 +124,10 @@ end;
 
 procedure TFormExt.OnCloseQueryInternalHandler(Sender: TObject; var CanClose: Boolean);
 begin
-  if FToDoClose then
-    Exit;
-
   FToDoClose := true;
+  CanClose := false;
+
+  inherited OnCloseQuery := nil;
 
   //asd debug
   Log.d('TFormExt.OnCloseQueryInternalHandler');
@@ -135,14 +135,7 @@ begin
   if Assigned(FOnCloseQueryExternalHandler) then
     FOnCloseQueryExternalHandler(Sender, CanClose);
 
-  if CanClose then
-    CanClose := false
-  else
-    Exit;
-
-  inherited OnCloseQuery := nil;
-
-  FThreadFactory.OnAllThreadsAreDestroyedRef := (
+  FThreadFactory.OnAllThreadsAreDestroyedProcRef := (
     procedure
     begin
       FThreadFactoryRegistry.OnDestroyedAllFactories := OnDestroyedAllFactoryHandler;
@@ -151,12 +144,29 @@ begin
 
   FThreadFactory.TerminateAllThreads;
 
+//  if FToDoClose then
+//    Exit;
+//
+//  FToDoClose := true;
+//
+//  if Assigned(FOnCloseQueryExternalHandler) then
+//    FOnCloseQueryExternalHandler(Sender, CanClose);
+//
+//  if CanClose then
+//    CanClose := false
+//  else
+//    Exit;
+//
+//  inherited OnCloseQuery := nil;
+//
+//  FThreadFactory.OnAllThreadsAreDestroyedProcRef := (
 //    procedure
 //    begin
-//      Self.Close;
+//      FThreadFactoryRegistry.OnDestroyedAllFactories := OnDestroyedAllFactoryHandler;
+//      FThreadFactoryRegistry.DestroyAllThreadFactories;
 //    end);
-
-//  FThreadFactoryRegistry.FinishAllThreadFactories;
+//
+//  FThreadFactory.TerminateAllThreads;
 end;
 
 procedure TFormExt.OnCloseInternalHandler(Sender: TObject; var Action: TCloseAction);
