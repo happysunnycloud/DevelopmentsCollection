@@ -22,7 +22,7 @@ type
   TRegProc = reference to procedure (const AThread: TThreadExt);
   TUnRegProc = reference to procedure (const AThread: TThreadExt);
   TExecProc = reference to procedure (const AThread: TThreadExt);
-  TNotifyEventRef = reference to procedure;
+  TNotifyEventProcRef = reference to procedure;
 
   TRegistringConstructor = reference to
     procedure (
@@ -178,7 +178,7 @@ type
 
     FOnDestroyFactory: TNotifyEvent;
     FOnAllThreadsAreDestroyed: TNotifyEvent;
-    FOnAllThreadsAreDestroyedRef: TNotifyEventRef;
+    FOnAllThreadsAreDestroyedProcRef: TNotifyEventProcRef;
 
     function GetAfterAllThreadsAreDestroyedProc: TProc;
     procedure SetAfterAllThreadsAreDestroyedProc(
@@ -189,7 +189,7 @@ type
     procedure CheckThreadZeroCount;
 
     procedure SetOnAllThreadsAreDestroyed(const ANotifyEvent: TNotifyEvent);
-    procedure SetOnAllThreadsAreDestroyedRef(const ANotifyEventRef: TNotifyEventRef);
+    procedure SetOnAllThreadsAreDestroyedProcRef(const ANotifyEventRef: TNotifyEventProcRef);
   protected
     procedure RegThreadProc(const AThread: TThreadExt);
     procedure UnRegThreadProc(const AThread: TThreadExt);
@@ -252,8 +252,8 @@ type
     /// <summary>
     ///   Вызывается перед AfterAllThreadsAreDestroyedProc
     /// </summary>
-    property OnAllThreadsAreDestroyedRef: TNotifyEventRef
-      write SetOnAllThreadsAreDestroyedRef;
+    property OnAllThreadsAreDestroyedRef: TNotifyEventProcRef
+      write SetOnAllThreadsAreDestroyedProcRef;
     /// <summary>
     ///   Вызывается после OnAllThreadsAreDestroyed / OnAllThreadsAreDestroyedRef
     /// </summary>
@@ -581,7 +581,7 @@ begin
   FAfterAllThreadsAreDestroyedProc := nil;
   FOnDestroyFactory := nil;
   FOnAllThreadsAreDestroyed := nil;
-  FOnAllThreadsAreDestroyedRef := nil;
+  FOnAllThreadsAreDestroyedProcRef := nil;
 end;
 
 destructor TThreadFactory.Destroy;
@@ -702,8 +702,8 @@ begin
   if Assigned(FOnAllThreadsAreDestroyed) then
     FOnAllThreadsAreDestroyed(Self)
   else
-  if Assigned(FOnAllThreadsAreDestroyedRef) then
-    FOnAllThreadsAreDestroyedRef;
+  if Assigned(FOnAllThreadsAreDestroyedProcRef) then
+    FOnAllThreadsAreDestroyedProcRef;
 
   if Assigned(Proc) then
   begin
@@ -719,14 +719,14 @@ end;
 
 procedure TThreadFactory.SetOnAllThreadsAreDestroyed(const ANotifyEvent: TNotifyEvent);
 begin
-  FOnAllThreadsAreDestroyedRef := nil;
+  FOnAllThreadsAreDestroyedProcRef := nil;
   FOnAllThreadsAreDestroyed := ANotifyEvent;
 end;
 
-procedure TThreadFactory.SetOnAllThreadsAreDestroyedRef(const ANotifyEventRef: TNotifyEventRef);
+procedure TThreadFactory.SetOnAllThreadsAreDestroyedProcRef(const ANotifyEventRef: TNotifyEventProcRef);
 begin
   FOnAllThreadsAreDestroyed := nil;
-  FOnAllThreadsAreDestroyedRef := ANotifyEventRef;
+  FOnAllThreadsAreDestroyedProcRef := ANotifyEventRef;
 end;
 
 procedure TThreadFactory.SetTerminateAllThreads;
