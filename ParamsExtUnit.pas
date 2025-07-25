@@ -138,6 +138,8 @@ type
     function IfAsVariantByIdent   (const AIdent: String; const ADefVal: Variant):   Variant;
     function IfAsTVarTypeByIdent  (const AIdent: String; const ADefVal: TVarType):  TVarType;
 
+    function Exists(const AIdent: String):  Boolean;
+
     function IndexOf(const AIdent: String; const AOffset: Integer = 0): Integer;
 
     property  Params: TVars read FParams write FParams;
@@ -702,6 +704,11 @@ begin
 
   SetLength(FParams, System.Length(FParams) + 1);
   FParams[System.Length(FParams) - 1].v := Value;
+end;
+
+function TParamsExt.Exists(const AIdent: String): Boolean;
+begin
+  Result := IfGetIndexByIdent(AIdent) >= 0;
 end;
 
 function TParamsExt.IndexOf(const AIdent: String; const AOffset: Integer = 0): Integer;
