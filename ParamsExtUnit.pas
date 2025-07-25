@@ -9,10 +9,37 @@ unit ParamsExtUnit;
 interface
 
 uses
+  System.SysUtils,
   System.Classes
   ;
 
 type
+//  TParamsExceptionCode = (pecValueNotFound = 0);
+//
+//  TParamsExceptionCodeHelper = record helper for TParamsExceptionCode
+//  public
+//    function ToString: String;
+//  end;
+//
+//  ParamsException = class (Exception)
+//  strict private
+//    FCode: TParamsExceptionCode;
+//    FValueIdent: String;
+//  public
+//    property Code: TParamsExceptionCode read FCode;
+//    property ValueIdent: String read FValueIdent;
+//
+//    constructor Create(
+//      const Msg: string;
+//      const Code: TParamsExceptionCode;
+//      const ValueIdent: String); reintroduce;
+//    constructor CreateFmt(
+//      const Msg: string;
+//      const Args: array of const;
+//      const Code: TParamsExceptionCode;
+//      const ValueIdent: String); reintroduce;
+//  end;
+
   TParamRecord = record
     v: Variant;
     Ident: String;
@@ -23,8 +50,10 @@ type
   TParamsExt = class
   strict private
     FParams: TVars;
-
+    // В случае ненахождения значения будет возбужден raise
     function GetIndexByIdent(const AIdent: String; const AOffset: Integer = 0): Integer;
+    // В случае ненахождения значения будет возвращено значение = -1
+    function IfGetIndexByIdent(const AIdent: String; const AOffset: Integer = 0): Integer;
   private
     function GetAsInt64    (const AIndex: Word): Int64;         overload;
     function GetAsBoolean  (const AIndex: Word): Boolean;       overload;
@@ -96,6 +125,19 @@ type
     property  AsVariantByIdent  [const AIdent: String]: Variant   read GetAsVariant;
     property  TypeOfVarByIdent  [const AIdent: String]: TVarType  read GetTypeOfVar;
 
+    function IfAsInt64ByIdent     (const AIdent: String; const ADefVal: Int64):     Int64;
+    function IfAsStringByIdent    (const AIdent: String; const ADefVal: String):    String;
+    function IfAsTimeByIdent      (const AIdent: String; const ADefVal: TTime):     TTime;
+    function IfAsDateByIdent      (const AIdent: String; const ADefVal: TDate):     TDate;
+    function IfAsDateTimeByIdent  (const AIdent: String; const ADefVal: TDateTime): TDateTime;
+    function IfAsBooleanByIdent   (const AIdent: String; const ADefVal: Boolean):   Boolean;
+    function IfAsIntegerByIdent   (const AIdent: String; const ADefVal: Integer):   Integer;
+    function IfAsWordByIdent      (const AIdent: String; const ADefVal: Word):      Word;
+    function IfAsByteByIdent      (const AIdent: String; const ADefVal: Byte):      Byte;
+    function IfAsPointerByIdent   (const AIdent: String; const ADefVal: Pointer):   Pointer;
+    function IfAsVariantByIdent   (const AIdent: String; const ADefVal: Variant):   Variant;
+    function IfAsTVarTypeByIdent  (const AIdent: String; const ADefVal: TVarType):  TVarType;
+
     function IndexOf(const AIdent: String; const AOffset: Integer = 0): Integer;
 
     property  Params: TVars read FParams write FParams;
@@ -107,9 +149,46 @@ type
 implementation
 
 uses
-    System.SysUtils
-  , System.Variants
+  System.Variants
   ;
+
+//{ TParamsExceptionCodeHelper }
+//
+//function TParamsExceptionCodeHelper.ToString: String;
+//begin
+//  Result := 'Void';
+//
+//  case Self of
+//    pecValueNotFound:
+//      Result := 'Value not found';
+//  end;
+//end;
+//
+//{ ParamsException }
+//
+//constructor ParamsException.Create(
+//  const Msg: string;
+//  const Code: TParamsExceptionCode;
+//  const ValueIdent: String
+//  );
+//begin
+//  inherited Create(Msg);
+//
+//  FCode := Code;
+//end;
+//
+//constructor ParamsException.CreateFmt(
+//  const Msg: string;
+//  const Args: array of const;
+//  const Code: TParamsExceptionCode;
+//  const ValueIdent: String
+//  );
+//begin
+//  inherited CreateFmt(Msg, Args);
+//
+//  FCode := Code;
+//  FValueIdent := ValueIdent;
+//end;
 
 { TParamsExt }
 
@@ -124,6 +203,27 @@ begin
   end;
 
   raise Exception.CreateFmt('Var of ident "%s" not found', [AIdent]);
+
+  //asd
+  //  raise ParamsException.CreateFmt(
+  //    'Value of ident "%s" not found',
+  //    [AIdent],
+  //    TParamsExceptionCode.pecValueNotFound,
+  //    AIdent);
+  //asd
+end;
+
+function TParamsExt.IfGetIndexByIdent(const AIdent: String; const AOffset: Integer = 0): Integer;
+var
+  i: Integer;
+begin
+  Result := -1;
+
+  for i := AOffset to Pred(Length) do
+  begin
+    if FParams[i].Ident = AIdent then
+      Exit(i);
+  end;
 end;
 
 constructor TParamsExt.Create(const AVars: array of Variant);
@@ -355,6 +455,174 @@ begin
   i := GetIndexByIdent(AIdent);
 
   CheckCorrect('GetTypeOfVar', i);
+
+  Result := TVarData(FParams[i].v).VType;
+end;
+
+function TParamsExt.IfAsInt64ByIdent(const AIdent: String; const ADefVal: Int64): Int64;
+var
+  i: Integer;
+begin
+  i := IfGetIndexByIdent(AIdent);
+
+  if i < 0 then
+    Exit(ADefVal);
+
+  CheckCorrect('IfAsInt64ByIdent', i, varInt64);
+
+  Result := Int64(FParams[i].v);
+end;
+
+function TParamsExt.IfAsStringByIdent(const AIdent: String; const ADefVal: String): String;
+var
+  i: Integer;
+begin
+  i := IfGetIndexByIdent(AIdent);
+
+  if i < 0 then
+    Exit(ADefVal);
+
+  CheckCorrect('IfAsStringByIdent', i, varUString);
+
+  Result := String(TVarData(FParams[i].v).VString);
+end;
+
+function TParamsExt.IfAsTimeByIdent(const AIdent: String; const ADefVal: TTime): TTime;
+var
+  i: Integer;
+begin
+  i := IfGetIndexByIdent(AIdent);
+
+  if i < 0 then
+    Exit(ADefVal);
+
+  CheckCorrect('IfAsTimeByIdent', i, varDouble);
+
+  Result := TTime(TVarData(FParams[i].v).VDouble);
+end;
+
+function TParamsExt.IfAsDateByIdent(const AIdent: String; const ADefVal: TDate): TDate;
+var
+  i: Integer;
+begin
+  i := IfGetIndexByIdent(AIdent);
+
+  if i < 0 then
+    Exit(ADefVal);
+
+  CheckCorrect('IfAsDateByIdent', i, varDouble);
+
+  Result := TTime(TVarData(FParams[i].v).VDouble);
+end;
+
+function TParamsExt.IfAsDateTimeByIdent(const AIdent: String; const ADefVal: TDateTime): TDateTime;
+var
+  i: Integer;
+begin
+  i := IfGetIndexByIdent(AIdent);
+
+  if i < 0 then
+    Exit(ADefVal);
+
+  CheckCorrect('IfAsDateTimeByIdent', i, varDate);
+
+  Result := TVarData(FParams[i].v).VDate;
+end;
+
+function TParamsExt.IfAsBooleanByIdent(const AIdent: String; const ADefVal: Boolean): Boolean;
+var
+  i: Integer;
+begin
+  i := IfGetIndexByIdent(AIdent);
+
+  if i < 0 then
+    Exit(ADefVal);
+
+  CheckCorrect('IfAsBooleanByIdent', i, varBoolean);
+
+  Result := Boolean(FParams[i].v);
+end;
+
+function TParamsExt.IfAsIntegerByIdent(const AIdent: String; const ADefVal: Integer): Integer;
+var
+  i: Integer;
+begin
+  i := IfGetIndexByIdent(AIdent);
+
+  if i < 0 then
+    Exit(ADefVal);
+
+  CheckCorrect('IfAsIntegerByIdent', i, varInteger);
+
+  Result := Integer(FParams[i].v);
+end;
+
+function TParamsExt.IfAsWordByIdent(const AIdent: String; const ADefVal: Word): Word;
+var
+  i: Integer;
+begin
+  i := IfGetIndexByIdent(AIdent);
+
+  if i < 0 then
+    Exit(ADefVal);
+
+  CheckCorrect('IfAsWordByIdent', i, varWord);
+
+  Result := Word(FParams[i].v);
+end;
+
+function TParamsExt.IfAsByteByIdent(const AIdent: String; const ADefVal: Byte): Byte;
+var
+  i: Integer;
+begin
+  i := IfGetIndexByIdent(AIdent);
+
+  if i < 0 then
+    Exit(ADefVal);
+
+  CheckCorrect('IfAsByteByIdent', i, varByte);
+
+  Result := Byte(FParams[i].v);
+end;
+
+function TParamsExt.IfAsPointerByIdent(const AIdent: String; const ADefVal: Pointer): Pointer;
+var
+  i: Integer;
+begin
+  i := IfGetIndexByIdent(AIdent);
+
+  if i < 0 then
+    Exit(ADefVal);
+
+  CheckCorrect('IfAsPointerByIdent', i, varByRef);
+
+  Result := TVarData(FParams[i].v).VPointer;
+end;
+
+function TParamsExt.IfAsVariantByIdent(const AIdent: String; const ADefVal: Variant): Variant;
+var
+  i: Integer;
+begin
+  i := IfGetIndexByIdent(AIdent);
+
+  if i < 0 then
+    Exit(ADefVal);
+
+  CheckCorrect('IfAsVariantByIdent', i);
+
+  Result := FParams[i].v;
+end;
+
+function TParamsExt.IfAsTVarTypeByIdent(const AIdent: String; const ADefVal: TVarType): TVarType;
+var
+  i: Integer;
+begin
+  i := IfGetIndexByIdent(AIdent);
+
+  if i < 0 then
+    Exit(ADefVal);
+
+  CheckCorrect('IfAsTVarTypeByIdent', i);
 
   Result := TVarData(FParams[i].v).VType;
 end;
