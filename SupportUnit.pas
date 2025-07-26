@@ -20,26 +20,26 @@ type
   TComponentFunctions = class
   public
     //проверяет наличие свойства у компонента
-    class function  HasProperty(const Obj: TObject; const Prop: String): System.TypInfo.PPropInfo;
+    class function  HasProperty(const Obj: TObject; const Prop: String): System.TypInfo.PPropInfo; deprecated 'FMX.ControlToolsUnit';
     //добавляет ADigitDepth символа '0' в начало числа, при преобразовании его в строку
     class function  DigitZeroAlignment(const ADigit: Word; const ADigitDepth: Byte = 2): String;
     //добавляет ADigitDepth символа '0' в начало числа, представленного в виде строки
     class function  StrZeroAlignment(const AStrDigit: String; const ADigitDepth: Byte = 2): String;
     //определяет наличие/отсутствия указываемого свойства у компонента
     class function  IsDesiredComponent(
-      const AComponent: TComponent; const APropertyName: String): Boolean;
+      const AComponent: TComponent; const APropertyName: String): Boolean; deprecated 'FMX.ControlToolsUnit';
     //проверяет наличие указываемого свойства у компонента, если оно отсутствует, поднимает исключение
-    class procedure CheckHasComponentProperty(const AComponent: TComponent; const APropertyName: String);
+    class procedure CheckHasComponentProperty(const AComponent: TComponent; const APropertyName: String); deprecated 'FMX.ControlToolsUnit';
 
     //устанавливает значение свойства Text у компонента
-    class procedure SetComponentText(const AComponent: TComponent; const AText: String); deprecated 'Use SetTextProperty';
+    class procedure SetComponentText(const AComponent: TComponent; const AText: String); deprecated 'FMX.ControlToolsUnit';
     //читает значение свойства Text у компонента
-    class function  GetComponentText(const AComponent: TComponent): String; deprecated 'Use GetTextProperty';
+    class function  GetComponentText(const AComponent: TComponent): String; deprecated 'FMX.ControlToolsUnit';
 
     //устанавливает значение свойства Text у компонента
-    class procedure SetTextProperty(const AComponent: TComponent; const AText: String);
+    class procedure SetTextProperty(const AComponent: TComponent; const AText: String); deprecated 'FMX.ControlToolsUnit';
     //читает значение свойства Text у компонента
-    class function  GetTextProperty(const AComponent: TComponent): String;
+    class function  GetTextProperty(const AComponent: TComponent): String; deprecated 'FMX.ControlToolsUnit';
 
     //устанавливает значение свойства StyleLookup у компонента
     class procedure SetStyleLookup(const AControl: TControl; const AStyleLookupName: String);
@@ -95,8 +95,8 @@ type
 
   TDateTimeFunctions = class
   public
-    class procedure ChangeDate(var ADateTime: TDateTime; const ADate: TDate);
-    class procedure ChangeTime(var ADateTime: TDateTime; const ATime: TTime);
+    class procedure ChangeDate(var ADateTime: TDateTime; const ADate: TDate); deprecated 'DateTimeToolsUnit';
+    class procedure ChangeTime(var ADateTime: TDateTime; const ATime: TTime); deprecated 'DateTimeToolsUnit';
   end;
 
   TFMXCommonFunctions = class

@@ -53,7 +53,7 @@ type
 implementation
 
 uses
-  SupportUnit;
+  FMX.ControlToolsUnit;
 
 class procedure TOnClickReplacer.Init;
 begin
@@ -120,7 +120,7 @@ begin
     Inc(i);
   end;
 
-  TComponentFunctions.ControlEnumerator(AOwner,
+  TControlTools.ControlEnumerator(AOwner,
     procedure (const AControl: TControl)
     begin
       if IsArrayContainsControl(ExcludedControls, AControl) then

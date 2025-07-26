@@ -55,7 +55,16 @@ type
 
     class procedure SetTextProperty(
       const AObj: TObject;
-      const AText: String);
+      const AText: String); deprecated 'Use SetPropertyAsString';
+
+    class function GetPropertyAsString(
+      const ASourceComponent: TComponent;
+      const APropertyName: String): String;
+
+    class procedure SetPropertyAsString(
+      const ASourceComponent: TComponent;
+      const APropertyName: String;
+      const AValue: String);
 
     class function GetPropertyAsObject(
       const ASourceComponent: TComponent;
@@ -99,6 +108,8 @@ implementation
 uses
   System.SysUtils
   ;
+
+{ TControlTools }
 
 class function TControlTools.HasProperty(
   const AObj: TObject;
@@ -144,6 +155,25 @@ begin
 
     ControlEnumerator(AComponent.Components[i], AControlEnumeratorCallbackProc);
   end;
+end;
+
+class function TControlTools.GetPropertyAsString(
+  const ASourceComponent: TComponent;
+  const APropertyName: String): String;
+begin
+  CheckHasProperty(ASourceComponent, APropertyName);
+
+  Result := GetStrProp(ASourceComponent, APropertyName);
+end;
+
+class procedure TControlTools.SetPropertyAsString(
+  const ASourceComponent: TComponent;
+  const APropertyName: String;
+  const AValue: String);
+begin
+  CheckHasProperty(ASourceComponent, TProperties.Text);
+
+  SetStrProp(ASourceComponent, APropertyName, AValue);
 end;
 
 class function TControlTools.GetPropertyAsObject(
