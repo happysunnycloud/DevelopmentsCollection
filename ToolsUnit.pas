@@ -29,9 +29,16 @@ type
   const
     REG_AUTO_RUN_KEY_PATH = '\Software\Microsoft\Windows\CurrentVersion\Run';
   public
-    class function KeyExists(const AAppName: String): Boolean;
+    class function KeyExists(const AAppName: String): Boolean; deprecated;
+    class function AutoRunKeyExists(const AAppName: String): Boolean;
     class procedure AddAppAutoRun(const AAppName: String; const AAppExeFileName: String);
     class procedure DeleteAppAutoRun(const AAppName: String);
+  end;
+
+  TPrivilegeTools = class
+  public
+    class function HasPrivilege(
+      const PrivilegeName: String): Boolean;
   end;
 
   TExceptionTools = class
@@ -173,7 +180,25 @@ begin
   end;
 end;
 
-class procedure TRegistryTools.AddAppAutoRun(const AAppName: String; const AAppExeFileName: String);
+class function TRegistryTools.AutoRunKeyExists(
+  const AAppName: String): Boolean;
+var
+  h: TRegistry;
+begin
+  h := TRegistry.Create;
+  try
+    h.RootKey := HKEY_CURRENT_USER;
+    h.OpenKey(REG_AUTO_RUN_KEY_PATH, false);
+    Result := h.ReadString(AAppName).Length > 0;
+    h.CloseKey;
+  finally
+    FreeAndNil(h);
+  end;
+end;
+
+class procedure TRegistryTools.AddAppAutoRun(
+  const AAppName: String;
+  const AAppExeFileName: String);
 var
   h: TRegistry;
 begin
@@ -188,7 +213,8 @@ begin
   end;
 end;
 
-class procedure TRegistryTools.DeleteAppAutoRun(const AAppName: String);
+class procedure TRegistryTools.DeleteAppAutoRun(
+  const AAppName: String);
 var
   h: TRegistry;
 begin
@@ -200,6 +226,30 @@ begin
     h.CloseKey;
   finally
     FreeAndNil(h);
+  end;
+end;
+
+{ TPrivilegeTools }
+
+class function TPrivilegeTools.HasPrivilege(
+  const PrivilegeName: String): Boolean;
+var
+  hToken: THandle;
+  tp: TOKEN_PRIVILEGES;
+  d: DWORD;
+begin
+  Result := False;
+
+  if OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES, hToken) then
+  begin
+    tp.PrivilegeCount := 1;
+    LookupPrivilegeValue(nil, pchar(PrivilegeName), tp.Privileges[0].Luid);
+    tp.Privileges[0].Attributes := SE_PRIVILEGE_ENABLED;
+    AdjustTokenPrivileges(hToken, False, tp, SizeOf(TOKEN_PRIVILEGES), nil, d);
+    if GetLastError = ERROR_SUCCESS then
+      Result := True;
+
+    CloseHandle(hToken);
   end;
 end;
 
