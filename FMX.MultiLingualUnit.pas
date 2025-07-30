@@ -35,7 +35,7 @@ uses
   FMX.Controls,
   FMX.Dialogs,
 
-  SupportUnit
+  FMX.ControlToolsUnit
   ;
 
 const
@@ -216,7 +216,7 @@ begin
     begin
       Dec(i);
 
-      if TComponentFunctions.IsDesiredComponent(AForm.Components[i], PROPERTY_TEXT) then
+      if TControlTools.HasTextProperty(AForm.Components[i]) then
       begin
         Control     := AForm.Components[i] as TControl;
         ControlName := Control.Name;
@@ -250,7 +250,7 @@ begin
     begin
       Dec(i);
 
-      if TComponentFunctions.IsDesiredComponent(AForm.Components[i], PROPERTY_TEXT) then
+      if TControlTools.HasTextProperty(AForm.Components[i]) then
       begin
         Control := AForm.Components[i] as TControl;
         ControlNameList.Add(Control.Name + ' = ');
@@ -330,7 +330,7 @@ begin
       begin
         if Control.Name = Translator.Origin then
         begin
-          if TComponentFunctions.IsDesiredComponent(AForm.Components[i], PROPERTY_TEXT) then
+          if TControlTools.HasTextProperty(AForm.Components[i]) then
             SetStrProp(Control, PROPERTY_TEXT, Translator.Translate);
 
           Break;

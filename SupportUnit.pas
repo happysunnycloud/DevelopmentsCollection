@@ -22,9 +22,9 @@ type
     //проверяет наличие свойства у компонента
     class function  HasProperty(const Obj: TObject; const Prop: String): System.TypInfo.PPropInfo; deprecated 'Use FMX.ControlToolsUnit';
     //добавляет ADigitDepth символа '0' в начало числа, при преобразовании его в строку
-    class function  DigitZeroAlignment(const ADigit: Word; const ADigitDepth: Byte = 2): String;
+    class function  DigitZeroAlignment(const ADigit: Word; const ADigitDepth: Byte = 2): String; deprecated 'Use ToolsUnit';
     //добавляет ADigitDepth символа '0' в начало числа, представленного в виде строки
-    class function  StrZeroAlignment(const AStrDigit: String; const ADigitDepth: Byte = 2): String;
+    class function  StrZeroAlignment(const AStrDigit: String; const ADigitDepth: Byte = 2): String; deprecated 'Use ToolsUnit';
     //определяет наличие/отсутствия указываемого свойства у компонента
     class function  IsDesiredComponent(
       const AComponent: TComponent; const APropertyName: String): Boolean; deprecated 'Use FMX.ControlToolsUnit';
@@ -48,32 +48,32 @@ type
 
     //копирование свойства
     class procedure CopyProperty(
-      const ASourceComponent: TComponent; const ADistanceControl: TComponent; const APropertyName: String);
+      const ASourceComponent: TComponent; const ADistanceControl: TComponent; const APropertyName: String); deprecated 'Use FMX.ControlToolsUnit';
     //копирование объекта со свойствами
     class procedure CopyObjectProperty(
-      const ASourceComponent: TComponent; const ADistanceControl: TComponent; const APropertyName: String);
+      const ASourceComponent: TComponent; const ADistanceControl: TComponent; const APropertyName: String); deprecated 'Use FMX.ControlToolsUnit';
     //копирование указателя
     class procedure CopyPointerProperty(
-      const ASourceComponent: TComponent; const ADistanceControl: TComponent; const APropertyName: String);
+      const ASourceComponent: TComponent; const ADistanceControl: TComponent; const APropertyName: String); deprecated 'Use FMX.ControlToolsUnit';
 
     class function  GetComponentPropertyAsString(
-      const ASourceComponent: TComponent; const APropertyName: String): String;
+      const ASourceComponent: TComponent; const APropertyName: String): String; deprecated 'Use FMX.ControlToolsUnit';
     class procedure SetComponentPropertyAsString(
-      const ASourceComponent: TComponent; const APropertyName: String; AString: String);
+      const ASourceComponent: TComponent; const APropertyName: String; AString: String); deprecated 'Use FMX.ControlToolsUnit';
     class function  GetComponentPropertyAsBoolean(
       const ASourceComponent: TComponent; const APropertyName: String): Boolean;
     class procedure SetComponentPropertyAsBoolean(
-      const ASourceComponent: TComponent; const APropertyName: String; ABoolean: Boolean);
+      const ASourceComponent: TComponent; const APropertyName: String; ABoolean: Boolean); deprecated 'Use FMX.ControlToolsUnit';
 
     class function  GetComponentPropertyAsObject(
-      const ASourceComponent: TComponent; const APropertyName: String): TObject;
+      const ASourceComponent: TComponent; const APropertyName: String): TObject; deprecated 'Use FMX.ControlToolsUnit';
     class procedure SetComponentPropertyAsObject(
-      const ASourceComponent: TComponent; const APropertyName: String; AObject: TObject);
+      const ASourceComponent: TComponent; const APropertyName: String; AObject: TObject); deprecated 'Use FMX.ControlToolsUnit';
 
     class function  GetComponentPropertyAsSet(
-      const ASourceComponent: TComponent; const APropertyName: String): String;
+      const ASourceComponent: TComponent; const APropertyName: String): String; deprecated 'Use FMX.ControlToolsUnit';
     class procedure SetComponentPropertyAsSet(
-      const ASourceComponent: TComponent; const APropertyName: String; ASet: String);
+      const ASourceComponent: TComponent; const APropertyName: String; ASet: String); deprecated 'Use FMX.ControlToolsUnit';
 
     //class function  GetObjectByClass(const AClass: TClass; const AObject: TObject): TObject;
 
@@ -87,10 +87,10 @@ type
 
   TStringFunctions = class
   public
-    class function  DateTimeToStandartFormatString(ADateTime: TDateTime): String;
-    class function  IsContainsOnlyDigits(AString: String): Boolean;
-    class function  IsIP4(AString: String): Boolean;
-    class function  GetHumanTime(AMediaTime: Int64; AMediaTimeScale: Int64): String;
+    class function  DateTimeToStandartFormatString(ADateTime: TDateTime): String; deprecated 'Use StringToolsUnit';
+    class function  IsContainsOnlyDigits(AString: String): Boolean; deprecated 'Use StringToolsUnit';
+    class function  IsIP4(AString: String): Boolean; deprecated 'Use StringToolsUnit';
+    class function  GetHumanTime(AMediaTime: Int64; AMediaTimeScale: Int64): String; deprecated 'Use StringToolsUnit';
   end;
 
   TDateTimeFunctions = class
@@ -111,9 +111,9 @@ type
 
   TCommon = class
   public
-    class procedure FreeAndNil(var aObject: TObject); overload;
-    class procedure FreeAndNil(var aConrol: TControl); overload;
-    class procedure FreeAndNil(var aComponent: TComponent); overload;
+    class procedure FreeAndNil(var aObject: TObject); overload; deprecated 'Use ToolsUnit';
+    class procedure FreeAndNil(var aConrol: TControl); overload; deprecated 'Use ToolsUnit';
+    class procedure FreeAndNil(var aComponent: TComponent); overload; deprecated 'Use ToolsUnit';
   end;
 
   TProperties = class

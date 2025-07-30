@@ -88,7 +88,8 @@ uses
   FMX.StdCtrls,
   FMX.Dialogs,
 
-  SupportUnit
+  FMX.ControlToolsUnit,
+  ToolsUnit
   ;
 
 procedure TInputScaleControl.StartOnChange;
@@ -225,12 +226,12 @@ begin
   fCurrentValue := ACurrentValue;
   if fCurrentValue < 0 then
   begin
-    SetStrProp(fValueOutputControl, TProperties.Text, TComponentFunctions.DigitZeroAlignment(0, fDigitDepth));
+    SetStrProp(fValueOutputControl, TProperties.Text, TTools.DigitZeroAlignment(0, fDigitDepth));
 //    SetInt64Prop(fValueOutputControl, 'Tag', 0);
   end
   else
   begin
-    SetStrProp(fValueOutputControl, TProperties.Text, TComponentFunctions.DigitZeroAlignment(fCurrentValue, fDigitDepth));
+    SetStrProp(fValueOutputControl, TProperties.Text, TTools.DigitZeroAlignment(fCurrentValue, fDigitDepth));
 //    SetInt64Prop(fValueOutputControl, 'Tag', fCurrentValue);
   end;
   Repaint;
@@ -277,7 +278,7 @@ var
   RangeValue: Word;
   RangeCount: Word;
 begin
-  Assert(TComponentFunctions.IsDesiredComponent(AValueOutputControl, TProperties.Text), 'Control "' + AValueOutputControl.Name + '" does not have a "' + TProperties.Text + '" property ');
+  Assert(TControlTools.HasTextProperty(AValueOutputControl), 'Control "' + AValueOutputControl.Name + '" does not have a "' + TProperties.Text + '" property ');
 //  Assert(TComponentFunctions.IsDesiredComponent(AValueOutputControl, PROPERTY_NAME_TAG),  'Control "' + AValueOutputControl.Name + '" does not have a "' + PROPERTY_NAME_TAG  + '" property ');
 
   inherited Create(AOwner);

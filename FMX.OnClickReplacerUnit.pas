@@ -8,6 +8,7 @@ uses
   , System.Generics.Collections
   , System.SysUtils
   , FMX.Controls
+  , FMX.Types
   ;
 
 type
@@ -35,7 +36,7 @@ type
     class procedure UnInit;
 
     class procedure Replace(
-      const AOwner: TComponent;
+      const AOwner: TFmxObject;
       const AExcludedControls: array of TControl;
       const AExternalProc: TProc);
 //    class procedure ReplaceFor(
@@ -101,7 +102,7 @@ begin
 end;
 
 class procedure TOnClickReplacer.Replace(
-  const AOwner: TComponent;
+  const AOwner: TFmxObject;
   const AExcludedControls: array of TControl;
   const AExternalProc: TProc);
 var

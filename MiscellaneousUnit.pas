@@ -1,4 +1,5 @@
-﻿{1.01}
+﻿// Видимо стоит упразднить модуль
+{1.01}
 unit MiscellaneousUnit;
 
 interface

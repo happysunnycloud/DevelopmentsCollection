@@ -127,7 +127,7 @@ uses
   , FMX.Forms
   , FMX.Graphics
 
-  , SupportUnit
+  , FMX.ControlToolsUnit
   ;
 
 class function TSwitchControl.CreateBySample(const AOwner: TComponent; const ASampleSwitch: TSwitch): TSwitchControl;
@@ -532,7 +532,8 @@ begin
   end
   else
   begin
-    AbsolutePoint := TFMXCommonFunctions.FindParentForm(Self).ScreenToClient(Screen.MousePos);
+    AbsolutePoint :=
+      TControlTools.FindParentForm(Self).ScreenToClient(Screen.MousePos);
     LocalPoint    := fTrackBox.AbsoluteToLocal(AbsolutePoint);
     if LocalPoint.X > fTrackBox.Width / 2 then
     begin

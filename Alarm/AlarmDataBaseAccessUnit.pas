@@ -68,7 +68,7 @@ uses
 
   FireDAC.Comp.Client,
   DataBaseToolsUnit,
-  SupportUnit,
+  StringToolsUnit,
   FMX.AlarmUnit
   ;
 
@@ -377,7 +377,8 @@ begin
                 '     alarm_id      =  :alarm_id            ' ;
 
     TDataBaseTools.Query.AddQuery(SQLQuery);
-    TDataBaseTools.Query.AddParameterAsString  (':alarm_time',      TStringFunctions.DateTimeToStandartFormatString(AAlarmRec.AlarmTime));
+    TDataBaseTools.Query.AddParameterAsString  (':alarm_time',
+      TStringTools.DateTimeToStandartFormatString(AAlarmRec.AlarmTime));
     TDataBaseTools.Query.AddParameterAsInteger (':alarm_type',      AAlarmRec.AlarmType);
     TDataBaseTools.Query.AddParameterAsInteger (':alarm_kind',      AAlarmRec.AlarmKind);
     TDataBaseTools.Query.AddParameterAsBoolean (':alarm_on',        AAlarmRec.AlarmOn);
@@ -437,7 +438,8 @@ begin
                 '     )                          ' ;
 
     TDataBaseTools.Query.AddQuery(SQLQuery);
-    TDataBaseTools.Query.AddParameterAsString  (':alarm_time',      TStringFunctions.DateTimeToStandartFormatString(AAlarmRec.AlarmTime));
+    TDataBaseTools.Query.AddParameterAsString  (':alarm_time',
+      TStringTools.DateTimeToStandartFormatString(AAlarmRec.AlarmTime));
     TDataBaseTools.Query.AddParameterAsInteger (':alarm_type',      AAlarmRec.AlarmType);
     TDataBaseTools.Query.AddParameterAsInteger (':alarm_kind',      AAlarmRec.AlarmKind);
     TDataBaseTools.Query.AddParameterAsBoolean (':alarm_on',        AAlarmRec.AlarmOn);
@@ -507,7 +509,8 @@ begin
                 '     alarm_id   =  :alarm_id   ' ;
 
     TDataBaseTools.Query.AddQuery(SQLQuery);
-    TDataBaseTools.Query.AddParameterAsString (':alarm_time', TStringFunctions.DateTimeToStandartFormatString(ADateTime));
+    TDataBaseTools.Query.AddParameterAsString (':alarm_time',
+      TStringTools.DateTimeToStandartFormatString(ADateTime));
     TDataBaseTools.Query.AddParameterAsInteger(':alarm_id',   AlarmId);
 
     TDataBaseTools.ExecQuery;
@@ -539,7 +542,8 @@ begin
                 '     )                                            ' ;
 
     TDataBaseTools.Query.AddQuery(SQLQuery);
-    TDataBaseTools.Query.AddParameterAsString  (':alarm_time',    TStringFunctions.DateTimeToStandartFormatString(ADateTime));
+    TDataBaseTools.Query.AddParameterAsString  (':alarm_time',
+      TStringTools.DateTimeToStandartFormatString(ADateTime));
     TDataBaseTools.Query.AddParameterAsInteger (':alarm_type',    TAlarm.ALARM_TYPE_CLOCK);
     TDataBaseTools.Query.AddParameterAsInteger (':alarm_kind',    TAlarm.ALARM_KIND_NONE);
     TDataBaseTools.Query.AddParameterAsBoolean (':alarm_on',      AAlarmOn);
@@ -608,7 +612,8 @@ begin
 
     TDataBaseTools.Query.AddQuery(SQLQuery);
     TDataBaseTools.Query.AddParameterAsInteger(':alarm_id',       AlarmId);
-    TDataBaseTools.Query.AddParameterAsString (':alarm_time',     TStringFunctions.DateTimeToStandartFormatString(ADateTime));
+    TDataBaseTools.Query.AddParameterAsString (':alarm_time',
+      TStringTools.DateTimeToStandartFormatString(ADateTime));
     TDataBaseTools.Query.AddParameterAsBoolean(':alarm_on',       AAlarmOn);
     TDataBaseTools.Query.AddParameterAsInteger(':alarm_hours',    AHours);
     TDataBaseTools.Query.AddParameterAsInteger(':alarm_minutes',  AMinutes);
@@ -643,7 +648,8 @@ begin
                 '     )                                            ' ;
 
     TDataBaseTools.Query.AddQuery(SQLQuery);
-    TDataBaseTools.Query.AddParameterAsString  (':alarm_time',    TStringFunctions.DateTimeToStandartFormatString(ADateTime));
+    TDataBaseTools.Query.AddParameterAsString  (':alarm_time',
+      TStringTools.DateTimeToStandartFormatString(ADateTime));
     TDataBaseTools.Query.AddParameterAsInteger (':alarm_type',    TAlarm.ALARM_TYPE_TIMER);
     TDataBaseTools.Query.AddParameterAsInteger (':alarm_kind',    TAlarm.ALARM_KIND_NONE);
     TDataBaseTools.Query.AddParameterAsBoolean (':alarm_on',      AAlarmOn);
@@ -680,7 +686,8 @@ begin
               '     alarm_time = :alarm_time ' ;
 
   TDataBaseTools.Query.AddQuery(SQLQuery);
-  TDataBaseTools.Query.AddParameterAsString (':alarm_time', TStringFunctions.DateTimeToStandartFormatString(ADateTime));
+  TDataBaseTools.Query.AddParameterAsString (':alarm_time',
+    TStringTools.DateTimeToStandartFormatString(ADateTime));
 
   QueryResult :=
   TDataBaseTools.RequestQuery;
@@ -734,7 +741,8 @@ begin
               '     alarm_time = :alarm_time ' ;
 
   TDataBaseTools.Query.AddQuery(SQLQuery);
-  TDataBaseTools.Query.AddParameterAsString (':alarm_time', TStringFunctions.DateTimeToStandartFormatString(ADateTime));
+  TDataBaseTools.Query.AddParameterAsString (':alarm_time',
+    TStringTools.DateTimeToStandartFormatString(ADateTime));
 
   TDataBaseTools.ExecQuery;
   TDataBaseTools.FreeQuery;

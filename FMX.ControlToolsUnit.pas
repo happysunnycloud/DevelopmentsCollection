@@ -6,7 +6,9 @@ interface
 uses
   System.Classes,
   System.TypInfo,
-  FMX.Controls
+  FMX.Controls,
+  FMX.Forms,
+  FMX.Types
   ;
 
 type
@@ -42,7 +44,7 @@ type
   TControlTools = class
   public
     class procedure ControlEnumerator(
-      const AComponent: TComponent;
+      const AFmxObject: TFmxObject;
       const AControlEnumeratorCallbackProc: TControlEnumeratorCallbackProc);
 
     class function HasProperty(
@@ -53,9 +55,12 @@ type
       const AObj: TObject;
       const APropertyName: String);
 
+    class function HasTextProperty(
+      const AObj: TObject): Boolean;
+
     class procedure SetTextProperty(
       const AObj: TObject;
-      const AText: String); deprecated 'Use SetPropertyAsString';
+      const AText: String);
 
     class function GetPropertyAsString(
       const ASourceComponent: TComponent;
@@ -101,12 +106,43 @@ type
       const ASourceComponent: TComponent;
       const APropertyName: String;
       const AValue: Boolean);
+
+    class function GetPropertyAsSet(
+      const ASourceComponent: TComponent;
+      const APropertyName: String): String;
+    class procedure SetPropertyAsSet(
+      const ASourceComponent: TComponent;
+      const APropertyName: String;
+      ASet: String);
+
+    // Копирование свойства
+    class procedure CopyProperty(
+      const ASourceComponent: TComponent;
+      const ADistanceControl: TComponent;
+      const APropertyName: String);
+    // Копирование объекта со свойствами
+    class procedure CopyObjectProperty(
+      const ASourceComponent: TComponent;
+      const ADistanceControl: TComponent;
+      const APropertyName: String);
+    // Копирование указателя
+    class procedure CopyPointerProperty(
+      const ASourceComponent: TComponent;
+      const ADistanceControl: TComponent;
+      const APropertyName: String);
+
+    class function FindParentForm(const AChildControl: TControl): FMX.Forms.TForm;
+    class function FindParentFrame(const AChildControl: TControl): FMX.Forms.TFrame;
+    class function FindControl(const AParentControl: TControl; const AControlName: String): TControl;
+
+    class procedure EnableControls(const AControls: array of TControl; const AState: Boolean);
   end;
 
 implementation
 
 uses
-  System.SysUtils
+    System.SysUtils
+  , FMX.Layouts
   ;
 
 { TControlTools }
@@ -126,6 +162,12 @@ begin
     raise Exception.CreateFmt('Object does not have a "%s" property', [APropertyName]);
 end;
 
+class function TControlTools.HasTextProperty(
+  const AObj: TObject): Boolean;
+begin
+  Result := HasProperty(AObj, TProperties.Text);
+end;
+
 class procedure TControlTools.SetTextProperty(
   const AObj: TObject;
   const AText: String);
@@ -136,24 +178,52 @@ begin
 end;
 
 class procedure TControlTools.ControlEnumerator(
-  const AComponent: TComponent;
+  const AFmxObject: TFmxObject;
   const AControlEnumeratorCallbackProc: TControlEnumeratorCallbackProc);
+  //asd
+  procedure ScrollBoxControlEnumerator(
+    const AControl: TControl);
+  var
+    __Control: TControl;
+    i: Word;
+  begin
+    i := AControl.ControlsCount;
+    while i > 0 do
+    begin
+      Dec(i);
+
+      __Control := AControl.Controls[i];
+      AControlEnumeratorCallbackProc(__Control);
+
+      ScrollBoxControlEnumerator(__Control);
+    end;
+  end;
+  //asd
 var
   _Control: TControl;
   i: Word;
 begin
-  if AComponent is TControl then
+  // TScrollContent может содержать только TControl
+  // Поэтому его обрабатываем отдельно
+  if AFmxObject.ClassInfo = TScrollBox.ClassInfo then
   begin
-    _Control := TControl(AComponent);
+    ScrollBoxControlEnumerator(TScrollBox(AFmxObject).Content);
+
+    Exit;
+  end;
+
+  if AFmxObject is TControl then
+  begin
+    _Control := TControl(AFmxObject);
     AControlEnumeratorCallbackProc(_Control);
   end;
 
-  i := AComponent.ComponentCount;
+  i := AFmxObject.ComponentCount;
   while i > 0 do
   begin
     Dec(i);
 
-    ControlEnumerator(AComponent.Components[i], AControlEnumeratorCallbackProc);
+    ControlEnumerator(TFmxObject(AFmxObject.Components[i]), AControlEnumeratorCallbackProc);
   end;
 end;
 
@@ -251,5 +321,171 @@ begin
 
   SetPropValue(ASourceComponent, APropertyName, AValue);
 end;
+
+class function TControlTools.GetPropertyAsSet(
+  const ASourceComponent: TComponent;
+  const APropertyName: String): String;
+begin
+  CheckHasProperty(ASourceComponent, APropertyName);
+
+  Result := GetSetProp(ASourceComponent, APropertyName, true);
+end;
+
+class procedure TControlTools.SetPropertyAsSet(
+  const ASourceComponent: TComponent;
+  const APropertyName: String;
+  ASet: String);
+begin
+  CheckHasProperty(ASourceComponent, APropertyName);
+
+  SetSetProp(ASourceComponent, APropertyName, ASet);
+end;
+
+class procedure TControlTools.CopyProperty(
+  const ASourceComponent: TComponent;
+  const ADistanceControl: TComponent;
+  const APropertyName: String);
+begin
+  CheckHasProperty(ASourceComponent, APropertyName);
+  CheckHasProperty(ADistanceControl, APropertyName);
+
+  SetPropValue(
+    ADistanceControl,
+    APropertyName,
+    GetPropValue(ASourceComponent, APropertyName));
+end;
+
+class procedure TControlTools.CopyObjectProperty(
+  const ASourceComponent: TComponent;
+  const ADistanceControl: TComponent;
+  const APropertyName: String);
+begin
+  CheckHasProperty(ASourceComponent, APropertyName);
+  CheckHasProperty(ADistanceControl, APropertyName);
+
+  SetObjectProp(
+    ADistanceControl,
+    APropertyName,
+    GetObjectProp(ASourceComponent, APropertyName));
+end;
+
+class procedure TControlTools.CopyPointerProperty(
+  const ASourceComponent: TComponent;
+  const ADistanceControl: TComponent;
+  const APropertyName: String);
+begin
+  CheckHasProperty(ASourceComponent, APropertyName);
+  CheckHasProperty(ADistanceControl, APropertyName);
+
+  SetMethodProp(
+    ADistanceControl,
+    APropertyName,
+    GetMethodProp(ASourceComponent, APropertyName));
+end;
+
+class function TControlTools.FindParentForm(const AChildControl: TControl): FMX.Forms.TForm;
+var
+  Parent: TFmxObject;
+begin
+  if not Assigned(AChildControl) then
+    raise Exception.Create('TControlTools.FindParentForm: AChildControl is nil');
+
+  Parent := AChildControl.Parent;
+  if Parent is TForm then
+  begin
+    Result := TForm(Parent);
+
+    Exit;
+  end
+  else
+  if not Assigned(Parent) then
+  begin
+    raise Exception.Create(Format('Parent form not found for control: %s', [AChildControl.Name]));
+  end
+  else
+  begin
+    Result := FindParentForm(TControl(Parent));
+  end;
+end;
+
+class function TControlTools.FindParentFrame(const AChildControl: TControl): FMX.Forms.TFrame;
+var
+  Parent: TFmxObject;
+begin
+  if not Assigned(AChildControl) then
+    raise Exception.Create('TControlTools.FindParentFrame: AChildControl is nil');
+
+  Parent := AChildControl.Parent;
+  if Parent is TFrame then
+  begin
+    Result := TFrame(Parent);
+
+    Exit;
+  end
+  else
+  if not Assigned(Parent) then
+  begin
+    raise Exception.Create(
+      Format('TControlTools.FindParentFrame: Parent frame not found for control: %s', [AChildControl.Name]));
+  end
+  else
+  begin
+    Result := FindParentFrame(TControl(Parent));
+  end;
+end;
+
+class function TControlTools.FindControl(const AParentControl: TControl; const AControlName: String): TControl;
+var
+  i: Word;
+  Parent: TFmxObject;
+  Control: TControl;
+  Children: TFmxObject;
+begin
+  Result := nil;
+
+  Parent := AParentControl;
+
+  if not Assigned(Parent) then
+    raise Exception.Create('TControlTools.FindControl: AParentControl is nil');
+
+  i := Parent.ChildrenCount;
+  while i > 0 do
+  begin
+    Dec(i);
+
+    Children := Parent.Children[i];
+    if Children is TControl then
+    begin
+      Control := TControl(Children);
+      if Control.Name = AControlName then
+      begin
+        Result := Control;
+
+        Exit;
+      end
+      else
+      begin
+        if Control.ControlsCount > 0 then
+          FindControl(Control, AControlName);
+      end;
+    end;
+  end;
+
+  if not Assigned(Result) then
+    raise Exception.Create(Format('TControlTools.FindControl: Control "%s" not found', [AControlName]));
+end;
+
+class procedure TControlTools.EnableControls(const AControls: array of TControl; const AState: Boolean);
+var
+  i: Word;
+  Control: TControl;
+begin
+  for i := 0 to Pred(Length(AControls)) do
+  begin
+    Control := AControls[i];
+    Control.Enabled := AState;
+  end;
+end;
+
 
 end.

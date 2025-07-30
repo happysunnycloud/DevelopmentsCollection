@@ -158,10 +158,11 @@ implementation
 uses
   System.SysUtils,
   System.UITypes,
-  System.TypInfo,
+  System.TypInfo
 
-  SupportUnit
+  , FMX.ControlToolsUnit
   , FMX.SwitchControlUnit
+  , ToolsUnit
   ;
 
 function TScrollBoxContainer.FindInfoControl(const AInfoPanelIndex: Integer; const AControlId: String): TControlContainer;
@@ -196,7 +197,7 @@ var
   i:          Word;
   InfoPanel:  TPanelContainer;
 begin
-  if not TComponentFunctions.IsDesiredComponent(fPanelContainerTemplate.PanelControl, APropName) then
+  if not TControlTools.HasProperty(fPanelContainerTemplate.PanelControl, APropName) then
   begin
     Assert(true = false, 'Component "InfoPanelTemplate" does not have a "' + APropName + '" property');
 
@@ -229,7 +230,7 @@ begin
   if not Assigned(InfoControl) then
     Exit;
 
-  if not TComponentFunctions.IsDesiredComponent(InfoControl.InfoControl, APropName) then
+  if not TControlTools.HasProperty(InfoControl.InfoControl, APropName) then
   begin
     Assert(true = false, 'Component "InfoControl" does not have a "' + APropName + '" property');
 
@@ -259,7 +260,7 @@ var
   PanelContainer: TPanelContainer;
   Method: TMethod absolute ANotifyEvent;
 begin
-  if not TComponentFunctions.IsDesiredComponent(fPanelContainerTemplate.PanelControl, APropName) then
+  if not TControlTools.HasProperty(fPanelContainerTemplate.PanelControl, APropName) then
   begin
     Assert(true = false, 'Component "InfoPanelTemplate" does not have a "' + APropName + '" property');
 
@@ -304,7 +305,7 @@ begin
   if not Assigned(InfoControl) then
     Exit;
 
-  if not TComponentFunctions.IsDesiredComponent(InfoControl.InfoControl, APropName) then
+  if not TControlTools.HasProperty(InfoControl.InfoControl, APropName) then
   begin
     Assert(true = false, 'Component "InfoControl" does not have a "' + APropName + '" property');
 
@@ -406,64 +407,64 @@ var
   PropertyName: String;
 begin
   PropertyName := TProperties.Height;
-  if TComponentFunctions.IsDesiredComponent(ASourceControl, PropertyName) then
-    TComponentFunctions.CopyProperty(ASourceControl, ADistanceControl, PropertyName);
+  if TControlTools.HasProperty(ASourceControl, PropertyName) then
+    TControlTools.CopyProperty(ASourceControl, ADistanceControl, PropertyName);
 
   PropertyName := TProperties.Width;
-  if TComponentFunctions.IsDesiredComponent(ASourceControl, PropertyName) then
-    TComponentFunctions.CopyProperty(ASourceControl, ADistanceControl, PropertyName);
+  if TControlTools.HasProperty(ASourceControl, PropertyName) then
+    TControlTools.CopyProperty(ASourceControl, ADistanceControl, PropertyName);
 
   PropertyName := TProperties.Position;
-  if TComponentFunctions.IsDesiredComponent(ASourceControl, PropertyName) then
-    TComponentFunctions.CopyObjectProperty(ASourceControl, ADistanceControl, PropertyName);
+  if TControlTools.HasProperty(ASourceControl, PropertyName) then
+    TControlTools.CopyObjectProperty(ASourceControl, ADistanceControl, PropertyName);
 
   PropertyName := TProperties.Stroke;
-  if TComponentFunctions.IsDesiredComponent(ASourceControl, PropertyName) then
-    TComponentFunctions.CopyObjectProperty(ASourceControl, ADistanceControl, PropertyName);
+  if TControlTools.HasProperty(ASourceControl, PropertyName) then
+    TControlTools.CopyObjectProperty(ASourceControl, ADistanceControl, PropertyName);
 
   PropertyName := TProperties.StyledSettings;
-  if TComponentFunctions.IsDesiredComponent(ASourceControl, PropertyName) then
-    TComponentFunctions.CopyProperty(ASourceControl, ADistanceControl, PropertyName);
+  if TControlTools.HasProperty(ASourceControl, PropertyName) then
+    TControlTools.CopyProperty(ASourceControl, ADistanceControl, PropertyName);
 
   PropertyName := TProperties.Text;
-  if TComponentFunctions.IsDesiredComponent(ASourceControl, PropertyName) then
-    TComponentFunctions.CopyProperty(ASourceControl, ADistanceControl, PropertyName);
+  if TControlTools.HasProperty(ASourceControl, PropertyName) then
+    TControlTools.CopyProperty(ASourceControl, ADistanceControl, PropertyName);
 
   PropertyName := TProperties.Align;
-  if TComponentFunctions.IsDesiredComponent(ASourceControl, PropertyName) then
-    TComponentFunctions.CopyProperty(ASourceControl, ADistanceControl, PropertyName);
+  if TControlTools.HasProperty(ASourceControl, PropertyName) then
+    TControlTools.CopyProperty(ASourceControl, ADistanceControl, PropertyName);
 
   PropertyName := TProperties.IsChecked;
-  if TComponentFunctions.IsDesiredComponent(ASourceControl, PropertyName) then
-    TComponentFunctions.CopyProperty(ASourceControl, ADistanceControl, PropertyName);
+  if TControlTools.HasProperty(ASourceControl, PropertyName) then
+    TControlTools.CopyProperty(ASourceControl, ADistanceControl, PropertyName);
 
   PropertyName := TProperties.TextSettings;
-  if TComponentFunctions.IsDesiredComponent(ASourceControl, PropertyName) then
-    TComponentFunctions.CopyObjectProperty(ASourceControl, ADistanceControl, PropertyName);
+  if TControlTools.HasProperty(ASourceControl, PropertyName) then
+    TControlTools.CopyObjectProperty(ASourceControl, ADistanceControl, PropertyName);
 
   PropertyName := TProperties.HitTest;
-  if TComponentFunctions.IsDesiredComponent(ASourceControl, PropertyName) then
-    TComponentFunctions.CopyProperty(ASourceControl, ADistanceControl, PropertyName);
+  if TControlTools.HasProperty(ASourceControl, PropertyName) then
+    TControlTools.CopyProperty(ASourceControl, ADistanceControl, PropertyName);
 
   PropertyName := TProperties.Fill;
-  if TComponentFunctions.IsDesiredComponent(ASourceControl, PropertyName) then
-    TComponentFunctions.CopyObjectProperty(ASourceControl, ADistanceControl, PropertyName);
+  if TControlTools.HasProperty(ASourceControl, PropertyName) then
+    TControlTools.CopyObjectProperty(ASourceControl, ADistanceControl, PropertyName);
 
   PropertyName := TProperties.Stroke;
-  if TComponentFunctions.IsDesiredComponent(ASourceControl, PropertyName) then
-    TComponentFunctions.CopyObjectProperty(ASourceControl, ADistanceControl, PropertyName);
+  if TControlTools.HasProperty(ASourceControl, PropertyName) then
+    TControlTools.CopyObjectProperty(ASourceControl, ADistanceControl, PropertyName);
 
   PropertyName := TProperties.Scale;
-  if TComponentFunctions.IsDesiredComponent(ASourceControl, PropertyName) then
-    TComponentFunctions.CopyObjectProperty(ASourceControl, ADistanceControl, PropertyName);
+  if TControlTools.HasProperty(ASourceControl, PropertyName) then
+    TControlTools.CopyObjectProperty(ASourceControl, ADistanceControl, PropertyName);
 
   PropertyName := TProperties.OnSwitch;
-  if TComponentFunctions.IsDesiredComponent(ASourceControl, PropertyName) then
-    TComponentFunctions.CopyPointerProperty(ASourceControl, ADistanceControl, PropertyName);
+  if TControlTools.HasProperty(ASourceControl, PropertyName) then
+    TControlTools.CopyPointerProperty(ASourceControl, ADistanceControl, PropertyName);
 
   PropertyName := TProperties.OnClick;
-  if TComponentFunctions.IsDesiredComponent(ASourceControl, PropertyName) then
-    TComponentFunctions.CopyPointerProperty(ASourceControl, ADistanceControl, PropertyName);
+  if TControlTools.HasProperty(ASourceControl, PropertyName) then
+    TControlTools.CopyPointerProperty(ASourceControl, ADistanceControl, PropertyName);
 
   if ASourceControl is TSwitchControl then
   begin
@@ -491,9 +492,9 @@ var
   Control: TControl;
 begin
   Control := AControlContainer.InfoControl;
-  TCommon.FreeAndNil(Control);
+  TTools.FreeAndNil(Control);
   AControlContainer.InfoControl := nil;
-  TCommon.FreeAndNil(TComponent(AControlContainer));
+  TTools.FreeAndNil(TComponent(AControlContainer));
   AControlContainer := nil;
 end;
 
@@ -510,42 +511,65 @@ end;
 
 function TControlContainer.GetText: String;
 begin
-  Result := TComponentFunctions.GetComponentPropertyAsString(TComponent(Self.fInfoControl), TProperties.Text);
+  Result :=
+    TControlTools.GetPropertyAsString(
+      TComponent(Self.fInfoControl),
+      TProperties.Text);
 end;
 
 procedure TControlContainer.SetText(AString: String);
 begin
-  TComponentFunctions.SetComponentPropertyAsString(TComponent(Self.fInfoControl), TProperties.Text, AString);
+  TControlTools.SetPropertyAsString(
+    TComponent(Self.fInfoControl),
+    TProperties.Text, AString);
 end;
 
 function TControlContainer.GetIsChecked: Boolean;
 begin
-  Result := TComponentFunctions.GetComponentPropertyAsBoolean(TComponent(Self.fInfoControl), TProperties.IsChecked);
+  Result :=
+    TControlTools.GetPropertyAsBoolean(
+      TComponent(Self.fInfoControl),
+      TProperties.IsChecked);
 end;
 
 procedure TControlContainer.SetIsChecked(ABoolean: Boolean);
 begin
-  TComponentFunctions.SetComponentPropertyAsBoolean(TComponent(Self.fInfoControl), TProperties.IsChecked, ABoolean);
+  TControlTools.SetPropertyAsBoolean(
+    TComponent(Self.fInfoControl),
+    TProperties.IsChecked,
+    ABoolean);
 end;
 
 function TControlContainer.GetStyledSettings: String;
 begin
-  Result := TComponentFunctions.GetComponentPropertyAsSet(TComponent(Self.fInfoControl), TProperties.StyledSettings);
+  Result :=
+    TControlTools.GetPropertyAsSet(
+      TComponent(Self.fInfoControl),
+      TProperties.StyledSettings);
 end;
 
 procedure TControlContainer.SetStyledSettings(AStyledSettings: String);
 begin
-  TComponentFunctions.SetComponentPropertyAsSet(TComponent(Self.fInfoControl), TProperties.StyledSettings, AStyledSettings);
+  TControlTools.SetPropertyAsSet(
+    TComponent(Self.fInfoControl),
+    TProperties.StyledSettings,
+    AStyledSettings);
 end;
 
 function TControlContainer.GetTextSettings: TTextSettings;
 begin
-  Result := TTextSettings(TComponentFunctions.GetComponentPropertyAsObject(TComponent(Self.fInfoControl), TProperties.TextSettings));
+  Result := TTextSettings(
+    TControlTools.GetPropertyAsObject(
+      TComponent(Self.fInfoControl),
+      TProperties.TextSettings));
 end;
 
 procedure TControlContainer.SetTextSettings(ATextSettings: TTextSettings);
 begin
-  TComponentFunctions.SetComponentPropertyAsObject(TComponent(Self.fInfoControl), TProperties.TextSettings, TObject(ATextSettings));
+  TControlTools.SetPropertyAsObject(
+    TComponent(Self.fInfoControl),
+    TProperties.TextSettings,
+    TObject(ATextSettings));
 end;
 
 procedure TControlContainer.OnClickInternal(Sender: TObject);
@@ -594,9 +618,9 @@ begin
   end;
 
   Control := AInfoPanel.PanelControl;
-  TCommon.FreeAndNil(Control);
+  TTools.FreeAndNil(Control);
   AInfoPanel.PanelControl := nil;
-  TCommon.FreeAndNil(TComponent(AInfoPanel));
+  TTools.FreeAndNil(TComponent(AInfoPanel));
   AInfoPanel := nil;
 end;
 
@@ -753,8 +777,8 @@ begin
     Inc(i);
   end;
 
-  TCommon.FreeAndNil(TControl(AScrollBoxControl.fScrollBoxHost));
-  TCommon.FreeAndNil(TComponent(AScrollBoxControl));
+  TTools.FreeAndNil(TControl(AScrollBoxControl.fScrollBoxHost));
+  TTools.FreeAndNil(TComponent(AScrollBoxControl));
 end;
 
 constructor TScrollBoxContainer.Create;

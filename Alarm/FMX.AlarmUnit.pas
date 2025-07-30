@@ -163,10 +163,10 @@ uses
 
   {$ENDIF}
 
-  FMX.Dialogs,
+  FMX.Dialogs
 
-  SupportUnit,
-  AddLogUnit
+  , FMX.ControlToolsUnit
+  , AddLogUnit
   ;
 
 const
@@ -203,7 +203,9 @@ begin
   while i < Length(AControls) do
   begin
     SetLength(Result, Length(Result) + 1);
-    Result[i] := TComponentFunctions.GetComponentPropertyAsBoolean(AControls[i], TProperties.IsChecked);
+    Result[i] :=
+      TControlTools.GetPropertyAsBoolean(
+        AControls[i], TProperties.IsChecked);
 
     Inc(i);
   end;

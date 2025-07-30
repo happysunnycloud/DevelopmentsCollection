@@ -1,5 +1,6 @@
 ﻿{0.4}
 // Класс TFMXControlTools - перенести из этого модуля в FMX.ControlToolsUnit, здесь установить deprecated
+// Сам модуль оставляем, складываем сюда все что не входит в другие
 unit ToolsUnit;
 
 interface
@@ -17,13 +18,13 @@ type
   TSearchRecList = TList<TSearchRec>;
   TCopyFileResult = (crOk = 0, crFileNotExists = 1, crCopyError = 2);
 
-  TFMXControlTools = class
-  public
-    class function FindParentForm(const AChildControl: TControl): FMX.Forms.TForm;
-    class function FindParentFrame(const AChildControl: TControl): FMX.Forms.TFrame;
-    class function FindControl(const AParentControl: TControl; const AControlName: String): TControl;
-    class procedure EnableControls(const AControls: array of TControl; const AState: Boolean);
-  end;
+//  TFMXControlTools = class
+//  public
+//    class function FindParentForm(const AChildControl: TControl): FMX.Forms.TForm; deprecated 'Use FMX.ControlToolsUnit';
+//    class function FindParentFrame(const AChildControl: TControl): FMX.Forms.TFrame; deprecated 'Use FMX.ControlToolsUnit';
+//    class function FindControl(const AParentControl: TControl; const AControlName: String): TControl; deprecated 'Use FMX.ControlToolsUnit';
+//    class procedure EnableControls(const AControls: array of TControl; const AState: Boolean); deprecated 'Use FMX.ControlToolsUnit';
+//  end;
 
   TRegistryTools = class
   const
@@ -49,6 +50,18 @@ type
       const ASeparator: String = ' -> ');
   end;
 
+  TTools = class
+  public
+    //добавляет ADigitDepth символа '0' в начало числа, при преобразовании его в строку
+    class function  DigitZeroAlignment(const ADigit: Word; const ADigitDepth: Byte = 2): String;
+    //добавляет ADigitDepth символа '0' в начало числа, представленного в виде строки
+    class function  StrZeroAlignment(const AStrDigit: String; const ADigitDepth: Byte = 2): String;
+
+    class procedure FreeAndNil(var aObject: TObject); overload;
+    class procedure FreeAndNil(var aConrol: TControl); overload;
+    class procedure FreeAndNil(var aComponent: TComponent); overload;
+  end;
+
 implementation
 
 uses
@@ -57,111 +70,111 @@ uses
   , Winapi.Windows
   ;
 
-{ TFMXControlTools }
-
-class function TFMXControlTools.FindParentForm(const AChildControl: TControl): FMX.Forms.TForm;
-var
-  Parent: TFmxObject;
-begin
-  if not Assigned(AChildControl) then
-    raise Exception.Create('TFMXControlTools.FindParentForm: AChildControl is nil');
-
-  Parent := AChildControl.Parent;
-  if Parent is TForm then
-  begin
-    Result := TForm(Parent);
-
-    Exit;
-  end
-  else
-  if not Assigned(Parent) then
-  begin
-    raise Exception.Create(Format('Parent form not found for control: %s', [AChildControl.Name]));
-  end
-  else
-  begin
-    Result := FindParentForm(TControl(Parent));
-  end;
-end;
-
-class function TFMXControlTools.FindParentFrame(const AChildControl: TControl): FMX.Forms.TFrame;
-var
-  Parent: TFmxObject;
-begin
-  if not Assigned(AChildControl) then
-    raise Exception.Create('TFMXControlTools.FindParentFrame: AChildControl is nil');
-
-  Parent := AChildControl.Parent;
-  if Parent is TFrame then
-  begin
-    Result := TFrame(Parent);
-
-    Exit;
-  end
-  else
-  if not Assigned(Parent) then
-  begin
-    raise Exception.Create(
-      Format('TFMXControlTools.FindParentFrame: Parent frame not found for control: %s', [AChildControl.Name]));
-  end
-  else
-  begin
-    Result := FindParentFrame(TControl(Parent));
-  end;
-end;
-
-class function TFMXControlTools.FindControl(const AParentControl: TControl; const AControlName: String): TControl;
-var
-  i: Word;
-  Parent: TFmxObject;
-  Control: TControl;
-  Children: TFmxObject;
-begin
-  Result := nil;
-
-  Parent := AParentControl;
-
-  if not Assigned(Parent) then
-    raise Exception.Create('TFMXControlTools.FindControl: AParentControl is nil');
-
-  i := Parent.ChildrenCount;
-  while i > 0 do
-  begin
-    Dec(i);
-
-    Children := Parent.Children[i];
-    if Children is TControl then
-    begin
-      Control := TControl(Children);
-      if Control.Name = AControlName then
-      begin
-        Result := Control;
-
-        Exit;
-      end
-      else
-      begin
-        if Control.ControlsCount > 0 then
-          FindControl(Control, AControlName);
-      end;
-    end;
-  end;
-
-  if not Assigned(Result) then
-    raise Exception.Create(Format('TFMXControlTools.FindControl: Control "%s" not found', [AControlName]));
-end;
-
-class procedure TFMXControlTools.EnableControls(const AControls: array of TControl; const AState: Boolean);
-var
-  i: Word;
-  Control: TControl;
-begin
-  for i := 0 to Pred(Length(AControls)) do
-  begin
-    Control := AControls[i];
-    Control.Enabled := AState;
-  end;
-end;
+//{ TFMXControlTools }
+//
+//class function TFMXControlTools.FindParentForm(const AChildControl: TControl): FMX.Forms.TForm;
+//var
+//  Parent: TFmxObject;
+//begin
+//  if not Assigned(AChildControl) then
+//    raise Exception.Create('TFMXControlTools.FindParentForm: AChildControl is nil');
+//
+//  Parent := AChildControl.Parent;
+//  if Parent is TForm then
+//  begin
+//    Result := TForm(Parent);
+//
+//    Exit;
+//  end
+//  else
+//  if not Assigned(Parent) then
+//  begin
+//    raise Exception.Create(Format('Parent form not found for control: %s', [AChildControl.Name]));
+//  end
+//  else
+//  begin
+//    Result := FindParentForm(TControl(Parent));
+//  end;
+//end;
+//
+//class function TFMXControlTools.FindParentFrame(const AChildControl: TControl): FMX.Forms.TFrame;
+//var
+//  Parent: TFmxObject;
+//begin
+//  if not Assigned(AChildControl) then
+//    raise Exception.Create('TFMXControlTools.FindParentFrame: AChildControl is nil');
+//
+//  Parent := AChildControl.Parent;
+//  if Parent is TFrame then
+//  begin
+//    Result := TFrame(Parent);
+//
+//    Exit;
+//  end
+//  else
+//  if not Assigned(Parent) then
+//  begin
+//    raise Exception.Create(
+//      Format('TFMXControlTools.FindParentFrame: Parent frame not found for control: %s', [AChildControl.Name]));
+//  end
+//  else
+//  begin
+//    Result := FindParentFrame(TControl(Parent));
+//  end;
+//end;
+//
+//class function TFMXControlTools.FindControl(const AParentControl: TControl; const AControlName: String): TControl;
+//var
+//  i: Word;
+//  Parent: TFmxObject;
+//  Control: TControl;
+//  Children: TFmxObject;
+//begin
+//  Result := nil;
+//
+//  Parent := AParentControl;
+//
+//  if not Assigned(Parent) then
+//    raise Exception.Create('TFMXControlTools.FindControl: AParentControl is nil');
+//
+//  i := Parent.ChildrenCount;
+//  while i > 0 do
+//  begin
+//    Dec(i);
+//
+//    Children := Parent.Children[i];
+//    if Children is TControl then
+//    begin
+//      Control := TControl(Children);
+//      if Control.Name = AControlName then
+//      begin
+//        Result := Control;
+//
+//        Exit;
+//      end
+//      else
+//      begin
+//        if Control.ControlsCount > 0 then
+//          FindControl(Control, AControlName);
+//      end;
+//    end;
+//  end;
+//
+//  if not Assigned(Result) then
+//    raise Exception.Create(Format('TFMXControlTools.FindControl: Control "%s" not found', [AControlName]));
+//end;
+//
+//class procedure TFMXControlTools.EnableControls(const AControls: array of TControl; const AState: Boolean);
+//var
+//  i: Word;
+//  Control: TControl;
+//begin
+//  for i := 0 to Pred(Length(AControls)) do
+//  begin
+//    Control := AControls[i];
+//    Control.Enabled := AState;
+//  end;
+//end;
 
 { TRegistryTools }
 
@@ -265,6 +278,89 @@ begin
   ExceptionMessage := AMethod + ' -> ' + AE.Message;
 
   raise Exception.Create(ExceptionMessage);
+end;
+
+{ TTools }
+
+class function TTools.DigitZeroAlignment(const ADigit: Word; const ADigitDepth: Byte = 2): String;
+var
+  i: Byte;
+begin
+  Result := IntToStr(ADigit);
+  if Length(Result) < ADigitDepth then
+  begin
+    i := ADigitDepth - 1;
+    while i > 0 do
+    begin
+      Dec(i);
+
+      Result := '0' + Result;
+    end;
+  end
+end;
+
+class function TTools.StrZeroAlignment(const AStrDigit: String; const ADigitDepth: Byte = 2): String;
+var
+  i: Byte;
+begin
+  Result := AStrDigit;
+  if Length(Result) < ADigitDepth then
+  begin
+    i := ADigitDepth - 1;
+    while i > 0 do
+    begin
+      Dec(i);
+
+      Result := '0' + Result;
+    end;
+  end
+end;
+
+class procedure TTools.FreeAndNil(var aObject: TObject);
+var
+  Obj: TObject;
+begin
+  Obj := aObject;
+  TThread.ForceQueue(nil,
+    procedure begin
+      Obj.Free;
+    end);
+  aObject := nil;
+end;
+
+class procedure TTools.FreeAndNil(var aConrol: TControl);
+var
+  Control: TControl;
+begin
+  Control := aConrol;
+  TThread.ForceQueue(nil,
+    procedure begin
+      if Assigned(Control) then
+      begin
+        if Assigned(Control.Owner) then
+          Control.Owner.RemoveComponent(Control);
+        Control.Parent := nil;
+      end;
+      Control.Free;
+    end);
+  aConrol := nil;
+end;
+
+class procedure TTools.FreeAndNil(var aComponent: TComponent);
+var
+  Component: TComponent;
+begin
+  Component := aComponent;
+  TThread.ForceQueue(nil,
+    procedure begin
+      if Assigned(Component) then
+      begin
+        if Assigned(Component.Owner) then
+          Component.Owner.RemoveComponent(Component);
+      end;
+      Component.Free;
+    end);
+  aComponent := nil;
 end;
 
 end.
