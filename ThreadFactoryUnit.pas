@@ -130,7 +130,6 @@ type
       const AUnregProc: TUnRegProc;
       const ASuspended: Boolean = false;
       const AFreeOnTerminate: Boolean = true); overload;
-
     /// <summary>
     ///   Создает не именованный поток с исполняемым анонимным методом
     ///   C указанием фабрики регистрирующей нить
@@ -220,9 +219,17 @@ type
       const AExecProc: TExecProc;
       const ASuspended: Boolean = false): TThreadExt; overload;
 
+    /// <summary>
+    ///   Создает поток на основе класса
+    ///   FreeOnTerminate = false
+    /// </summary>
     function CreateThreadClassOf(
       const AClassThread: TThreadExtClass;
       const ASuspended: Boolean = false): Pointer;
+    /// <summary>
+    ///   Создает поток на основе класса
+    ///   FreeOnTerminate = true
+    /// </summary>
     function CreateFreeOnTerminateThreadClassOf(
       const AClassThread: TThreadExtClass;
       const ASuspended: Boolean = false): Pointer;
@@ -318,7 +325,10 @@ begin
   end
   else
   begin
-    raise Exception.Create('Execute proc reference is nil');
+    if not (Self is TThreadExtClass) then
+    begin
+      raise Exception.Create('Execute proc reference is nil');
+    end;
   end;
 
   FEventHold := TEvent.Create(nil, true, not Suspended, '', false);
@@ -588,16 +598,6 @@ destructor TThreadFactory.Destroy;
 begin
   if FThreadRegistry.Count > 0 then
   begin
-    //asd debug
-    //    FThreadRegistry.Enumerator(
-    //      procedure (const AThread: TThreadExt)
-    //      var
-    //        a: String;
-    //      begin
-    //        a := AThread.ThreadName;
-    //        a := a;
-    //      end);
-    //asd debug
     raise Exception.Create('There are undestroyed threads');
   end;
 
