@@ -517,33 +517,6 @@ begin
   end;
 end;
 
-procedure TBorderFrame.LeftLayoutMouseEnter(Sender: TObject);
-begin
-  Cursor := crSizeWE;
-end;
-
-procedure TBorderFrame.LeftLayoutMouseMove(Sender: TObject; Shift: TShiftState;
-  X, Y: Single);
-var
-  XDelta: Integer;
-begin
-  if not FIsMouseDown then
-    Exit;
-
-  XDelta := Trunc(X - FStartX);
-
-  if TForm(Owner).Width - XDelta >= FMinWidth then
-  begin
-    TForm(Owner).Width := TForm(Owner).Width - XDelta;
-    TForm(Owner).Left := TForm(Owner).Left + XDelta;
-  end
-  else
-  begin
-    TForm(Owner).Left := TForm(Owner).Left + TForm(Owner).Width - FMinWidth;
-    TForm(Owner).Width := FMinWidth;
-  end;
-end;
-
 procedure TBorderFrame.RightBottomLayoutMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Single);
 var
   XDelta: Integer;
@@ -571,6 +544,33 @@ begin
   else
   begin
     TForm(Owner).Height := FMinHeight;
+  end;
+end;
+
+procedure TBorderFrame.LeftLayoutMouseEnter(Sender: TObject);
+begin
+  Cursor := crSizeWE;
+end;
+
+procedure TBorderFrame.LeftLayoutMouseMove(Sender: TObject; Shift: TShiftState;
+  X, Y: Single);
+var
+  XDelta: Integer;
+begin
+  if not FIsMouseDown then
+    Exit;
+
+  XDelta := Trunc(X - FStartX);
+
+  if TForm(Owner).Width - XDelta >= FMinWidth then
+  begin
+    TForm(Owner).Width := TForm(Owner).Width - XDelta;
+    TForm(Owner).Left := TForm(Owner).Left + XDelta;
+  end
+  else
+  begin
+    TForm(Owner).Left := TForm(Owner).Left + TForm(Owner).Width - FMinWidth;
+    TForm(Owner).Width := FMinWidth;
   end;
 end;
 

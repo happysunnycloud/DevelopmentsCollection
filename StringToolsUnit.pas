@@ -9,6 +9,7 @@ type
     class function IsContainsOnlyDigits(AString: String): Boolean;
     class function IsIP4(AString: String): Boolean;
     class function GetHumanTime(AMediaTime: Int64; AMediaTimeScale: Int64): String;
+    class function GenIdent: String;
   end;
 
 implementation
@@ -118,6 +119,20 @@ begin
   S := Trunc(slTime - (M * 60));
 
   Result := GetNormalLength(M) + ':' + GetNormalLength(S);
+end;
+
+class function TStringTools.GenIdent: String;
+var
+  Hour, Min, Sec, MSec: Word;
+begin
+  DecodeTime(Now, Hour, Min, Sec, MSec);
+  Result := Concat(
+    Hour.ToString,
+    Min.ToString,
+    Sec.ToString,
+    MSec.ToString,
+    '::',
+    Random(1000).ToString);
 end;
 
 end.

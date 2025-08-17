@@ -235,18 +235,18 @@ type
       const ASuspended: Boolean = false): Pointer;
 
     /// <summary>
+    ///   Создает независимый поток с обязательной регистрацией в фабрике потоков
+    ///   FreeOnTerminate = true
+    /// </summary>
+    procedure CreateRegistredThread(
+      const AThreadFactoryRegistringConstructor: TThreadFactoryRegistringConstructor); overload;
+    /// <summary>
     ///   Создает независимый поток с обязательным указанием
     ///   методов регистрации и снятия с регистрации
     ///   FreeOnTerminate = true
     /// </summary>
     procedure CreateRegistredThread(
       const ARegistringConstructor: TRegistringConstructor); overload;
-    /// <summary>
-    ///   Создает независимый поток с обязательной регистрацией в фабрике потоков
-    ///   FreeOnTerminate = true
-    /// </summary>
-    procedure CreateRegistredThread(
-      const AThreadFactoryRegistringConstructor: TThreadFactoryRegistringConstructor); overload;
 
     property OnDestroyFactory: TNotifyEvent
       write FOnDestroyFactory;
@@ -662,21 +662,21 @@ begin
 end;
 
 procedure TThreadFactory.CreateRegistredThread(
-  const ARegistringConstructor: TRegistringConstructor);
-begin
-  if not Assigned(ARegistringConstructor) then
-    raise Exception.Create('Registring constructor is nil');
-
-  ARegistringConstructor(RegThreadProc, UnRegThreadProc);
-end;
-
-procedure TThreadFactory.CreateRegistredThread(
   const AThreadFactoryRegistringConstructor: TThreadFactoryRegistringConstructor);
 begin
   if not Assigned(AThreadFactoryRegistringConstructor) then
     raise Exception.Create('Registring constructor is nil');
 
   AThreadFactoryRegistringConstructor(Self);
+end;
+
+procedure TThreadFactory.CreateRegistredThread(
+  const ARegistringConstructor: TRegistringConstructor);
+begin
+  if not Assigned(ARegistringConstructor) then
+    raise Exception.Create('Registring constructor is nil');
+
+  ARegistringConstructor(RegThreadProc, UnRegThreadProc);
 end;
 
 function TThreadFactory.GetAfterAllThreadsAreDestroyedProc: TProc;
