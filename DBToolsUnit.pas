@@ -1,6 +1,4 @@
-﻿{0.2}
-//asd debug свойство property FDConnection: TFDConnection read fFDConnection;
-//нужно спрятать и на прямую неиспользовать, незачем это
+﻿{0.3}
 unit DBToolsUnit;
 
 interface
@@ -49,9 +47,9 @@ type
 
     fFDConnection:      TFDConnection;
     fFDQuery:           TDBQuery;
-  public
-    property  FDConnection: TFDConnection read fFDConnection;
 
+    property  FDConnection: TFDConnection read fFDConnection;
+  public
     property  Query:        TQuery read fQuery;
 
     function  CreateQuery:  TQuery;
@@ -61,6 +59,7 @@ type
     procedure ExecuteQuery;
     procedure CloseQuery;
 
+    procedure StartTransaction;
     procedure Commit;
     procedure Rollback;
 
@@ -231,6 +230,11 @@ begin
   except
     raise;
   end;
+end;
+
+procedure TDBTools.StartTransaction;
+begin
+  FDConnection.StartTransaction;
 end;
 
 procedure TDBTools.Commit;
