@@ -1,4 +1,4 @@
-﻿{0.6}
+﻿{0.7}
 unit BorderFrameUnit;
 
 interface
@@ -71,6 +71,8 @@ type
       Y: Single);
   private
     FMinWidth, FMinHeight: Integer;
+    FMaxWidth, FMaxHeight: Integer;
+
     FIsMouseDown: Boolean;
     FStartX, FStartY: Single;
 
@@ -78,7 +80,10 @@ type
     FTrayIconMouseRightButtonDown: TMouseEvent;
     FTrayIconMouseLeftButtonDown: TMouseEvent;
 
-    //FLastTopValue: Integer;
+    procedure LeftConstraint(const X: Single);
+    procedure RightConstraint(const X: Single);
+    procedure TopConstraint(const Y: Single);
+    procedure BottomConstraint(const Y: Single);
 
     function GetCaption: TText;
     function GetTrayIcon: TCustomTrayIcon;
@@ -124,7 +129,20 @@ type
       ABorderColor: TAlphaColor = TAlphaColorRec.Cornflowerblue;
       ACloseButtonColor: TAlphaColor = TAlphaColorRec.White;
       ACloseButtonMouseOverColor: TAlphaColor = TAlphaColorRec.Lime
-      ); reintroduce;
+      ); reintroduce; overload;
+    constructor Create(
+      AOwner: TComponent;
+      AContentLayout: TLayout;
+      ACaption: String = '';
+      AMinWidth: Integer = 0;
+      AMinHeigth: Integer = 0;
+      AMaxWidth: Integer = 0;
+      AMaxHeigth: Integer = 0;
+      ACaptionColor: TAlphaColor = TAlphaColorRec.White;
+      ABorderColor: TAlphaColor = TAlphaColorRec.Cornflowerblue;
+      ACloseButtonColor: TAlphaColor = TAlphaColorRec.White;
+      ACloseButtonMouseOverColor: TAlphaColor = TAlphaColorRec.Lime
+      ); reintroduce; overload;
 
     property Caption: TText read GetCaption;
     property TrayIcon: TCustomTrayIcon read GetTrayIcon;
@@ -224,6 +242,35 @@ constructor TBorderFrame.Create(
   ACloseButtonColor: TAlphaColor = TAlphaColorRec.White;
   ACloseButtonMouseOverColor: TAlphaColor = TAlphaColorRec.Lime
 );
+begin
+  Create(
+    AOwner,
+    AContentLayout,
+    ACaption,
+    AMinWidth,
+    AMinHeigth,
+    0,
+    0,
+    ACaptionColor,
+    ABorderColor,
+    ACloseButtonColor,
+    ACloseButtonMouseOverColor
+    );
+end;
+
+constructor TBorderFrame.Create(
+  AOwner: TComponent;
+  AContentLayout: TLayout;
+  ACaption: String = '';
+  AMinWidth: Integer = 0;
+  AMinHeigth: Integer = 0;
+  AMaxWidth: Integer = 0;
+  AMaxHeigth: Integer = 0;
+  ACaptionColor: TAlphaColor = TAlphaColorRec.White;
+  ABorderColor: TAlphaColor = TAlphaColorRec.Cornflowerblue;
+  ACloseButtonColor: TAlphaColor = TAlphaColorRec.White;
+  ACloseButtonMouseOverColor: TAlphaColor = TAlphaColorRec.Lime
+  );
 var
   Control: TControl;
 begin
@@ -231,6 +278,9 @@ begin
 
   FMinWidth := AMinWidth;
   FMinHeight := AMinHeigth;
+
+  FMaxWidth := AMaxWidth;
+  FMaxHeight := AMaxHeigth;
 
   FIsMouseDown := false;
 
@@ -253,6 +303,9 @@ begin
 
   if AOwner is TForm then
     TForm(AOwner).BorderStyle := TFmxFormBorderStyle.None;
+
+  MinWidth := Trunc(AContentLayout.Width);
+  MinHeight := Trunc(AContentLayout.Height);
 
   Self.Parent := TForm(AOwner);
   Self.Align := TAlignLayout.Contents;
@@ -319,6 +372,64 @@ begin
     RolldownButtonRectangle);
 end;
 
+procedure TBorderFrame.LeftConstraint(const X: Single);
+var
+  XDelta: Integer;
+begin
+  XDelta := Trunc(X - FStartX);
+
+  if (TForm(Owner).Width - XDelta >= FMinWidth) and
+     (TForm(Owner).Width - XDelta <= FMaxWidth)
+  then
+  begin
+    TForm(Owner).Left := TForm(Owner).Left + XDelta;
+    TForm(Owner).Width := TForm(Owner).Width - XDelta;
+  end;
+end;
+
+procedure TBorderFrame.RightConstraint(const X: Single);
+var
+  XDelta: Integer;
+begin
+  XDelta := Trunc(X - FStartX);
+
+  if (TForm(Owner).Width + XDelta >= FMinWidth) and
+     (TForm(Owner).Width + XDelta <= FMaxWidth)
+  then
+  begin
+    TForm(Owner).Width := TForm(Owner).Width + XDelta;
+  end;
+end;
+
+procedure TBorderFrame.TopConstraint(const Y: Single);
+var
+  YDelta: Integer;
+begin
+  YDelta := Trunc(Y - FStartY);
+
+  if (TForm(Owner).Height - YDelta >= FMinHeight) and
+     (TForm(Owner).Height - YDelta <= FMaxHeight)
+  then
+  begin
+    TForm(Owner).Top := TForm(Owner).Top + YDelta;
+    TForm(Owner).Height := TForm(Owner).Height - YDelta;
+  end;
+end;
+
+procedure TBorderFrame.BottomConstraint(const Y: Single);
+var
+  YDelta: Integer;
+begin
+  YDelta := Trunc(Y - FStartY);
+
+  if (TForm(Owner).Height + YDelta >= FMinHeight) and
+     (TForm(Owner).Height + YDelta <= FMaxHeight)
+  then
+  begin
+    TForm(Owner).Height := TForm(Owner).Height + YDelta;
+  end;
+end;
+
 function TBorderFrame.GetCaption: TText;
 begin
   Result := CaptionText;
@@ -351,22 +462,11 @@ end;
 
 procedure TBorderFrame.BottomLayoutMouseMove(Sender: TObject;
   Shift: TShiftState; X, Y: Single);
-var
-  YDelta: Integer;
 begin
   if not FIsMouseDown then
     Exit;
 
-  YDelta := Trunc(Y - fStartY);
-
-  if TForm(Owner).Height + YDelta >= FMinHeight then
-  begin
-    TForm(Owner).Height := TForm(Owner).Height + YDelta;
-  end
-  else
-  begin
-    TForm(Owner).Height := FMinHeight;
-  end;
+  BottomConstraint(Y);
 end;
 
 procedure TBorderFrame.BorderMouseLeave(Sender: TObject);
@@ -420,131 +520,39 @@ begin
 end;
 
 procedure TBorderFrame.LeftTopLayoutMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Single);
-var
-  XDelta: Integer;
-  YDelta: Integer;
 begin
   if not FIsMouseDown then
     Exit;
 
-  XDelta := Trunc(X - FStartX);
-  YDelta := Trunc(Y - FStartY);
-
-  if TForm(Owner).Width - XDelta >= FMinWidth then
-  begin
-    TForm(Owner).Width := TForm(Owner).Width - XDelta;
-    TForm(Owner).Left := TForm(Owner).Left + XDelta;
-  end
-  else
-  begin
-    TForm(Owner).Left := TForm(Owner).Left + TForm(Owner).Width - FMinWidth;
-    TForm(Owner).Width := FMinWidth;
-  end;
-
-  if TForm(Owner).Height - YDelta >= FMinHeight then
-  begin
-    TForm(Owner).Top := TForm(Owner).Top + YDelta;
-    TForm(Owner).Height := TForm(Owner).Height - YDelta;
-  end
-  else
-  begin
-    TForm(Owner).Top := TForm(Owner).Top + (TForm(Owner).Height - FMinHeight);
-    TForm(Owner).Height := FMinHeight;
-  end;
+  LeftConstraint(X);
+  TopConstraint(Y);
 end;
 
 procedure TBorderFrame.RightTopLayoutMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Single);
-var
-  XDelta: Integer;
-  YDelta: Integer;
 begin
   if not FIsMouseDown then
     Exit;
 
-  XDelta := Trunc(X - FStartX);
-  YDelta := Trunc(Y - FStartY);
-
-  if TForm(Owner).Width + XDelta >= FMinWidth then
-  begin
-    TForm(Owner).Width := TForm(Owner).Width + XDelta;
-  end
-  else
-  begin
-    TForm(Owner).Width := FMinWidth;
-  end;
-
-  if TForm(Owner).Height - YDelta >= FMinHeight then
-  begin
-    TForm(Owner).Top := TForm(Owner).Top + YDelta;
-    TForm(Owner).Height := TForm(Owner).Height - YDelta;
-  end
-  else
-  begin
-    TForm(Owner).Top := TForm(Owner).Top + (TForm(Owner).Height - FMinHeight);
-    TForm(Owner).Height := FMinHeight;
-  end;
+  RightConstraint(X);
+  TopConstraint(Y);
 end;
 
 procedure TBorderFrame.LeftBottomLayoutMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Single);
-var
-  XDelta: Integer;
-  YDelta: Integer;
 begin
   if not FIsMouseDown then
     Exit;
 
-  XDelta := Trunc(X - FStartX);
-  YDelta := Trunc(Y - FStartY);
-
-  if TForm(Owner).Width - XDelta >= FMinWidth then
-  begin
-    TForm(Owner).Left := TForm(Owner).Left + XDelta;
-    TForm(Owner).Width := TForm(Owner).Width - XDelta;
-  end
-  else
-  begin
-    TForm(Owner).Left := TForm(Owner).Left + TForm(Owner).Width - FMinWidth;
-    TForm(Owner).Width := FMinWidth;
-  end;
-
-  if TForm(Owner).Height + YDelta >= FMinHeight then
-  begin
-    TForm(Owner).Height := TForm(Owner).Height + YDelta;
-  end
-  else
-  begin
-    TForm(Owner).Height := FMinHeight;
-  end;
+  LeftConstraint(X);
+  BottomConstraint(Y);
 end;
 
 procedure TBorderFrame.RightBottomLayoutMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Single);
-var
-  XDelta: Integer;
-  YDelta: Integer;
 begin
   if not fIsMouseDown then
     Exit;
 
-  XDelta := Trunc(X - FStartX);
-  YDelta := Trunc(Y - FStartY);
-
-  if TForm(Owner).Width + XDelta >= FMinWidth then
-  begin
-    TForm(Owner).Width := TForm(Owner).Width + XDelta;
-  end
-  else
-  begin
-    TForm(Owner).Width := FMinWidth;
-  end;
-
-  if TForm(Owner).Height + YDelta >= FMinHeight then
-  begin
-    TForm(Owner).Height := TForm(Owner).Height + YDelta;
-  end
-  else
-  begin
-    TForm(Owner).Height := FMinHeight;
-  end;
+  RightConstraint(X);
+  BottomConstraint(Y);
 end;
 
 procedure TBorderFrame.LeftLayoutMouseEnter(Sender: TObject);
@@ -554,24 +562,11 @@ end;
 
 procedure TBorderFrame.LeftLayoutMouseMove(Sender: TObject; Shift: TShiftState;
   X, Y: Single);
-var
-  XDelta: Integer;
 begin
   if not FIsMouseDown then
     Exit;
 
-  XDelta := Trunc(X - FStartX);
-
-  if TForm(Owner).Width - XDelta >= FMinWidth then
-  begin
-    TForm(Owner).Width := TForm(Owner).Width - XDelta;
-    TForm(Owner).Left := TForm(Owner).Left + XDelta;
-  end
-  else
-  begin
-    TForm(Owner).Left := TForm(Owner).Left + TForm(Owner).Width - FMinWidth;
-    TForm(Owner).Width := FMinWidth;
-  end;
+  LeftConstraint(X);
 end;
 
 procedure TBorderFrame.RightLayoutMouseEnter(Sender: TObject);
@@ -581,44 +576,20 @@ end;
 
 procedure TBorderFrame.RightLayoutMouseMove(Sender: TObject; Shift: TShiftState;
   X, Y: Single);
-var
-  XDelta: Integer;
 begin
   if not FIsMouseDown then
     Exit;
 
-  XDelta := Trunc(X - FStartX);
-
-  if TForm(Owner).Width + XDelta >= FMinWidth then
-  begin
-    TForm(Owner).Width := TForm(Owner).Width + XDelta;
-  end
-  else
-  begin
-    TForm(Owner).Width := FMinWidth;
-  end;
+  RightConstraint(X);
 end;
 
 procedure TBorderFrame.TopLayoutMouseMove(Sender: TObject; Shift: TShiftState;
   X, Y: Single);
-var
-  YDelta: Integer;
 begin
   if not FIsMouseDown then
     Exit;
 
-  YDelta := Trunc(Y - FStartY);
-
-  if TForm(Owner).Height - YDelta >= FMinHeight then
-  begin
-    TForm(Owner).Top := TForm(Owner).Top + YDelta;
-    TForm(Owner).Height := TForm(Owner).Height - YDelta;
-  end
-  else
-  begin
-    TForm(Owner).Top := TForm(Owner).Top + (TForm(Owner).Height - FMinHeight);
-    TForm(Owner).Height := FMinHeight;
-  end;
+  TopConstraint(Y);
 end;
 
 procedure TBorderFrame.RolldownButtonRectangleClick(Sender: TObject);
@@ -682,13 +653,13 @@ end;
 
 procedure TBorderFrame.SetMinWidth(const AMinWidth: Integer);
 begin
-  FMinWidth := AMinWidth;
+  FMinWidth := AMinWidth + WidthDelta;
   Width := FMinWidth;
 end;
 
 procedure TBorderFrame.SetMinHeight(const AMinHeight: Integer);
 begin
-  FMinHeight := AMinHeight;
+  FMinHeight := AMinHeight + HeightDelta;
   Height := FMinHeight;
 end;
 
@@ -700,7 +671,6 @@ end;
 procedure TBorderFrame.SetMinClientWidth(const AMinClientWidth: Integer);
 begin
   FMinWidth := AMinClientWidth + WidthDelta;
-//  Width := FMinWidth;
 end;
 
 function TBorderFrame.GetMinClientHeight: Integer;
@@ -711,7 +681,6 @@ end;
 procedure TBorderFrame.SetMinClientHeight(const AMinClientHeight: Integer);
 begin
   FMinHeight := AMinClientHeight + HeightDelta;
-//  Height := FMinHeight;
 end;
 
 procedure TBorderFrame.TopLayoutMouseEnter(Sender: TObject);
@@ -769,6 +738,5 @@ function TBorderFrame.GetClientHeight: Integer;
 begin
   Result := TForm(Owner).Height - HeightDelta;
 end;
-
 
 end.
