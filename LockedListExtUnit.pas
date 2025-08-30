@@ -1,4 +1,6 @@
-﻿unit LockedListExtUnit;
+﻿{0.1}
+
+unit LockedListExtUnit;
 
 interface
 
@@ -14,6 +16,7 @@ type
     FList: TList<T>;
 
     function GetItem(Index: Integer): T;
+    function GetFirst: T;
   public
     constructor Create;
     destructor Destroy; override;
@@ -31,6 +34,7 @@ type
     function Item(const AIndex: Integer): T; deprecated 'Use "Items" property';
 
     property Items[Index: Integer]: T read GetItem;
+    property First: T read GetFirst;
   end;
 
 implementation
@@ -138,6 +142,21 @@ begin
       raise Exception.Create(METHOD + ' ' + 'Index out of range');
 
     Result := FList.Items[Index];
+  finally
+    UnlockList;
+  end;
+end;
+
+function TLockedListExt<T>.GetFirst: T;
+const
+  METHOD = 'TLockedListExt<T>.GetFirst';
+begin
+  LockList;
+  try
+    if FList.Count = 0 then
+      raise Exception.Create(METHOD + ' ' + 'List is empty');
+
+    Result := FList.Items[0];
   finally
     UnlockList;
   end;
