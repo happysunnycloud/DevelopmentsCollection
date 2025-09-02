@@ -379,7 +379,7 @@ begin
   XDelta := Trunc(X - FStartX);
 
   if (TForm(Owner).Width - XDelta >= FMinWidth) and
-     (TForm(Owner).Width - XDelta <= FMaxWidth)
+     ((TForm(Owner).Width - XDelta <= FMaxWidth) or (FMaxWidth = 0))
   then
   begin
     TForm(Owner).Left := TForm(Owner).Left + XDelta;
@@ -394,7 +394,7 @@ begin
   XDelta := Trunc(X - FStartX);
 
   if (TForm(Owner).Width + XDelta >= FMinWidth) and
-     (TForm(Owner).Width + XDelta <= FMaxWidth)
+     ((TForm(Owner).Width + XDelta <= FMaxWidth) or (FMaxWidth = 0))
   then
   begin
     TForm(Owner).Width := TForm(Owner).Width + XDelta;
@@ -408,7 +408,7 @@ begin
   YDelta := Trunc(Y - FStartY);
 
   if (TForm(Owner).Height - YDelta >= FMinHeight) and
-     (TForm(Owner).Height - YDelta <= FMaxHeight)
+     ((TForm(Owner).Height - YDelta <= FMaxHeight) or (FMaxHeight = 0))
   then
   begin
     TForm(Owner).Top := TForm(Owner).Top + YDelta;
@@ -423,7 +423,7 @@ begin
   YDelta := Trunc(Y - FStartY);
 
   if (TForm(Owner).Height + YDelta >= FMinHeight) and
-     (TForm(Owner).Height + YDelta <= FMaxHeight)
+     ((TForm(Owner).Height + YDelta <= FMaxHeight) or (FMaxHeight = 0))
   then
   begin
     TForm(Owner).Height := TForm(Owner).Height + YDelta;
