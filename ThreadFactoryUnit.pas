@@ -236,14 +236,12 @@ type
 
     /// <summary>
     ///   Создает независимый поток с обязательной регистрацией в фабрике потоков
-    ///   FreeOnTerminate = true
     /// </summary>
     procedure CreateRegistredThread(
       const AThreadFactoryRegistringConstructor: TThreadFactoryRegistringConstructor); overload;
     /// <summary>
     ///   Создает независимый поток с обязательным указанием
     ///   методов регистрации и снятия с регистрации
-    ///   FreeOnTerminate = true
     /// </summary>
     procedure CreateRegistredThread(
       const ARegistringConstructor: TRegistringConstructor); overload;
