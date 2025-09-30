@@ -1,4 +1,5 @@
-﻿unit ObjectRegistryUnit;
+﻿{0.1}
+unit ObjectRegistryUnit;
 
 interface
 
@@ -23,7 +24,11 @@ type
     function UnRegisterObject(const AObject: T): Word;
 
     function ObjectByIndex(const AIndex: Word): T;
+    function FirstObject: T;
     procedure Enumerator(const ACallbackProc: TEnumCallbackProc);
+      deprecated 'Use ForwardEnumerator or Use BackwardEnumerator';
+    procedure ForwardEnumerator(const ACallbackProc: TEnumCallbackProc);
+    procedure BackwardEnumerator(const ACallbackProc: TEnumCallbackProc);
 
     property Count: Word read GetCount;
   end;
@@ -94,7 +99,61 @@ begin
   end;
 end;
 
+function TObjectRegistry<T>.FirstObject: T;
+var
+  ObjectList: TList<T>;
+begin
+  ObjectList := FObjectList.LockList;
+  try
+    if ObjectList.Count = 0 then
+      raise Exception.Create('FirstObject: Registry is empty');
+    Result := ObjectList[0];
+  finally
+    FObjectList.UnlockList;
+  end;
+end;
+
 procedure TObjectRegistry<T>.Enumerator(const ACallbackProc: TEnumCallbackProc);
+var
+  ObjectList: TList<T>;
+  _Object: T;
+  i: Word;
+begin
+  ObjectList := FObjectList.LockList;
+  try
+    i := ObjectList.Count;
+    while i > 0 do
+    begin
+      Dec(i);
+
+      ACallbackProc(ObjectList[i]);
+    end;
+  finally
+    FObjectList.UnlockList;
+  end;
+end;
+
+procedure TObjectRegistry<T>.ForwardEnumerator(const ACallbackProc: TEnumCallbackProc);
+var
+  ObjectList: TList<T>;
+  _Object: T;
+  i: Word;
+begin
+  ObjectList := FObjectList.LockList;
+  try
+    i := 0;
+    while i < Count do
+    begin
+      ACallbackProc(ObjectList[i]);
+
+      Inc(i);
+    end;
+  finally
+    FObjectList.UnlockList;
+  end;
+end;
+
+procedure TObjectRegistry<T>.BackwardEnumerator(const ACallbackProc: TEnumCallbackProc);
 var
   ObjectList: TList<T>;
   _Object: T;
