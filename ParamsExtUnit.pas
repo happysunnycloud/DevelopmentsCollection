@@ -693,6 +693,7 @@ begin
 
   SetLength(fParams, System.Length(FParams) + 1);
   FParams[System.Length(FParams) - 1].v := Value;
+  FParams[System.Length(FParams) - 1].Ident := AIdent;
 end;
 
 procedure TParamsExt.AddAsPointer(AValue: Pointer);
