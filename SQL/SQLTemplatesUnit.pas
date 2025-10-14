@@ -35,8 +35,8 @@ type
 implementation
 
 uses
-    System.SysUtils,
-    ToolsUnit
+    System.SysUtils
+  , FileToolsUnit
   ;
 
 constructor TSQLTemplate.Create(const aIdent, aSQL: String);
@@ -84,6 +84,8 @@ begin
           CloseFile(TemplateFile);
         end;
       end;
+      if FileNameList.Count = 0 then
+        raise Exception.Create('SQL template list is empty');
     except
       raise;
     end;
