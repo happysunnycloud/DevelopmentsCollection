@@ -10,6 +10,7 @@ type
     class function IsIP4(AString: String): Boolean;
     class function GetHumanTime(AMediaTime: Int64; AMediaTimeScale: Int64): String;
     class function GenIdent: String;
+    class function ExtractFromBrackets(const ASource: String): String;
   end;
 
 implementation
@@ -133,6 +134,37 @@ begin
     MSec.ToString,
     '::',
     Random(1000).ToString);
+end;
+
+class function TStringTools.ExtractFromBrackets(const ASource: String): String;
+var
+  i: Integer;
+  BracketCount: Integer;
+  OpeningBracetFound: Boolean;
+  c: Char;
+begin
+  OpeningBracetFound := false;
+  BracketCount := 0;
+  for i := 1 to Length(ASource) do
+  begin
+    c := ASource[i];
+    if c = '(' then
+      Inc(BracketCount);
+
+    if c = ')' then
+      Dec(BracketCount);
+
+    if BracketCount > 0 then
+    begin
+      if OpeningBracetFound then
+        Result := Concat(Result, c)
+      else
+        OpeningBracetFound := true;
+    end;
+
+    if (i > 1) and (BracketCount = 0) and OpeningBracetFound then
+      Exit;
+  end;
 end;
 
 end.
