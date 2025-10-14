@@ -11,7 +11,8 @@ uses
 type
   TObjectRegistry<T> = class
   type
-    TEnumCallbackProc = reference to procedure (const AObject: T);
+    TEnumCallbackProc = reference to
+      procedure (const AObject: T; var ABreak: Boolean);
   strict private
     FObjectList: TThreadList<T>;
 
@@ -118,7 +119,9 @@ var
   ObjectList: TList<T>;
   _Object: T;
   i: Word;
+  _Break: Boolean;
 begin
+  _Break := false;
   ObjectList := FObjectList.LockList;
   try
     i := ObjectList.Count;
@@ -126,7 +129,9 @@ begin
     begin
       Dec(i);
 
-      ACallbackProc(ObjectList[i]);
+      ACallbackProc(ObjectList[i], _Break);
+      if _Break then
+        Break;
     end;
   finally
     FObjectList.UnlockList;
@@ -138,13 +143,17 @@ var
   ObjectList: TList<T>;
   _Object: T;
   i: Word;
+  _Break: Boolean;
 begin
+  _Break := false;
   ObjectList := FObjectList.LockList;
   try
     i := 0;
     while i < Count do
     begin
-      ACallbackProc(ObjectList[i]);
+      ACallbackProc(ObjectList[i], _Break);
+      if _Break then
+        Break;
 
       Inc(i);
     end;
@@ -158,7 +167,9 @@ var
   ObjectList: TList<T>;
   _Object: T;
   i: Word;
+  _Break: Boolean;
 begin
+  _Break := false;
   ObjectList := FObjectList.LockList;
   try
     i := ObjectList.Count;
@@ -166,7 +177,9 @@ begin
     begin
       Dec(i);
 
-      ACallbackProc(ObjectList[i]);
+      ACallbackProc(ObjectList[i], _Break);
+      if _Break then
+        Break;
     end;
   finally
     FObjectList.UnlockList;
