@@ -1,4 +1,4 @@
-﻿{0.0}
+﻿{0.1}
 
 // Нужно переехать на этот модуль с ParamsClassUnit
 // Класс для упаковки/распаковки параметров
@@ -12,6 +12,9 @@ uses
   System.SysUtils,
   System.Classes
   ;
+
+const
+  CLASS_NAME = 'TParamsExt';
 
 type
 //  TParamsExceptionCode = (pecValueNotFound = 0);
@@ -125,18 +128,18 @@ type
     property  AsVariantByIdent  [const AIdent: String]: Variant   read GetAsVariant;
     property  TypeOfVarByIdent  [const AIdent: String]: TVarType  read GetTypeOfVar;
 
-    function IfAsInt64ByIdent     (const AIdent: String; const ADefVal: Int64):     Int64;
-    function IfAsStringByIdent    (const AIdent: String; const ADefVal: String):    String;
-    function IfAsTimeByIdent      (const AIdent: String; const ADefVal: TTime):     TTime;
-    function IfAsDateByIdent      (const AIdent: String; const ADefVal: TDate):     TDate;
-    function IfAsDateTimeByIdent  (const AIdent: String; const ADefVal: TDateTime): TDateTime;
-    function IfAsBooleanByIdent   (const AIdent: String; const ADefVal: Boolean):   Boolean;
-    function IfAsIntegerByIdent   (const AIdent: String; const ADefVal: Integer):   Integer;
-    function IfAsWordByIdent      (const AIdent: String; const ADefVal: Word):      Word;
-    function IfAsByteByIdent      (const AIdent: String; const ADefVal: Byte):      Byte;
-    function IfAsPointerByIdent   (const AIdent: String; const ADefVal: Pointer):   Pointer;
-    function IfAsVariantByIdent   (const AIdent: String; const ADefVal: Variant):   Variant;
-    function IfAsTVarTypeByIdent  (const AIdent: String; const ADefVal: TVarType):  TVarType;
+    function  IfAsInt64ByIdent     (const AIdent: String; const ADefVal: Int64):     Int64;
+    function  IfAsStringByIdent    (const AIdent: String; const ADefVal: String):    String;
+    function  IfAsTimeByIdent      (const AIdent: String; const ADefVal: TTime):     TTime;
+    function  IfAsDateByIdent      (const AIdent: String; const ADefVal: TDate):     TDate;
+    function  IfAsDateTimeByIdent  (const AIdent: String; const ADefVal: TDateTime): TDateTime;
+    function  IfAsBooleanByIdent   (const AIdent: String; const ADefVal: Boolean):   Boolean;
+    function  IfAsIntegerByIdent   (const AIdent: String; const ADefVal: Integer):   Integer;
+    function  IfAsWordByIdent      (const AIdent: String; const ADefVal: Word):      Word;
+    function  IfAsByteByIdent      (const AIdent: String; const ADefVal: Byte):      Byte;
+    function  IfAsPointerByIdent   (const AIdent: String; const ADefVal: Pointer):   Pointer;
+    function  IfAsVariantByIdent   (const AIdent: String; const ADefVal: Variant):   Variant;
+    function  IfAsTVarTypeByIdent  (const AIdent: String; const ADefVal: TVarType):  TVarType;
 
     function Exists(const AIdent: String):  Boolean;
 
@@ -205,14 +208,6 @@ begin
   end;
 
   raise Exception.CreateFmt('Var of ident "%s" not found', [AIdent]);
-
-  //asd
-  //  raise ParamsException.CreateFmt(
-  //    'Value of ident "%s" not found',
-  //    [AIdent],
-  //    TParamsExceptionCode.pecValueNotFound,
-  //    AIdent);
-  //asd
 end;
 
 function TParamsExt.IfGetIndexByIdent(const AIdent: String; const AOffset: Integer = 0): Integer;
@@ -235,7 +230,7 @@ var
 begin
   _Length := System.Length(AVars);
   if _Length = 0 then
-    raise Exception.Create(Format('TParams.%s: AVars is empty', ['Create']));
+    raise Exception.Create(Format('%s.%s: AVars is empty', [CLASS_NAME, 'Create']));
 
   for i := 0 to Pred(_Length) do
   begin
@@ -637,13 +632,13 @@ var
 begin
   _Length := System.Length(fParams);
   if _Length = 0 then
-    raise Exception.Create(Format('TParams.%s: Params property is empty', [AMethodName]));
+    raise Exception.Create(Format('%s.%s: Params property is empty', [CLASS_NAME, AMethodName]));
 
   if AIndex >= _Length then
-    raise Exception.Create(Format('TParams.%s: Index out of range', [AMethodName]));
+    raise Exception.Create(Format('%s.%s: Index out of range', [CLASS_NAME, AMethodName]));
 
   if AIndex < 0 then
-    raise Exception.Create(Format('TParams.%s: Index out of range', [AMethodName]));
+    raise Exception.Create(Format('%s.%s: Index out of range', [CLASS_NAME, AMethodName]));
 end;
 
 procedure TParamsExt.CheckCorrect(
@@ -655,7 +650,7 @@ begin
 
   if VarType(FParams[AIndex].v) <> AVarType then
     raise Exception.Create(
-      Format('TParams.%s: Type mismatch', [AMethodName]));
+      Format('%s.%s: Type mismatch', [CLASS_NAME, AMethodName]));
 end;
 
 function TParamsExt.Length: Word;
@@ -723,10 +718,10 @@ var
   ParamsObj: TParamsExt absolute AParamsObj;
 begin
   if not Assigned(Self) then
-    raise Exception.Create('TParams.CopyFrom: Params not initialized');
+    raise Exception.CreateFmt('%s.%s: Params not initialized', [CLASS_NAME, 'CopyFrom']);
 
   if not Assigned(AParamsObj) then
-    raise Exception.Create('TParams.CopyFrom: AParamsObj is nil');
+    raise Exception.CreateFmt('%s.%s: AParamsObj is nil', [CLASS_NAME, 'CopyFrom']);
 
   if System.Length(ParamsObj.Params) = 0 then
     Exit;
@@ -746,10 +741,10 @@ var
   ParamsObj: TParamsExt absolute AParamsObj;
 begin
   if not Assigned(Self) then
-    raise Exception.Create('TParams.AddFrom: Params not initialized');
+    raise Exception.CreateFmt('%s.%s: Params not initialized', [CLASS_NAME, 'AddFrom']);
 
   if not Assigned(AParamsObj) then
-    raise Exception.Create('TParams.AddFrom: AParamsObj is nil');
+    raise Exception.CreateFmt('%s.%s: AParamsObj is nil', [CLASS_NAME, 'AddFrom']);
 
   if System.Length(ParamsObj.Params) = 0 then
     Exit;
