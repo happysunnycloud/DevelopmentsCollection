@@ -1,5 +1,6 @@
 ﻿{0.1}
 // 220325 Базовая форма с фабрикой нитей, стоит на нее переехать
+// Так же добавлен реестр фабрик
 unit FMX.FormExtUnit;
 
 interface
@@ -8,7 +9,6 @@ uses
     System.Classes
   , System.UITypes
   , FMX.Forms
-
   , ThreadFactoryRegistryUnit
   , ThreadFactoryUnit
   ;
@@ -26,7 +26,14 @@ type
 
   TFormExt = class(FMX.Forms.TForm)
   strict private
+    /// <summary>
+    ///   Реестр фабрик нитей
+    ///   Позволяет создавать локальные фабрики
+    /// </summary>
     FThreadFactoryRegistry: TThreadFactoryRegistry;
+    /// <summary>
+    ///   Базовая фабрика нитей
+    /// </summary>
     FThreadFactory: TThreadFactory;
     //FCanClose: Boolean;
     FOnCloseQueryExternalHandler: TCloseQueryMethod;
