@@ -1,4 +1,4 @@
-﻿{0.0}
+﻿{0.4}
 // Юнит адаптирован под SQLITE
 // Перевести проекты на этот юнит, убрать из коллекции старые DataBaseToolsUnit.pas и DBToolsUnit.pas
 unit DBToolsUnit;
@@ -61,7 +61,7 @@ type
     procedure ExecuteQuery;
     procedure CloseQuery;
 
-    procedure Begin_;
+    procedure StartTransaction;
     procedure Commit;
     procedure Rollback;
 
@@ -71,22 +71,14 @@ type
 
 implementation
 
-procedure PlaceParameterAsInteger(
-  var ASQLQuery: String;
-  const AParameterName: String;
-  const AParameter: Integer);
+procedure PlaceParameterAsInteger(var ASQLQuery: String; const AParameterName: String; const AParameter: Integer);
 begin
-  ASQLQuery :=
-    StringReplace(ASQLQuery, AParameterName, IntToStr(AParameter), [rfReplaceAll, rfIgnoreCase]);
+  ASQLQuery := StringReplace(ASQLQuery, AParameterName, IntToStr(AParameter), [rfReplaceAll, rfIgnoreCase]);
 end;
 
-procedure PlaceParameterAsInt64(
-  var ASQLQuery: String;
-  const AParameterName: String;
-  const AParameter: Int64);
+procedure PlaceParameterAsInt64(var ASQLQuery: String; const AParameterName: String; const AParameter: Int64);
 begin
-  ASQLQuery :=
-    StringReplace(ASQLQuery, AParameterName, IntToStr(AParameter), [rfReplaceAll, rfIgnoreCase]);
+  ASQLQuery := StringReplace(ASQLQuery, AParameterName, IntToStr(AParameter), [rfReplaceAll, rfIgnoreCase]);
 end;
 
 procedure PlaceParameterAsString(
@@ -239,14 +231,9 @@ begin
   end;
 end;
 
-procedure TDBTools.Begin_;
+procedure TDBTools.StartTransaction;
 begin
-  FFDQuery.SQL.Text := 'begin;';
-  try
-    FFDQuery.ExecSQL;
-  except
-    raise;
-  end;
+  FDConnection.StartTransaction;
 end;
 
 procedure TDBTools.Commit;
