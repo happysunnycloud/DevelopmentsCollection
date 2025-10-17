@@ -40,10 +40,56 @@ type
       const AExt: String;
       var AFileNames: TFileNames);
 
+    // Рекурсивно получает дерево имен файлов
+    class procedure GetTreeOfFileNames(
+      const ARootDir: String;
+      const AExt: String;
+      var AFileNames: TFileNames);
+
     class function CopyFile(const AFileNameFrom: String; const AFileNameTo: String): TCopyFileResult;
+
+  end;
+
+  TFileNamesHelper = record helper for TFileNames
+  public
+    procedure Add(const AFileName: String);
+    procedure CopyFrom(const AFileNames: TFileNames);
+    procedure CopyRangeFrom(
+      const AFileNames: TFileNames;
+      const AStartIndex: Integer;
+      const AFinishIndex: Integer);
   end;
 
 implementation
+
+{ TFileNamesHelper }
+
+procedure TFileNamesHelper.Add(const AFileName: String);
+begin
+  SetLength(Self, Length(Self) + 1);
+  Self[Length(Self) - 1] := AFileName;
+end;
+
+procedure TFileNamesHelper.CopyFrom(const AFileNames: TFileNames);
+var
+  i: Integer;
+begin
+  SetLength(Self, 0);
+  for i := 0 to Pred(Length(AFileNames)) do
+    Add(AFileNames[i]);
+end;
+
+procedure TFileNamesHelper.CopyRangeFrom(
+  const AFileNames: TFileNames;
+  const AStartIndex: Integer;
+  const AFinishIndex: Integer);
+var
+  i: Integer;
+begin
+  SetLength(Self, 0);
+  for i := AStartIndex to AFinishIndex do
+    Add(AFileNames[i]);
+end;
 
 { TFileTools }
 
@@ -209,6 +255,48 @@ begin
     if Assigned(FileStreamTo) then
       FreeAndNil(FileStreamTo);
   end;
+end;
+
+class procedure TFileTools.GetTreeOfFileNames(
+  const ARootDir: String;
+  const AExt: String;
+  var AFileNames: TFileNames);
+var
+  SearchRec: System.SysUtils.TSearchRec;
+  IsFound: Boolean;
+  MustAdd: Boolean;
+begin
+//  SetLength(AFileNames, 0);
+
+  IsFound := FindFirst(ARootDir + PATH_SPLITTER + '*.*', faAnyFile, SearchRec) = 0;
+  while IsFound do
+  begin
+    if (SearchRec.Name <> '.') and
+       (SearchRec.Name <> '..')
+    then
+    begin
+      if (SearchRec.Attr and faDirectory) <> faDirectory then
+      begin
+        MustAdd := false;
+        if AExt.IsEmpty then
+          MustAdd := true
+        else
+        if not AExt.IsEmpty then
+          if ExtractFileExt(SearchRec.Name) = '.' + AExt then
+            MustAdd := true;
+
+        if MustAdd then
+          AFileNames.Add(Concat(ARootDir, PATH_SPLITTER, SearchRec.Name))
+      end
+      else
+      if (SearchRec.Attr and faDirectory) = faDirectory then
+      begin
+        GetTreeOfFileNames(Concat(ARootDir, SearchRec.Name), AExt, AFileNames);
+      end;
+    end;
+    IsFound := FindNext(SearchRec) = 0;
+  end;
+  System.SysUtils.FindClose(SearchRec);
 end;
 
 end.
