@@ -1,4 +1,4 @@
-unit FMX.SingleSoundUnit;
+﻿unit FMX.SingleSoundUnit;
 
 interface
 
@@ -25,6 +25,7 @@ type
   strict private
     FCriticalSection: TCriticalSection;
     FMediaPlayer: TMediaPlayer;
+    FCurrentTime: TMediaTime;
 
     procedure SetFileName(const AFileName: String);
     function GetFileName: String;
@@ -43,6 +44,7 @@ type
 
     procedure Play; overload;
     procedure Play(const ACurrentTime: TMediaTime); overload;
+    procedure Pause;
     procedure Stop;
   end;
 
@@ -58,6 +60,7 @@ constructor TSingleSound.Create;
 begin
   FCriticalSection := TCriticalSection.Create;
   FMediaPlayer := TMediaPlayer.Create(nil);
+  FCurrentTime := 0;
 end;
 
 destructor TSingleSound.Destroy;
@@ -129,7 +132,7 @@ end;
 
 procedure TSingleSound.Play;
 begin
-  Self.Play(0);
+  Self.Play(FCurrentTime);
 end;
 
 procedure TSingleSound.Play(const ACurrentTime: TMediaTime);
@@ -147,11 +150,23 @@ begin
   end;
 end;
 
+procedure TSingleSound.Pause;
+begin
+  FCriticalSection.Enter;
+  try
+    FCurrentTime := FMediaPlayer.CurrentTime;
+    FMediaPlayer.Stop;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
 procedure TSingleSound.Stop;
 begin
   FCriticalSection.Enter;
   try
     FMediaPlayer.Stop;
+    FCurrentTime := 0;
   finally
     FCriticalSection.Leave;
   end;
