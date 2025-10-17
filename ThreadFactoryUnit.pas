@@ -179,9 +179,9 @@ type
     FOnAllThreadsAreDestroyed: TNotifyEvent;
     FOnAllThreadsAreDestroyedProcRef: TNotifyEventProcRef;
 
-    function GetAfterAllThreadsAreDestroyedProc: TProc;
+    function GetAfterAllThreadsAreDestroyedProc: TProc; deprecated 'Use OnAllThreadsAreDestroyed or OnAllThreadsAreDestroyedProRef';
     procedure SetAfterAllThreadsAreDestroyedProc(
-      const AAfterAllThreadsAreDestroyedProc: TProc);
+      const AAfterAllThreadsAreDestroyedProc: TProc); deprecated 'Use OnAllThreadsAreDestroyed or OnAllThreadsAreDestroyedProRef';
 
     procedure SetTerminateAllThreads;
 
@@ -261,6 +261,7 @@ type
       write SetOnAllThreadsAreDestroyedProcRef;
     /// <summary>
     ///   Вызывается после OnAllThreadsAreDestroyed / OnAllThreadsAreDestroyedRef
+    ///   Выполняется в главном потоке
     /// </summary>
     property AfterAllThreadsAreDestroyedProc: TProc
       read GetAfterAllThreadsAreDestroyedProc
