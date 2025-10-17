@@ -28,6 +28,7 @@ type
     procedure Clear;
     procedure Remove(Item: T); inline;
     procedure RemoveItem(Item: T; Direction: TList.TDirection);
+    procedure Delete(const AIndex: Integer);
 
     function Count: Word;
 
@@ -103,6 +104,23 @@ begin
   end;
 end;
 
+procedure TLockedListExt<T>.Delete(const AIndex: Integer);
+const
+  METHOD = 'TLockedListExt<T>.Delete';
+begin
+  LockList;
+  try
+    if (AIndex < 0) or
+       (AIndex > FList.Count)
+    then
+      raise Exception.Create(METHOD + ' ' + 'Index out of range');
+
+    FList.Delete(AIndex);
+  finally
+    UnlockList;
+  end;
+end;
+
 function TLockedListExt<T>.Count: Word;
 begin
   LockList;
@@ -132,7 +150,7 @@ end;
 
 function TLockedListExt<T>.GetItem(Index: Integer): T;
 const
-  METHOD = 'TLockedListExt<T>.GetT';
+  METHOD = 'TLockedListExt<T>.GetItem';
 begin
   LockList;
   try
