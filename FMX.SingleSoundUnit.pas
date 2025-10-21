@@ -25,7 +25,7 @@ type
   strict private
     FCriticalSection: TCriticalSection;
     FMediaPlayer: TMediaPlayer;
-    FCurrentTime: TMediaTime;
+    FLastCurrentTime: TMediaTime;
 
     procedure SetFileName(const AFileName: String);
     function GetFileName: String;
@@ -60,7 +60,7 @@ constructor TSingleSound.Create;
 begin
   FCriticalSection := TCriticalSection.Create;
   FMediaPlayer := TMediaPlayer.Create(nil);
-  FCurrentTime := 0;
+  FLastCurrentTime := 0;
 end;
 
 destructor TSingleSound.Destroy;
@@ -97,14 +97,11 @@ begin
 end;
 
 procedure TSingleSound.SetCurrentTime(const ACurrentTime: TMediaTime);
-var
-  CurrentTime: TMediaTime;
 begin
   FCriticalSection.Enter;
   try
-    CurrentTime := ACurrentTime;
-
-    FMediaPlayer.CurrentTime := CurrentTime;
+    FLastCurrentTime := ACurrentTime;
+    FMediaPlayer.CurrentTime := FLastCurrentTime;
   finally
     FCriticalSection.Leave;
   end;
@@ -114,7 +111,7 @@ function TSingleSound.GetCurrentTime: TMediaTime;
 begin
   FCriticalSection.Enter;
   try
-    Result := FMediaPlayer.CurrentTime;
+    Result := FMediaPlayer.CurrentTime
   finally
     FCriticalSection.Leave;
   end;
@@ -132,7 +129,8 @@ end;
 
 procedure TSingleSound.Play;
 begin
-  Self.Play(FCurrentTime);
+  FMediaPlayer.Volume := 0.8;
+  Self.Play(FLastCurrentTime);
 end;
 
 procedure TSingleSound.Play(const ACurrentTime: TMediaTime);
@@ -154,7 +152,7 @@ procedure TSingleSound.Pause;
 begin
   FCriticalSection.Enter;
   try
-    FCurrentTime := FMediaPlayer.CurrentTime;
+    FLastCurrentTime := FMediaPlayer.CurrentTime;
     FMediaPlayer.Stop;
   finally
     FCriticalSection.Leave;
@@ -166,7 +164,7 @@ begin
   FCriticalSection.Enter;
   try
     FMediaPlayer.Stop;
-    FCurrentTime := 0;
+    FLastCurrentTime := 0;
   finally
     FCriticalSection.Leave;
   end;

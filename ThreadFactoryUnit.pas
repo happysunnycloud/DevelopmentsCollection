@@ -1,5 +1,6 @@
-﻿{0.2}
+﻿{0.3}
 // 220325 Обновленный юнит по работе с нитями, если и переезжать, то на него
+// 191025 Обновление
 unit ThreadFactoryUnit;
 
 interface
@@ -50,9 +51,12 @@ type
   TThreadExt = class(TThread)
   strict private
     FCriticalSection: TCriticalSection;
-    FParamsCriticalSection: TCriticalSection;
-
-    FParams: TParamsExt;
+//    // Демонтировать после переделки MelomaniacPlayer,
+//    // Устаревший модуль просто закинуть в проект с MelomaniacPlayer
+//    FParamsCriticalSection: TCriticalSection;
+//    // Демонтировать после переделки MelomaniacPlayer,
+//    // Устаревший модуль просто закинуть в проект с MelomaniacPlayer
+//    FParams: TParamsExt;
 
     FEventHold: TEvent;
     FRegProc: TRegProc;
@@ -63,6 +67,8 @@ type
     FOnException: TExceptionProc;
 
     FThreadName: String;
+
+    FIsHolded: Boolean;
 
     procedure DoInit(
       const AThreadName: String;
@@ -76,10 +82,10 @@ type
       const AThreadName: String;
       const AExceptionMessage: String);
 
-    procedure RaiseMustOverridedException(const AMessage: String);
+    //procedure RaiseMustOverridedException(const AMessage: String);
 
     //function GetEventHold: TEvent;
-    function GetParams: TParamsExt;
+    //function GetParams: TParamsExt;
 
     function GetTerminated: Boolean;
 
@@ -87,9 +93,14 @@ type
     procedure SetThreadName(const AThreadName: String);
 
     //property EventHold: TEvent read FEventHold;// GetEventHold;
+
+    function GetIsHolded: Boolean;
+    procedure SetIsHolded(const AIsHolded: Boolean);
+
+    function GetIntentionHoldState: Boolean;
   protected
-    property Params: TParamsExt read GetParams;
-    procedure MountParams; virtual; deprecated 'Лишнее, используется только в Melomaniac, нужно убрать';
+    //property Params: TParamsExt read GetParams;
+    //procedure MountParams; virtual; deprecated 'Лишнее, используется только в Melomaniac, нужно убрать';
 
     procedure ExecHold;
     procedure Execute; override;
@@ -162,6 +173,12 @@ type
     property OnException: TExceptionProc read FOnException write FOnException;
     property ExceptionMessage: String read FExceptionMessage;
     property Terminated: Boolean read GetTerminated;
+
+    // Отображает, когда поток фактически вошел в ExecHold
+    property IsHolded: Boolean read GetIsHolded write SetIsHolded;
+    // Отображает, состояние запроса на Hold
+    // Не означает, что поток в настоящий момент вошел в ExecHold
+    property IntentionHoldState: Boolean read GetIntentionHoldState;
   end;
 
   TThreadExtClass = class of TThreadExt;
@@ -312,7 +329,7 @@ procedure TThreadExt.DoInit(
   const AFreeOnTerminate: Boolean = true);
 begin
   FCriticalSection := TCriticalSection.Create;
-  FParamsCriticalSection := TCriticalSection.Create;
+  //FParamsCriticalSection := TCriticalSection.Create;
 
   ThreadName := 'Nameless thread';
   if AThreadName.Length > 0 then
@@ -331,9 +348,11 @@ begin
   end;
 
   FEventHold := TEvent.Create(nil, true, not Suspended, '', false);
+  FIsHolded := false;
+
   FRegProc := ARegProc;
   FUnregProc := AUnregProc;
-  FParams := TParamsExt.Create;
+  //FParams := TParamsExt.Create;
 
   FreeOnTerminate := AFreeOnTerminate;
 
@@ -441,11 +460,11 @@ end;
 
 destructor TThreadExt.Destroy;
 begin
-  FreeAndNil(FParams);
+//  FreeAndNil(FParams);
   FreeAndNil(FEventHold);
 
   FreeAndNil(FCriticalSection);
-  FreeAndNil(FParamsCriticalSection);
+//  FreeAndNil(FParamsCriticalSection);
 
   if Assigned(FUnRegProc) then
     FUnregProc(Self);
@@ -469,49 +488,81 @@ begin
   raise Exception.Create(AThreadName + ' -> ' + AExceptionMessage);
 end;
 
-procedure TThreadExt.RaiseMustOverridedException(const AMessage: String);
-begin
-  raise Exception.CreateFmt('%s: %s', [AMessage, 'The method must be overrided']);
-end;
+//procedure TThreadExt.RaiseMustOverridedException(const AMessage: String);
+//begin
+//  raise Exception.CreateFmt('%s: %s', [AMessage, 'The method must be overrided']);
+//end;
 
-function TThreadExt.GetParams: TParamsExt;
-begin
-  FParamsCriticalSection.Enter;
-  try
-    Result := FParams;
-  finally
-    FParamsCriticalSection.Leave;
-  end;
-end;
+//function TThreadExt.GetParams: TParamsExt;
+//begin
+//  FParamsCriticalSection.Enter;
+//  try
+//    Result := FParams;
+//  finally
+//    FParamsCriticalSection.Leave;
+//  end;
+//end;
 
 function TThreadExt.GetTerminated: Boolean;
 begin
-  FParamsCriticalSection.Enter;
+  FCriticalSection.Enter;
   try
     Result := inherited Terminated;
   finally
-    FParamsCriticalSection.Leave;
+    FCriticalSection.Leave;
   end;
 end;
 
 function TThreadExt.GetThreadName: String;
 begin
-  FParamsCriticalSection.Enter;
+  FCriticalSection.Enter;
   try
     Result := FThreadName;
   finally
-    FParamsCriticalSection.Leave;
+    FCriticalSection.Leave;
   end;
 end;
 
 procedure TThreadExt.SetThreadName(const AThreadName: String);
 begin
-  FParamsCriticalSection.Enter;
+  FCriticalSection.Enter;
   try
     FThreadName := AThreadName;
     NameThreadForDebugging(AThreadName);
   finally
-    FParamsCriticalSection.Leave;
+    FCriticalSection.Leave;
+  end;
+end;
+
+function TThreadExt.GetIsHolded: Boolean;
+begin
+  FCriticalSection.Enter;
+  try
+    Result := FIsHolded;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
+procedure TThreadExt.SetIsHolded(const AIsHolded: Boolean);
+begin
+  FCriticalSection.Enter;
+  try
+    FIsHolded := AIsHolded;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
+function TThreadExt.GetIntentionHoldState: Boolean;
+begin
+  FCriticalSection.Enter;
+  try
+    Result := false;
+    if TWaitResult.wrTimeout = FEventHold.WaitFor(1) then
+      Result := true;
+  finally
+    FCriticalSection.Leave;
   end;
 end;
 
@@ -549,9 +600,11 @@ end;
 
 procedure TThreadExt.ExecHold;
 begin
+  IsHolded := True;
   FEventHold.WaitFor(INFINITE);
+  IsHolded := false;
 
-  MountParams;
+  //MountParams;
 end;
 
 procedure TThreadExt.TryExcept(const AProc: TProc);
@@ -576,12 +629,12 @@ begin
     end);
 end;
 
-procedure TThreadExt.MountParams;
-const
-  METHOD = 'TThreadExt.MountParams';
-begin
-  RaiseMustOverridedException(METHOD);
-end;
+//procedure TThreadExt.MountParams;
+//const
+//  METHOD = 'TThreadExt.MountParams';
+//begin
+//  RaiseMustOverridedException(METHOD);
+//end;
 
 constructor TThreadFactory.Create;
 begin

@@ -208,14 +208,17 @@ begin
 end;
 
 procedure TFormExt.OnDestroyedAllFactoryHandler(Sender: TObject);
+var
+  Form: TFormExt;
 begin
   //asd debug
   Log.d('TFormExt.OnDestroyedAllFactoryHandler');
   //asd debug
+  Form := Self;
   TThread.ForceQueue(nil,
     procedure
     begin
-      Self.Close;
+      Form.Close;
     end);
 end;
 

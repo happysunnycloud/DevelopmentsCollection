@@ -1,4 +1,4 @@
-﻿{0.0}
+﻿{0.1}
 unit ThreadFactoryRegistryUnit;
 
 interface
@@ -61,10 +61,19 @@ end;
 
 procedure TThreadFactoryRegistry.DestroyAllThreadFactories;
 var
-  i: Word;
+  FactoryCount: Integer;
+  i: Integer;
   ThreadFactory: TThreadFactory;
 begin
-  i := Self.Count;
+  FactoryCount := Self.Count;
+  if FactoryCount = 0 then
+  begin
+    CheckThreadFactoryZeroCount;
+
+    Exit;
+  end;
+
+  i := FactoryCount;
   while i > 0 do
   begin
     Dec(i);
@@ -78,9 +87,7 @@ begin
     ThreadFactory.OnAllThreadsAreDestroyed := OnAllThreadsAreDestroyedHandler;
 
     ThreadFactory.TerminateAllThreads;
-  end;
-
-  CheckThreadFactoryZeroCount;
+  end
 end;
 
 procedure TThreadFactoryRegistry.CheckThreadFactoryZeroCount;
