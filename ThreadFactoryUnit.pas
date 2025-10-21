@@ -479,6 +479,8 @@ begin
         FOnException);
     end;
   end;
+
+  inherited;
 end;
 
 procedure TThreadExt.OnExceptionInnerHandler(
@@ -658,6 +660,8 @@ begin
 
   if Assigned(FOnDestroyFactory) then
     FOnDestroyFactory(Self);
+
+  inherited;
 end;
 
 procedure TThreadFactory.RegThreadProc(const AThread: TThreadExt);
