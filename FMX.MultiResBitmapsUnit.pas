@@ -324,7 +324,7 @@ begin
   for Bitmap in Self do
   begin
     if Bitmap.Ident = AIdent then
-      Exit(Bitmap);
+      Exit(TBitmap(Bitmap));
   end;
 end;
 

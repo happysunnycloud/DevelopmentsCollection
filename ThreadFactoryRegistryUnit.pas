@@ -17,7 +17,6 @@ type
     procedure OnAllThreadsAreDestroyedHandler(Sender: TObject);
 
     procedure CheckThreadFactoryZeroCount;
-  private
   public
     function CreateThreadFactory: TThreadFactory;
     // Финишируем все фабрики нитей
@@ -55,8 +54,25 @@ begin
 end;
 
 procedure TThreadFactoryRegistry.OnAllThreadsAreDestroyedHandler(Sender: TObject);
+var
+  ThreadFactory: TThreadFactory;
 begin
-  Sender.Free;
+  if not (Sender is TThreadFactory) then
+  begin
+    raise Exception.
+      Create('TThreadFactoryRegistry.OnAllThreadsAreDestroyedHandler -> ' +
+      'Sender is not a TThreadFactory');
+  end;
+
+  ThreadFactory := TThreadFactory(Sender);
+  FreeAndNil(ThreadFactory);
+
+//  TThread.ForceQueue(nil,
+//    procedure
+//    begin
+//      FreeAndNil(ThreadFactory);
+//    end
+//  );
 end;
 
 procedure TThreadFactoryRegistry.DestroyAllThreadFactories;
