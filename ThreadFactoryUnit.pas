@@ -196,9 +196,9 @@ type
     FOnAllThreadsAreDestroyed: TNotifyEvent;
     FOnAllThreadsAreDestroyedProcRef: TNotifyEventProcRef;
 
-    function GetAfterAllThreadsAreDestroyedProc: TProc; deprecated 'Use OnAllThreadsAreDestroyed or OnAllThreadsAreDestroyedProRef';
-    procedure SetAfterAllThreadsAreDestroyedProc(
-      const AAfterAllThreadsAreDestroyedProc: TProc); deprecated 'Use OnAllThreadsAreDestroyed or OnAllThreadsAreDestroyedProRef';
+//    function GetAfterAllThreadsAreDestroyedProc: TProc; deprecated 'Use OnAllThreadsAreDestroyed or OnAllThreadsAreDestroyedProRef';
+//    procedure SetAfterAllThreadsAreDestroyedProc(
+//      const AAfterAllThreadsAreDestroyedProc: TProc); deprecated 'Use OnAllThreadsAreDestroyed or OnAllThreadsAreDestroyedProRef';
 
     procedure SetTerminateAllThreads;
 
@@ -280,9 +280,9 @@ type
     ///   Вызывается после OnAllThreadsAreDestroyed / OnAllThreadsAreDestroyedRef
     ///   Выполняется в главном потоке
     /// </summary>
-    property AfterAllThreadsAreDestroyedProc: TProc
-      read GetAfterAllThreadsAreDestroyedProc
-      write SetAfterAllThreadsAreDestroyedProc;
+//    property AfterAllThreadsAreDestroyedProc: TProc
+//      read GetAfterAllThreadsAreDestroyedProc
+//      write SetAfterAllThreadsAreDestroyedProc;
 
     procedure TerminateAllThreads;
 
@@ -735,37 +735,37 @@ begin
   ARegistringConstructor(RegThreadProc, UnRegThreadProc);
 end;
 
-function TThreadFactory.GetAfterAllThreadsAreDestroyedProc: TProc;
-begin
-  FCriticalSection.Enter;
-  try
-    Result := FAfterAllThreadsAreDestroyedProc;
-  finally
-    FCriticalSection.Leave;
-  end;
-end;
-
-procedure TThreadFactory.SetAfterAllThreadsAreDestroyedProc(
-  const AAfterAllThreadsAreDestroyedProc: TProc);
-begin
-  FCriticalSection.Enter;
-  try
-    FAfterAllThreadsAreDestroyedProc := AAfterAllThreadsAreDestroyedProc;
-  finally
-    FCriticalSection.Leave;
-  end;
-end;
+//function TThreadFactory.GetAfterAllThreadsAreDestroyedProc: TProc;
+//begin
+//  FCriticalSection.Enter;
+//  try
+//    Result := FAfterAllThreadsAreDestroyedProc;
+//  finally
+//    FCriticalSection.Leave;
+//  end;
+//end;
+//
+//procedure TThreadFactory.SetAfterAllThreadsAreDestroyedProc(
+//  const AAfterAllThreadsAreDestroyedProc: TProc);
+//begin
+//  FCriticalSection.Enter;
+//  try
+//    FAfterAllThreadsAreDestroyedProc := AAfterAllThreadsAreDestroyedProc;
+//  finally
+//    FCriticalSection.Leave;
+//  end;
+//end;
 
 procedure TThreadFactory.CheckThreadZeroCount;
 var
-  Proc: TProc;
+//  Proc: TProc;
   Count: Word;
 begin
   Count := FThreadRegistry.Count;
   if Count > 0 then
     Exit;
 
-  Proc := AfterAllThreadsAreDestroyedProc;
+//  Proc := AfterAllThreadsAreDestroyedProc;
 
   if Assigned(FOnAllThreadsAreDestroyed) then
     FOnAllThreadsAreDestroyed(Self)
@@ -773,16 +773,16 @@ begin
   if Assigned(FOnAllThreadsAreDestroyedProcRef) then
     FOnAllThreadsAreDestroyedProcRef;
 
-  if Assigned(Proc) then
-  begin
-    AfterAllThreadsAreDestroyedProc := nil;
-
-    TThread.ForceQueue(nil,
-      procedure
-      begin
-        Proc;
-      end);
-  end;
+//  if Assigned(Proc) then
+//  begin
+//    AfterAllThreadsAreDestroyedProc := nil;
+//
+//    TThread.ForceQueue(nil,
+//      procedure
+//      begin
+//        Proc;
+//      end);
+//  end;
 end;
 
 procedure TThreadFactory.SetOnAllThreadsAreDestroyed(const ANotifyEvent: TNotifyEvent);
