@@ -99,7 +99,7 @@ begin
     // Возможно он использовался при работе с нитью
     // Переназначаем OnAllThreadsAreDestroyedHandler
     ThreadFactory.OnAllThreadsAreDestroyedProcRef := nil;
-    ThreadFactory.AfterAllThreadsAreDestroyedProc := nil;
+//    ThreadFactory.AfterAllThreadsAreDestroyedProc := nil;
     ThreadFactory.OnAllThreadsAreDestroyed := OnAllThreadsAreDestroyedHandler;
 
     ThreadFactory.TerminateAllThreads;
