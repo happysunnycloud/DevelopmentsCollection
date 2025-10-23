@@ -26,12 +26,16 @@ type
     FCriticalSection: TCriticalSection;
     FMediaPlayer: TMediaPlayer;
     FLastCurrentTime: TMediaTime;
+    FLastVolume: Single;
 
     procedure SetFileName(const AFileName: String);
     function GetFileName: String;
 
     procedure SetCurrentTime(const ACurrentTime: TMediaTime);
     function GetCurrentTime: TMediaTime;
+
+    function GetVolume: Single;
+    procedure SetVolume(const AVolume: Single);
 
     function GetDuration: TMediaTime;
   public
@@ -40,12 +44,16 @@ type
 
     property FileName: String read GetFileName write SetFileName;
     property CurrentTime: TMediaTime read GetCurrentTime write SetCurrentTime;
+    property Volume: Single read GetVolume write SetVolume;
     property Duration: TMediaTime read GetDuration;
 
     procedure Play; overload;
     procedure Play(const ACurrentTime: TMediaTime); overload;
     procedure Pause;
     procedure Stop;
+
+    procedure Mute;
+    procedure Sound;
   end;
 
 implementation
@@ -61,6 +69,8 @@ begin
   FCriticalSection := TCriticalSection.Create;
   FMediaPlayer := TMediaPlayer.Create(nil);
   FLastCurrentTime := 0;
+  FMediaPlayer.Volume := 0.5;
+  FLastVolume := FMediaPlayer.Volume;
 end;
 
 destructor TSingleSound.Destroy;
@@ -117,6 +127,26 @@ begin
   end;
 end;
 
+function TSingleSound.GetVolume: Single;
+begin
+  FCriticalSection.Enter;
+  try
+    Result := FMediaPlayer.Volume
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
+procedure TSingleSound.SetVolume(const AVolume: Single);
+begin
+  FCriticalSection.Enter;
+  try
+    FMediaPlayer.Volume := AVolume;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
 function TSingleSound.GetDuration: TMediaTime;
 begin
   FCriticalSection.Enter;
@@ -129,7 +159,6 @@ end;
 
 procedure TSingleSound.Play;
 begin
-  FMediaPlayer.Volume := 0.8;
   Self.Play(FLastCurrentTime);
 end;
 
@@ -165,6 +194,27 @@ begin
   try
     FMediaPlayer.Stop;
     FLastCurrentTime := 0;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
+procedure TSingleSound.Mute;
+begin
+  FCriticalSection.Enter;
+  try
+    FLastVolume := FMediaPlayer.Volume;
+    FMediaPlayer.Volume := 0;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
+procedure TSingleSound.Sound;
+begin
+  FCriticalSection.Enter;
+  try
+    FMediaPlayer.Volume := FLastVolume
   finally
     FCriticalSection.Leave;
   end;
