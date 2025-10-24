@@ -65,6 +65,7 @@ type
   strict private
     FItems: TItems;
     FPopupMenuThread: TPopupMenuExtThread;
+    FCallingObject: TObject;
     /// <summary>
     ///   Выставляется в случае закрытия всего приложения
     ///   При выставленном флаге, сворачиваем работу меню
@@ -98,12 +99,21 @@ type
     function FindItem(const AItemName: String): TItem;
 
     procedure Add(const AItem: TItem);
-    procedure Open(const X, Y: Single; const AParentItem: TItem = nil);
+    procedure Open(
+      const ACallingObject: TObject); overload;
+    procedure Open(
+      const X, Y: Single); overload;
+    procedure Open(
+      const X, Y: Single;
+      const ACallingObject: TObject;
+      const AParentItem: TItem = nil); overload;
     procedure Close;
 
     property Items: TItems read FItems;
 
     property Theme: TTheme read FTheme write FTheme;
+
+    property CallingObject: TObject read FCallingObject;
   end;
 
 implementation
@@ -534,7 +544,7 @@ begin
           end);
     end
     else
-      Open(Point.X, Point.Y, ItemOwner);
+      Open(Point.X, Point.Y, FCallingObject, ItemOwner);
   end;
 end;
 
@@ -546,6 +556,7 @@ begin
 
   FItems := TItems.Create;
   FPopupMenuThread := nil;
+  FCallingObject := nil;
 
   FToDoClose := false;
 
@@ -661,7 +672,23 @@ begin
 end;
 
 procedure TPopupMenuExt.Open(
+  const ACallingObject: TObject);
+var
+  Point: TPoint;
+begin
+  GetCurPos(Point);
+  Open(Point.X, Point.Y, ACallingObject);
+end;
+
+procedure TPopupMenuExt.Open(
+  const X, Y: Single);
+begin
+  Open(X, Y, nil);
+end;
+
+procedure TPopupMenuExt.Open(
   const X, Y: Single;
+  const ACallingObject: TObject;
   const AParentItem: TItem = nil);
 
   function _GetMaxTextWidth(const AText: TText; const AItems: TItems): Single;
@@ -709,6 +736,8 @@ var
   AndroidGoBackButtonText: TText;
   {$ENDIF}
 begin
+  FCallingObject := ACallingObject;
+
   if not Assigned(AParentItem) then
   begin
     OpenedForm := FindOpenedForm(nil);
