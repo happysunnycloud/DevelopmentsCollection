@@ -41,6 +41,7 @@ type
     FTag: NativeInt;
     FIsChecked: Boolean;
     FName: String;
+    FVisible: Boolean;
 
     procedure SetParent(const AParent: TItem);
     function GetLevel: Word;
@@ -59,6 +60,7 @@ type
     property Tag: NativeInt read FTag write FTag;
     property IsChecked: Boolean read FIsChecked write FIsChecked;
     property Name: String read FName write FName;
+    property Visible: Boolean read FVisible write FVisible;
   end;
 
   TPopupMenuExt = class(TComponent)
@@ -320,6 +322,9 @@ begin
   begin
     for Item in Self do
     begin
+      if not Item.Visible then
+        Continue;
+
       if not Assigned(Item.Parent) then
         AItems.Add(Item);
     end;
@@ -328,6 +333,9 @@ begin
   begin
     for Item in AParent.Children do
     begin
+      if not Item.Visible then
+        Continue;
+
       AItems.Add(Item);
     end;
   end;
@@ -344,6 +352,7 @@ begin
   FFormOwner := nil;
   FTag := 0;
   FName := '';
+  FVisible := true;
 end;
 
 destructor TItem.Destroy;
