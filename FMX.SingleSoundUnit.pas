@@ -44,6 +44,9 @@ type
 
     property FileName: String read GetFileName write SetFileName;
     property CurrentTime: TMediaTime read GetCurrentTime write SetCurrentTime;
+    // Необходимо иметь ввиду, что TMediaPlayer
+    // округляет значение Volume до десятых долей числа
+    // Таким образом 0.06 превращается в 0
     property Volume: Single read GetVolume write SetVolume;
     property Duration: TMediaTime read GetDuration;
 
