@@ -655,11 +655,11 @@ begin
     raise Exception.Create('There are undestroyed threads');
   end;
 
-  FreeAndNil(FThreadRegistry);
-  FreeAndNil(FCriticalSection);
-
   if Assigned(FOnDestroyFactory) then
     FOnDestroyFactory(Self);
+
+  FreeAndNil(FThreadRegistry);
+  FreeAndNil(FCriticalSection);
 
   inherited;
 end;
