@@ -26,6 +26,7 @@ type
     FCriticalSection: TCriticalSection;
     FMediaPlayer: TMediaPlayer;
     FLastCurrentTime: TMediaTime;
+    FVolume: Single;
     FLastVolume: Single;
 
     procedure SetFileName(const AFileName: String);
@@ -56,7 +57,7 @@ type
     procedure Stop;
 
     procedure Mute;
-    procedure Sound;
+    procedure UnMute;
   end;
 
 implementation
@@ -72,8 +73,9 @@ begin
   FCriticalSection := TCriticalSection.Create;
   FMediaPlayer := TMediaPlayer.Create(nil);
   FLastCurrentTime := 0;
-  FMediaPlayer.Volume := 0.5;
-  FLastVolume := FMediaPlayer.Volume;
+  FVolume := 0.5;
+  FMediaPlayer.Volume := FVolume;
+  FLastVolume := FVolume;
 end;
 
 destructor TSingleSound.Destroy;
@@ -134,7 +136,7 @@ function TSingleSound.GetVolume: Single;
 begin
   FCriticalSection.Enter;
   try
-    Result := FMediaPlayer.Volume
+    Result := FVolume;
   finally
     FCriticalSection.Leave;
   end;
@@ -144,7 +146,8 @@ procedure TSingleSound.SetVolume(const AVolume: Single);
 begin
   FCriticalSection.Enter;
   try
-    FMediaPlayer.Volume := AVolume;
+    FVolume := AVolume;
+    FMediaPlayer.Volume := FVolume;
   finally
     FCriticalSection.Leave;
   end;
@@ -173,8 +176,9 @@ begin
   try
     CurrentTime := ACurrentTime;
 
-    FMediaPlayer.CurrentTime := CurrentTime;
     FMediaPlayer.Play;
+    FMediaPlayer.CurrentTime := CurrentTime;
+    FMediaPlayer.Volume := FVolume;
   finally
     FCriticalSection.Leave;
   end;
@@ -207,17 +211,17 @@ begin
   FCriticalSection.Enter;
   try
     FLastVolume := FMediaPlayer.Volume;
-    FMediaPlayer.Volume := 0;
+    Volume := 0;
   finally
     FCriticalSection.Leave;
   end;
 end;
 
-procedure TSingleSound.Sound;
+procedure TSingleSound.UnMute;
 begin
   FCriticalSection.Enter;
   try
-    FMediaPlayer.Volume := FLastVolume
+    Volume := FLastVolume;
   finally
     FCriticalSection.Leave;
   end;
