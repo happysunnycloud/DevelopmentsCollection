@@ -180,8 +180,8 @@ end;
 class procedure TControlTools.ControlEnumerator(
   const AFmxObject: TFmxObject;
   const AControlEnumeratorCallbackProc: TControlEnumeratorCallbackProc);
-  //asd
-  procedure ScrollBoxControlEnumerator(
+
+  procedure _ScrollBoxControlEnumerator(
     const AControl: TControl);
   var
     __Control: TControl;
@@ -195,10 +195,10 @@ class procedure TControlTools.ControlEnumerator(
       __Control := AControl.Controls[i];
       AControlEnumeratorCallbackProc(__Control);
 
-      ScrollBoxControlEnumerator(__Control);
+      _ScrollBoxControlEnumerator(__Control);
     end;
   end;
-  //asd
+
 var
   _Control: TControl;
   i: Word;
@@ -207,7 +207,7 @@ begin
   // Поэтому его обрабатываем отдельно
   if AFmxObject.ClassInfo = TScrollBox.ClassInfo then
   begin
-    ScrollBoxControlEnumerator(TScrollBox(AFmxObject).Content);
+    _ScrollBoxControlEnumerator(TScrollBox(AFmxObject).Content);
 
     Exit;
   end;
