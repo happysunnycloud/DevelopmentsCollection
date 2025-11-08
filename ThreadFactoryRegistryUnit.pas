@@ -64,7 +64,7 @@ begin
       'Sender is not a TThreadFactory');
   end;
 
-  ThreadFactory := TThreadFactory(Sender);
+  ThreadFactory := Sender as TThreadFactory;
   FreeAndNil(ThreadFactory);
 
 //  TThread.ForceQueue(nil,
