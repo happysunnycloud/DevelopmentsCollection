@@ -65,10 +65,13 @@ type
 
     FExceptionMessage: String;
     FOnException: TExceptionProc;
-
     FThreadName: String;
-
     FIsHolded: Boolean;
+
+    // Выполняется только в случае, если холд FEventHold выставлен
+    FOnBeforeHold: TNotifyEvent;
+    // Выполняется только в случае, если был фактический холд
+    FOnAfterHold: TNotifyEvent;
 
     procedure DoInit(
       const AThreadName: String;
@@ -179,6 +182,9 @@ type
     // Отображает, состояние запроса на Hold
     // Не означает, что поток в настоящий момент вошел в ExecHold
     property IntentionHoldState: Boolean read GetIntentionHoldState;
+
+    property OnBeforeHold: TNotifyEvent read FOnBeforeHold write FOnBeforeHold;
+    property OnAfterHold: TNotifyEvent read FOnAfterHold write FOnAfterHold;
   end;
 
   TThreadExtClass = class of TThreadExt;
@@ -346,6 +352,9 @@ begin
       raise Exception.Create('Execute proc reference is nil');
     end;
   end;
+
+  FOnBeforeHold := nil;
+  FOnAfterHold := nil;
 
   FEventHold := TEvent.Create(nil, true, not Suspended, '', false);
   FIsHolded := false;
@@ -601,9 +610,38 @@ begin
 end;
 
 procedure TThreadExt.ExecHold;
+var
+  EnteredToHold: Boolean;
 begin
+  EnteredToHold := false;
+
   IsHolded := True;
+
+  if FEventHold.WaitFor(1) = wrTimeout then
+  begin
+    EnteredToHold := true;
+    if Assigned(FOnBeforeHold) then
+      Queue(nil,
+        procedure
+        begin
+          FOnBeforeHold(Self);
+        end
+      );
+  end;
+
   FEventHold.WaitFor(INFINITE);
+
+  if EnteredToHold then
+  begin
+    if Assigned(FOnAfterHold) then
+      Queue(nil,
+        procedure
+        begin
+          FOnAfterHold(Self);
+        end
+      );
+  end;
+
   IsHolded := false;
 
   //MountParams;
@@ -810,7 +848,6 @@ begin
     Thread := FThreadRegistry.ThreadByIndex(i);
 
     Thread.Terminate;
-//    Thread.UnHoldThread;
   end;
 end;
 
