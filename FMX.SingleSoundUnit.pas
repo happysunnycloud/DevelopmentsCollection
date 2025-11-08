@@ -90,7 +90,7 @@ begin
     raise Exception.CreateFmt(
       TErrorClass.FileNotExists.ErrorTextFmt, [AFileName]);
 
-  Self.Stop;
+  Stop;
 
   FCriticalSection.Enter;
   try
@@ -165,7 +165,7 @@ end;
 
 procedure TSingleSound.Play;
 begin
-  Self.Play(FLastCurrentTime);
+  Play(FLastCurrentTime);
 end;
 
 procedure TSingleSound.Play(const ACurrentTime: TMediaTime);
@@ -175,7 +175,6 @@ begin
   FCriticalSection.Enter;
   try
     CurrentTime := ACurrentTime;
-
     FMediaPlayer.Play;
     FMediaPlayer.CurrentTime := CurrentTime;
     FMediaPlayer.Volume := FVolume;
@@ -200,6 +199,8 @@ begin
   FCriticalSection.Enter;
   try
     FMediaPlayer.Stop;
+    FMediaPlayer.Clear;
+    FMediaPlayer.CurrentTime := 0;
     FLastCurrentTime := 0;
   finally
     FCriticalSection.Leave;
