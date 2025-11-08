@@ -1,4 +1,4 @@
-﻿{0.0}
+﻿{0.1}
 // Используется в FilePackerUnit
 unit FileToolsUnit;
 
@@ -268,7 +268,7 @@ var
 begin
 //  SetLength(AFileNames, 0);
 
-  IsFound := FindFirst(ARootDir + PATH_SPLITTER + '*.*', faAnyFile, SearchRec) = 0;
+  IsFound := FindFirst(Concat(ARootDir, PATH_SPLITTER, '*.*'), faAnyFile, SearchRec) = 0;
   while IsFound do
   begin
     if (SearchRec.Name <> '.') and
@@ -291,7 +291,7 @@ begin
       else
       if (SearchRec.Attr and faDirectory) = faDirectory then
       begin
-        GetTreeOfFileNames(Concat(ARootDir, SearchRec.Name), AExt, AFileNames);
+        GetTreeOfFileNames(Concat(ARootDir, PATH_SPLITTER, SearchRec.Name), AExt, AFileNames);
       end;
     end;
     IsFound := FindNext(SearchRec) = 0;
