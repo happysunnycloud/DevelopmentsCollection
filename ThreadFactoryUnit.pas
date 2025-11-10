@@ -297,6 +297,10 @@ type
 
 implementation
 
+uses
+    DebugUnit
+  ;
+
 constructor TExceptionMessageThread.Create(
   const AThreadName: String;
   const AExceptionMessage: String;
@@ -469,6 +473,7 @@ end;
 
 destructor TThreadExt.Destroy;
 begin
+  TDebug.ODS('TThreadExt.Destroy -> Name = ' + Self.ThreadName);
 //  FreeAndNil(FParams);
   FreeAndNil(FEventHold);
 

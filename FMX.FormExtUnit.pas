@@ -45,7 +45,7 @@ type
     /// </summary>
     FToDoClose: Boolean;
 
-    procedure OnDestroyedAllFactoryHandler(Sender: TObject);
+    procedure OnDestroyedAllFactoriesHandler(Sender: TObject);
 
     function GetOnCloseQuery: TCloseQueryMethod;
     procedure SetOnCloseQuery(const AOnCloseQuery: TCloseQueryMethod);
@@ -145,7 +145,7 @@ begin
   FThreadFactory.OnAllThreadsAreDestroyedProcRef := (
     procedure
     begin
-      FThreadFactoryRegistry.OnDestroyedAllFactories := OnDestroyedAllFactoryHandler;
+      FThreadFactoryRegistry.OnDestroyedAllFactories := OnDestroyedAllFactoriesHandler;
       FThreadFactoryRegistry.DestroyAllThreadFactories;
     end);
 
@@ -207,12 +207,12 @@ begin
   Result := OnCloseQuery;
 end;
 
-procedure TFormExt.OnDestroyedAllFactoryHandler(Sender: TObject);
+procedure TFormExt.OnDestroyedAllFactoriesHandler(Sender: TObject);
 var
   Form: TFormExt;
 begin
   //asd debug
-  Log.d('TFormExt.OnDestroyedAllFactoryHandler');
+  Log.d('TFormExt.OnDestroyedAllFactoriesHandler');
   //asd debug
   Form := Self;
   TThread.ForceQueue(nil,

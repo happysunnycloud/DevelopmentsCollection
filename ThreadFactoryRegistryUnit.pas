@@ -57,6 +57,11 @@ procedure TThreadFactoryRegistry.OnAllThreadsAreDestroyedHandler(Sender: TObject
 var
   ThreadFactory: TThreadFactory;
 begin
+  if not Assigned(Sender) then
+    raise Exception.
+      Create('TThreadFactoryRegistry.OnAllThreadsAreDestroyedHandler -> ' +
+      'Sender is nil');
+
   if not (Sender is TThreadFactory) then
   begin
     raise Exception.
@@ -95,7 +100,7 @@ begin
     Dec(i);
 
     ThreadFactory := ObjectByIndex(i);
-    // Назначим / переназначим OnAllThreadsAreDestroyedRef, AfterAllThreadsAreDestroyedProc
+    // Назначим / переназначим OnAllThreadsAreDestroyed, AfterAllThreadsAreDestroyedProcRef
     // Возможно он использовался при работе с нитью
     // Переназначаем OnAllThreadsAreDestroyedHandler
     ThreadFactory.OnAllThreadsAreDestroyedProcRef := nil;
