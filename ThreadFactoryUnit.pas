@@ -1,6 +1,5 @@
-﻿{0.3}
-// 220325 Обновленный юнит по работе с нитями, если и переезжать, то на него
-// 191025 Обновление
+﻿{0.4}
+// Юнит по работе с нитями, если и переезжать, то на него
 unit ThreadFactoryUnit;
 
 interface
@@ -23,7 +22,6 @@ type
   TRegProc = reference to procedure (const AThread: TThreadExt);
   TUnRegProc = reference to procedure (const AThread: TThreadExt);
   TExecProc = reference to procedure (const AThread: TThreadExt);
-  TNotifyEventProcRef = reference to procedure;
 
   TRegistringConstructor = reference to
     procedure (
@@ -51,12 +49,6 @@ type
   TThreadExt = class(TThread)
   strict private
     FCriticalSection: TCriticalSection;
-//    // Демонтировать после переделки MelomaniacPlayer,
-//    // Устаревший модуль просто закинуть в проект с MelomaniacPlayer
-//    FParamsCriticalSection: TCriticalSection;
-//    // Демонтировать после переделки MelomaniacPlayer,
-//    // Устаревший модуль просто закинуть в проект с MelomaniacPlayer
-//    FParams: TParamsExt;
 
     FEventHold: TEvent;
     FRegProc: TRegProc;
@@ -85,42 +77,22 @@ type
       const AThreadName: String;
       const AExceptionMessage: String);
 
-    //procedure RaiseMustOverridedException(const AMessage: String);
-
-    //function GetEventHold: TEvent;
-    //function GetParams: TParamsExt;
-
     function GetTerminated: Boolean;
 
     function GetThreadName: String;
     procedure SetThreadName(const AThreadName: String);
-
-    //property EventHold: TEvent read FEventHold;// GetEventHold;
 
     function GetIsHolded: Boolean;
     procedure SetIsHolded(const AIsHolded: Boolean);
 
     function GetIntentionHoldState: Boolean;
   protected
-    //property Params: TParamsExt read GetParams;
-    //procedure MountParams; virtual; deprecated 'Лишнее, используется только в Melomaniac, нужно убрать';
-
     procedure ExecHold;
     procedure Execute; override;
     procedure TryExcept(const AProc: TProc);
 
     property ThreadName: String read GetThreadName write SetThreadName;
   public
-    //    constructor Create(
-    //      const ARegProc: TRegProc;
-    //      const AUnregProc: TUnRegProc;
-    //      const AExecProc: TExecProc); overload;
-    //    constructor Create(
-    //      const AThreadName: String;
-    //      const ARegProc: TRegProc;
-    //      const AUnregProc: TUnRegProc;
-    //      const AExecProc: TExecProc); overload;
-
     /// <summary>
     ///   Создает не именованный поток с исполняемым анонимным методом
     ///   C указанием процедур регистрации и снятия с регистрации
@@ -194,24 +166,13 @@ type
   TThreadFactory = class
   strict private
     FCriticalSection: TCriticalSection;
-
     FThreadRegistry: TThreadRegistry;
-    FAfterAllThreadsAreDestroyedProc: TProc;
-
     FOnDestroyFactory: TNotifyEvent;
     FOnAllThreadsAreDestroyed: TNotifyEvent;
-    FOnAllThreadsAreDestroyedProcRef: TNotifyEventProcRef;
-
-//    function GetAfterAllThreadsAreDestroyedProc: TProc; deprecated 'Use OnAllThreadsAreDestroyed or OnAllThreadsAreDestroyedProRef';
-//    procedure SetAfterAllThreadsAreDestroyedProc(
-//      const AAfterAllThreadsAreDestroyedProc: TProc); deprecated 'Use OnAllThreadsAreDestroyed or OnAllThreadsAreDestroyedProRef';
 
     procedure SetTerminateAllThreads;
-
     procedure CheckThreadZeroCount;
-
     procedure SetOnAllThreadsAreDestroyed(const ANotifyEvent: TNotifyEvent);
-    procedure SetOnAllThreadsAreDestroyedProcRef(const ANotifyEventRef: TNotifyEventProcRef);
   protected
     procedure RegThreadProc(const AThread: TThreadExt);
     procedure UnRegThreadProc(const AThread: TThreadExt);
@@ -272,23 +233,8 @@ type
     property OnDestroyFactory: TNotifyEvent
       write FOnDestroyFactory;
 
-    /// <summary>
-    ///   Вызывается перед AfterAllThreadsAreDestroyedProc
-    /// </summary>
     property OnAllThreadsAreDestroyed: TNotifyEvent
       write SetOnAllThreadsAreDestroyed;
-    /// <summary>
-    ///   Вызывается перед AfterAllThreadsAreDestroyedProc
-    /// </summary>
-    property OnAllThreadsAreDestroyedProcRef: TNotifyEventProcRef
-      write SetOnAllThreadsAreDestroyedProcRef;
-    /// <summary>
-    ///   Вызывается после OnAllThreadsAreDestroyed / OnAllThreadsAreDestroyedRef
-    ///   Выполняется в главном потоке
-    /// </summary>
-//    property AfterAllThreadsAreDestroyedProc: TProc
-//      read GetAfterAllThreadsAreDestroyedProc
-//      write SetAfterAllThreadsAreDestroyedProc;
 
     procedure TerminateAllThreads;
 
@@ -296,10 +242,6 @@ type
   end;
 
 implementation
-
-uses
-    DebugUnit
-  ;
 
 constructor TExceptionMessageThread.Create(
   const AThreadName: String;
@@ -339,7 +281,6 @@ procedure TThreadExt.DoInit(
   const AFreeOnTerminate: Boolean = true);
 begin
   FCriticalSection := TCriticalSection.Create;
-  //FParamsCriticalSection := TCriticalSection.Create;
 
   ThreadName := 'Nameless thread';
   if AThreadName.Length > 0 then
@@ -365,7 +306,6 @@ begin
 
   FRegProc := ARegProc;
   FUnregProc := AUnregProc;
-  //FParams := TParamsExt.Create;
 
   FreeOnTerminate := AFreeOnTerminate;
 
@@ -377,35 +317,6 @@ begin
 
   inherited Create(ASuspended);
 end;
-
-//constructor TThreadExt.Create(
-//  const ARegProc: TRegProc;
-//  const AUnregProc: TUnRegProc;
-//  const AExecProc: TExecProc);
-//begin
-//  DoInit(
-//    '',
-//    AExecProc,
-//    ARegProc,
-//    AUnregProc,
-//    false,
-//    true);
-//end;
-//
-//constructor TThreadExt.Create(
-//  const AThreadName: String;
-//  const ARegProc: TRegProc;
-//  const AUnregProc: TUnRegProc;
-//  const AExecProc: TExecProc);
-//begin
-//  DoInit(
-//    AThreadName,
-//    AExecProc,
-//    ARegProc,
-//    AUnregProc,
-//    false,
-//    true);
-//end;
 
 constructor TThreadExt.Create(
   const AExecProc: TExecProc;
@@ -473,12 +384,8 @@ end;
 
 destructor TThreadExt.Destroy;
 begin
-  TDebug.ODS('TThreadExt.Destroy -> Name = ' + Self.ThreadName);
-//  FreeAndNil(FParams);
   FreeAndNil(FEventHold);
-
   FreeAndNil(FCriticalSection);
-//  FreeAndNil(FParamsCriticalSection);
 
   if Assigned(FUnRegProc) then
     FUnregProc(Self);
@@ -503,21 +410,6 @@ procedure TThreadExt.OnExceptionInnerHandler(
 begin
   raise Exception.Create(AThreadName + ' -> ' + AExceptionMessage);
 end;
-
-//procedure TThreadExt.RaiseMustOverridedException(const AMessage: String);
-//begin
-//  raise Exception.CreateFmt('%s: %s', [AMessage, 'The method must be overrided']);
-//end;
-
-//function TThreadExt.GetParams: TParamsExt;
-//begin
-//  FParamsCriticalSection.Enter;
-//  try
-//    Result := FParams;
-//  finally
-//    FParamsCriticalSection.Leave;
-//  end;
-//end;
 
 function TThreadExt.GetTerminated: Boolean;
 begin
@@ -648,8 +540,6 @@ begin
   end;
 
   IsHolded := false;
-
-  //MountParams;
 end;
 
 procedure TThreadExt.TryExcept(const AProc: TProc);
@@ -674,21 +564,12 @@ begin
     end);
 end;
 
-//procedure TThreadExt.MountParams;
-//const
-//  METHOD = 'TThreadExt.MountParams';
-//begin
-//  RaiseMustOverridedException(METHOD);
-//end;
-
 constructor TThreadFactory.Create;
 begin
   FCriticalSection := TCriticalSection.Create;
   FThreadRegistry := TThreadRegistry.Create;
-  FAfterAllThreadsAreDestroyedProc := nil;
   FOnDestroyFactory := nil;
   FOnAllThreadsAreDestroyed := nil;
-  FOnAllThreadsAreDestroyedProcRef := nil;
 end;
 
 destructor TThreadFactory.Destroy;
@@ -778,66 +659,21 @@ begin
   ARegistringConstructor(RegThreadProc, UnRegThreadProc);
 end;
 
-//function TThreadFactory.GetAfterAllThreadsAreDestroyedProc: TProc;
-//begin
-//  FCriticalSection.Enter;
-//  try
-//    Result := FAfterAllThreadsAreDestroyedProc;
-//  finally
-//    FCriticalSection.Leave;
-//  end;
-//end;
-//
-//procedure TThreadFactory.SetAfterAllThreadsAreDestroyedProc(
-//  const AAfterAllThreadsAreDestroyedProc: TProc);
-//begin
-//  FCriticalSection.Enter;
-//  try
-//    FAfterAllThreadsAreDestroyedProc := AAfterAllThreadsAreDestroyedProc;
-//  finally
-//    FCriticalSection.Leave;
-//  end;
-//end;
-
 procedure TThreadFactory.CheckThreadZeroCount;
 var
-//  Proc: TProc;
   Count: Word;
 begin
   Count := FThreadRegistry.Count;
   if Count > 0 then
     Exit;
 
-//  Proc := AfterAllThreadsAreDestroyedProc;
-
   if Assigned(FOnAllThreadsAreDestroyed) then
-    FOnAllThreadsAreDestroyed(Self)
-  else
-  if Assigned(FOnAllThreadsAreDestroyedProcRef) then
-    FOnAllThreadsAreDestroyedProcRef;
-
-//  if Assigned(Proc) then
-//  begin
-//    AfterAllThreadsAreDestroyedProc := nil;
-//
-//    TThread.ForceQueue(nil,
-//      procedure
-//      begin
-//        Proc;
-//      end);
-//  end;
+    FOnAllThreadsAreDestroyed(Self);
 end;
 
 procedure TThreadFactory.SetOnAllThreadsAreDestroyed(const ANotifyEvent: TNotifyEvent);
 begin
-  FOnAllThreadsAreDestroyedProcRef := nil;
   FOnAllThreadsAreDestroyed := ANotifyEvent;
-end;
-
-procedure TThreadFactory.SetOnAllThreadsAreDestroyedProcRef(const ANotifyEventRef: TNotifyEventProcRef);
-begin
-  FOnAllThreadsAreDestroyed := nil;
-  FOnAllThreadsAreDestroyedProcRef := ANotifyEventRef;
 end;
 
 procedure TThreadFactory.SetTerminateAllThreads;
