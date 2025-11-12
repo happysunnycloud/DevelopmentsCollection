@@ -77,6 +77,8 @@ type
       const AThreadName: String;
       const AExceptionMessage: String);
 
+    procedure OnTerminateHandler(Sender: TObject);
+
     function GetTerminated: Boolean;
 
     function GetThreadName: String;
@@ -169,6 +171,7 @@ type
     FThreadRegistry: TThreadRegistry;
     FOnDestroyFactory: TNotifyEvent;
     FOnAllThreadsAreDestroyed: TNotifyEvent;
+    FThreadFactoryName: String;
 
     procedure SetTerminateAllThreads;
     procedure CheckThreadZeroCount;
@@ -236,12 +239,18 @@ type
     property OnAllThreadsAreDestroyed: TNotifyEvent
       write SetOnAllThreadsAreDestroyed;
 
+    property ThreadFactoryName: String read  FThreadFactoryName write FThreadFactoryName;
+
     procedure TerminateAllThreads;
 
     function GetThreadByName(const AThreadName: String): TThreadExt;
   end;
 
 implementation
+
+uses
+    FMX.Types
+  ;
 
 constructor TExceptionMessageThread.Create(
   const AThreadName: String;
@@ -282,21 +291,23 @@ procedure TThreadExt.DoInit(
 begin
   FCriticalSection := TCriticalSection.Create;
 
+  if not (Self is TThreadExtClass) then
+    raise Exception.Create('TThreadExt.DoInit -> Self is not TThreadExtClass');
+
+  if not Assigned(AExecProc) then
+    raise Exception.Create('TThreadExt.DoInit -> AExecProc is nil');
+
+  if not Assigned(ARegProc) then
+    raise Exception.Create('TThreadExt.DoInit -> ARegProc is nil');
+
+  if not Assigned(AUnRegProc) then
+    raise Exception.Create('TThreadExt.DoInit -> AUnRegProc is nil');
+
   ThreadName := 'Nameless thread';
   if AThreadName.Length > 0 then
     ThreadName := AThreadName;
 
-  if Assigned(AExecProc) then
-  begin
-    FExecProc := AExecProc;
-  end
-  else
-  begin
-    if not (Self is TThreadExtClass) then
-    begin
-      raise Exception.Create('Execute proc reference is nil');
-    end;
-  end;
+  FExecProc := AExecProc;
 
   FOnBeforeHold := nil;
   FOnAfterHold := nil;
@@ -307,13 +318,14 @@ begin
   FRegProc := ARegProc;
   FUnregProc := AUnregProc;
 
+  OnTerminate := OnTerminateHandler;
+
   FreeOnTerminate := AFreeOnTerminate;
 
   FExceptionMessage := '';
   FOnException := OnExceptionInnerHandler;
 
-  if Assigned(FRegProc) then
-    FRegProc(Self);
+  FRegProc(Self);
 
   inherited Create(ASuspended);
 end;
@@ -387,12 +399,11 @@ begin
   FreeAndNil(FEventHold);
   FreeAndNil(FCriticalSection);
 
-  if Assigned(FUnRegProc) then
-    FUnregProc(Self);
+//  FUnregProc(Self);
 
-  if Assigned(FOnException) then
+  if FExceptionMessage.Length > 0 then
   begin
-    if FExceptionMessage.Length > 0 then
+    if Assigned(FOnException) then
     begin
       TExceptionMessageThread.Create(
         FThreadName,
@@ -409,6 +420,15 @@ procedure TThreadExt.OnExceptionInnerHandler(
   const AExceptionMessage: String);
 begin
   raise Exception.Create(AThreadName + ' -> ' + AExceptionMessage);
+end;
+
+procedure TThreadExt.OnTerminateHandler(Sender: TObject);
+begin
+  // Выполняем синхронно в главном потоке, иначе есть вероятность
+  // отмены регистрации сразу нескольких потоков одновременно
+  // В этой связи счетчик тредов в регистре тредов может выдать 0
+  // и уйти в событие OnAllThreadsAreDestroyedHandler несколько раз
+  FUnregProc(Self);
 end;
 
 function TThreadExt.GetTerminated: Boolean;
@@ -566,24 +586,34 @@ end;
 
 constructor TThreadFactory.Create;
 begin
+  Log.d('TThreadFactory.Create');
+
   FCriticalSection := TCriticalSection.Create;
   FThreadRegistry := TThreadRegistry.Create;
   FOnDestroyFactory := nil;
   FOnAllThreadsAreDestroyed := nil;
+  FThreadFactoryName := 'NamelessThreadFactory';
 end;
 
 destructor TThreadFactory.Destroy;
+var
+  ThreadFactory: TThreadFactory;
 begin
   if FThreadRegistry.Count > 0 then
   begin
     raise Exception.Create('There are undestroyed threads');
   end;
 
-  if Assigned(FOnDestroyFactory) then
-    FOnDestroyFactory(Self);
-
   FreeAndNil(FThreadRegistry);
   FreeAndNil(FCriticalSection);
+
+  ThreadFactory := Self;
+  if Assigned(FOnDestroyFactory) then
+    TThread.ForceQueue(nil,
+      procedure
+      begin
+        FOnDestroyFactory(ThreadFactory);
+      end);
 
   inherited;
 end;
@@ -661,14 +691,21 @@ end;
 
 procedure TThreadFactory.CheckThreadZeroCount;
 var
-  Count: Word;
+  ThreadFactory: TThreadFactory;
 begin
-  Count := FThreadRegistry.Count;
-  if Count > 0 then
+  if FThreadRegistry.Count > 0 then
     Exit;
 
+  ThreadFactory := Self;
+
+  Log.d('TThreadFactory.CheckThreadZeroCount -> ' + ThreadFactory.ThreadFactoryName);
+
   if Assigned(FOnAllThreadsAreDestroyed) then
-    FOnAllThreadsAreDestroyed(Self);
+    TThread.ForceQueue(nil,
+      procedure
+      begin
+        FOnAllThreadsAreDestroyed(ThreadFactory);
+      end);
 end;
 
 procedure TThreadFactory.SetOnAllThreadsAreDestroyed(const ANotifyEvent: TNotifyEvent);
@@ -688,15 +725,23 @@ begin
 
     Thread := FThreadRegistry.ThreadByIndex(i);
 
+    Log.d('TThreadFactory.SetTerminateAllThreads -> Thread.ThreadName = ' + Thread.ThreadName + ' ' +
+    'Self.ThreadFactoryName = ' + Self.ThreadFactoryName);
+
     Thread.Terminate;
   end;
 end;
 
 procedure TThreadFactory.TerminateAllThreads;
 begin
-  SetTerminateAllThreads;
+  if FThreadRegistry.Count = 0 then
+  begin
+    CheckThreadZeroCount;
 
-  CheckThreadZeroCount;
+    Exit;
+  end;
+
+  SetTerminateAllThreads;
 end;
 
 function TThreadFactory.GetThreadByName(const AThreadName: String): TThreadExt;

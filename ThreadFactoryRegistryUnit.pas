@@ -31,7 +31,8 @@ implementation
 
 uses
   System.SysUtils,
-  System.Generics.Collections;
+  System.Generics.Collections,
+  FMX.Types;
 
 function TThreadFactoryRegistry.CreateThreadFactory: TThreadFactory;
 begin
@@ -46,9 +47,17 @@ begin
 end;
 
 procedure TThreadFactoryRegistry.OnDestroyFactoryHandler(Sender: TObject);
+var
+  ThreadFactory: TThreadFactory;
 begin
-  if Assigned(Self) then
-    UnRegisterObject(TThreadFactory(Sender));
+  if not Assigned(Sender) then
+    raise Exception.
+      Create('TThreadFactoryRegistry.OnDestroyFactoryHandler -> ' +
+      'Sender is nil');
+
+  ThreadFactory := Sender as TThreadFactory;
+
+  UnRegisterObject(ThreadFactory);
 
   CheckThreadFactoryZeroCount;
 end;
@@ -70,14 +79,15 @@ begin
   end;
 
   ThreadFactory := Sender as TThreadFactory;
-  FreeAndNil(ThreadFactory);
 
-//  TThread.ForceQueue(nil,
-//    procedure
-//    begin
-//      FreeAndNil(ThreadFactory);
-//    end
-//  );
+  Log.d('TThreadFactoryRegistry.OnAllThreadsAreDestroyedHandler -> ' + ThreadFactory.ThreadFactoryName);
+
+  TThread.ForceQueue(nil,
+    procedure
+    begin
+      FreeAndNil(ThreadFactory);
+    end
+  );
 end;
 
 procedure TThreadFactoryRegistry.DestroyAllThreadFactories;
@@ -86,7 +96,7 @@ var
   i: Integer;
   ThreadFactory: TThreadFactory;
 begin
-  FactoryCount := Self.Count;
+  FactoryCount := Count;
   if FactoryCount = 0 then
   begin
     CheckThreadFactoryZeroCount;
@@ -111,11 +121,14 @@ end;
 
 procedure TThreadFactoryRegistry.CheckThreadFactoryZeroCount;
 begin
-  if Self.Count > 0 then
+  if Count > 0 then
     Exit;
 
   if Assigned(FOnDestroyedAllFactories) then
+  begin
+    Log.d('TThreadFactoryRegistry.CheckThreadFactoryZeroCount -> FOnDestroyedAllFactories ');
     FOnDestroyedAllFactories(Self);
+  end;
 end;
 
 end.
