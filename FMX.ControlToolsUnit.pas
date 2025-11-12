@@ -39,13 +39,25 @@ type
     StyleLookup     = 'StyleLookup';
   end;
 
-  TControlEnumeratorCallbackProc = reference to procedure (const AControl: TControl);
+  TControlEnumeratorCallbackProc = reference to
+    procedure (const AControl: TControl);
+  TComponentEnumeratorCallbackProc = reference to
+    procedure (const AComponent: TComponent);
+  TBreakingComponentEnumeratorCallbackProc = reference to
+    procedure (const AComponent: TComponent; var ABreak: Boolean);
 
   TControlTools = class
   public
     class procedure ControlEnumerator(
       const AFmxObject: TFmxObject;
       const AControlEnumeratorCallbackProc: TControlEnumeratorCallbackProc);
+
+    class procedure ComponentEnumerator(
+      const AFmxObject: TFmxObject;
+      const AComponentEnumeratorCallbackProc: TComponentEnumeratorCallbackProc); overload;
+    class procedure ComponentEnumerator(
+      const AFmxObject: TFmxObject;
+      const ABreakingComponentEnumeratorCallbackProc: TBreakingComponentEnumeratorCallbackProc); overload;
 
     class function HasProperty(
       const AObj: TObject;
@@ -223,8 +235,76 @@ begin
   begin
     Dec(i);
 
-    ControlEnumerator(TFmxObject(AFmxObject.Components[i]), AControlEnumeratorCallbackProc);
+    ControlEnumerator(
+      TFmxObject(AFmxObject.Components[i]),
+      AControlEnumeratorCallbackProc);
   end;
+end;
+
+class procedure TControlTools.ComponentEnumerator(
+  const AFmxObject: TFmxObject;
+  const AComponentEnumeratorCallbackProc: TComponentEnumeratorCallbackProc);
+var
+  _Component: TComponent;
+  i: Word;
+begin
+  if AFmxObject is TComponent then
+  begin
+    _Component := TControl(AFmxObject);
+    AComponentEnumeratorCallbackProc(_Component);
+  end;
+
+  i := AFmxObject.ComponentCount;
+  while i > 0 do
+  begin
+    Dec(i);
+
+    ComponentEnumerator(
+      TFmxObject(AFmxObject.Components[i]),
+      AComponentEnumeratorCallbackProc);
+  end;
+end;
+
+class procedure TControlTools.ComponentEnumerator(
+  const AFmxObject: TFmxObject;
+  const ABreakingComponentEnumeratorCallbackProc: TBreakingComponentEnumeratorCallbackProc);
+
+  procedure _ComponentEnumerator(
+    const AObject: TFmxObject;
+    const ACallbackProc: TBreakingComponentEnumeratorCallbackProc;
+    var ABreak: Boolean);
+  var
+    _Component: TComponent;
+    i: Word;
+  begin
+    if AObject is TComponent then
+    begin
+      _Component := TControl(AObject);
+      ACallbackProc(_Component, ABreak);
+      if ABreak then
+        Exit;
+    end;
+
+    i := AObject.ComponentCount;
+    while (i > 0) and not ABreak do
+    begin
+      Dec(i);
+
+      _ComponentEnumerator(
+        TFmxObject(AObject.Components[i]),
+        ACallbackProc,
+        ABreak);
+    end;
+  end;
+
+var
+  _Break: Boolean;
+begin
+  _Break := false;
+  _ComponentEnumerator(
+    AFmxObject,
+    ABreakingComponentEnumeratorCallbackProc,
+    _Break);
 end;
 
 class function TControlTools.GetPropertyAsString(
