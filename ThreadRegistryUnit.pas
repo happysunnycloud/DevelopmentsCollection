@@ -109,7 +109,6 @@ begin
 
       ACallbackProc(ThreadList[i]);
     end;
-
   finally
     FThreadList.UnlockList;
   end;
