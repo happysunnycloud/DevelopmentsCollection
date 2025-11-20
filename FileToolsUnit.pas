@@ -18,10 +18,22 @@ const
   {$ENDIF}
 type
   TSearchRecList = TList<TSearchRec>;
-  TCopyFileResult = (crOk = 0, crFileNotExists = 1, crCopyError = 2);
+  TCopyFileResult = (
+    crOk = 0,
+    crFileNotExists = 1,
+    crCopyError = 2,
+    crDestFileNotDeleted = 3,
+    crSourceFileNotDeleted = 4);
+  TCopyFileAction = (caNothing = 0, caRename = 1, caReplace = 2);
   TFileNames = array of String;
 
   TFileTools = class
+  strict private
+    class function CommonCopyFile(
+      const AFileNameFrom: String;
+      const AFileNameTo: String): TCopyFileResult;
+
+    class function GetNewFileName(const APath: String): String;
   public
     class procedure GetFileNameListByDir(
       const ADir: String;
@@ -46,8 +58,14 @@ type
       const AExt: String;
       var AFileNames: TFileNames);
 
-    class function CopyFile(const AFileNameFrom: String; const AFileNameTo: String): TCopyFileResult;
-
+    class function CopyFile(
+      const AFileNameFrom: String;
+      const AFileNameTo: String;
+      const ADoIfExists: TCopyFileAction = caNothing): TCopyFileResult;
+    class function MoveFile(
+      const AFileNameFrom: String;
+      const AFileNameTo: String;
+      const ADoIfExists: TCopyFileAction = caNothing): TCopyFileResult;
   end;
 
   TFileNamesHelper = record helper for TFileNames
@@ -221,7 +239,58 @@ begin
   System.SysUtils.FindClose(sRec);
 end;
 
-class function TFileTools.CopyFile(const AFileNameFrom: String; const AFileNameTo: String): TCopyFileResult;
+class function TFileTools.GetNewFileName(const APath: String): String;
+
+  function _DeleteBrackets(const AFileBody: String): String;
+  var
+    i : Word;
+    sClearedFileName: String;
+  begin
+    sClearedFileName := AFileBody;
+    if AFileBody[Length(AFileBody)] = ')' then
+    begin
+      i := Length(AFileBody);
+      while (i > 0) and (AFileBody[i + 1] <> '(') do
+      begin
+        Dec(i);
+      end;
+      sClearedFileName := Copy(AFileBody, 1, i);
+      if sClearedFileName = '' then
+        sClearedFileName := AFileBody;
+    end;
+
+    Result := sClearedFileName;
+  end;
+
+var
+  i:            Word;
+  sNewFileName: String;
+  sFileExt:     String;
+  sFileBody:    String;
+begin
+  Result        := APath;
+
+  sFileExt      := ExtractFileExt(APath);
+  sFileBody     := _DeleteBrackets(StringReplace(APath, sFileExt, '', [rfReplaceAll, rfIgnoreCase]));
+  sNewFileName  := sFileBody + sFileExt;
+
+  i := 1;
+  while FileExists(sNewFileName) do
+  begin
+    sNewFileName := sFileBody + '(' + IntToStr(i) + ')' + sFileExt;
+
+    Inc(i);
+
+    if i >= 255 then
+      Exit;
+  end;
+
+  Result := sNewFileName;
+end;
+
+class function TFileTools.CommonCopyFile(
+  const AFileNameFrom: String;
+  const AFileNameTo: String): TCopyFileResult;
 var
   FileStreamFrom: TFileStream;
   FileStreamTo: TFileStream;
@@ -255,6 +324,58 @@ begin
     if Assigned(FileStreamTo) then
       FreeAndNil(FileStreamTo);
   end;
+end;
+
+class function TFileTools.CopyFile(
+  const AFileNameFrom: String;
+  const AFileNameTo: String;
+  const ADoIfExists: TCopyFileAction = caNothing): TCopyFileResult;
+var
+  FileNameTo: String;
+begin
+  Result := crOk;
+  FileNameTo := AFileNameTo;
+
+  if FileExists(AFileNameTo) then
+  begin
+    case ADoIfExists of
+      caNothing:
+      begin
+        Exit;
+      end;
+      caReplace:
+      begin
+        if not DeleteFile(FileNameTo) then
+        begin
+          Result := crDestFileNotDeleted;
+
+          Exit;
+        end;
+      end;
+      caRename:
+      begin
+        FileNameTo := GetNewFileName(AFileNameTo);
+      end;
+    end
+  end;
+
+  CommonCopyFile(AFileNameFrom, FileNameTo);
+end;
+
+class function TFileTools.MoveFile(
+  const AFileNameFrom: String;
+  const AFileNameTo: String;
+  const ADoIfExists: TCopyFileAction = caNothing): TCopyFileResult;
+var
+  CopyFileResult: TCopyFileResult;
+begin
+  Result := crOk;
+  CopyFileResult := CopyFile(AFileNameFrom, AFileNameTo, ADoIfExists);
+  if CopyFileResult = crOk then
+    if not DeleteFile(AFileNameFrom) then
+      Result := crSourceFileNotDeleted
+  else
+    Result := CopyFileResult;
 end;
 
 class procedure TFileTools.GetTreeOfFileNames(
