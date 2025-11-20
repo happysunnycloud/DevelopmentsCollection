@@ -65,6 +65,8 @@ type
     // Выполняется только в случае, если был фактический холд
     FOnAfterHold: TNotifyEvent;
 
+    FOnTerminateExternalHandler: TNotifyEvent;
+
     procedure DoInit(
       const AThreadName: String;
       const AExecProc: TExecProc;
@@ -77,7 +79,7 @@ type
       const AThreadName: String;
       const AExceptionMessage: String);
 
-    procedure OnTerminateHandler(Sender: TObject);
+    procedure OnTerminateInternalHandler(Sender: TObject);
 
     function GetTerminated: Boolean;
 
@@ -88,6 +90,9 @@ type
     procedure SetIsHolded(const AIsHolded: Boolean);
 
     function GetIntentionHoldState: Boolean;
+
+    procedure SetOnTerminate(const AOnTerminate: TNotifyEvent);
+    function GetOnTerminate: TNotifyEvent;
   protected
     procedure ExecHold;
     procedure Execute; override;
@@ -151,6 +156,8 @@ type
     property ExceptionMessage: String read FExceptionMessage;
     property Terminated: Boolean read GetTerminated;
 
+    property OnTerminate: TNotifyEvent read GetOnTerminate write SetOnTerminate;
+
     // Отображает, когда поток фактически вошел в ExecHold
     property IsHolded: Boolean read GetIsHolded write SetIsHolded;
     // Отображает, состояние запроса на Hold
@@ -189,7 +196,15 @@ type
     /// </summary>
     function CreateThread(
       const AExecProc: TExecProc;
-      const ASuspended: Boolean = false): TThreadExt;
+      const ASuspended: Boolean = false): TThreadExt; overload;
+    /// <summary>
+    ///   Создает именованый поток с исполняемым анонимным методом
+    ///   FreeOnTerminate = false
+    /// </summary>
+    function CreateThread(
+      const AThreadName: String;
+      const AExecProc: TExecProc;
+      const ASuspended: Boolean = false): TThreadExt; overload;
     /// <summary>
     ///   Создает поток с исполняемым анонимным методом
     ///   FreeOnTerminate = true
@@ -311,6 +326,7 @@ begin
 
   FOnBeforeHold := nil;
   FOnAfterHold := nil;
+  FOnTerminateExternalHandler := nil;
 
   FEventHold := TEvent.Create(nil, true, not Suspended, '', false);
   FIsHolded := false;
@@ -318,7 +334,7 @@ begin
   FRegProc := ARegProc;
   FUnregProc := AUnregProc;
 
-  OnTerminate := OnTerminateHandler;
+  inherited OnTerminate := OnTerminateInternalHandler;
 
   FreeOnTerminate := AFreeOnTerminate;
 
@@ -422,13 +438,16 @@ begin
   raise Exception.Create(AThreadName + ' -> ' + AExceptionMessage);
 end;
 
-procedure TThreadExt.OnTerminateHandler(Sender: TObject);
+procedure TThreadExt.OnTerminateInternalHandler(Sender: TObject);
 begin
   // Выполняем синхронно в главном потоке, иначе есть вероятность
   // отмены регистрации сразу нескольких потоков одновременно
   // В этой связи счетчик тредов в регистре тредов может выдать 0
   // и уйти в событие OnAllThreadsAreDestroyedHandler несколько раз
   FUnregProc(Self);
+
+  if Assigned(FOnTerminateExternalHandler) then
+    FOnTerminateExternalHandler(Self);
 end;
 
 function TThreadExt.GetTerminated: Boolean;
@@ -524,6 +543,26 @@ begin
   end;
 
   UnHoldThread;
+end;
+
+procedure TThreadExt.SetOnTerminate(const AOnTerminate: TNotifyEvent);
+begin
+  FCriticalSection.Enter;
+  try
+    FOnTerminateExternalHandler := AOnTerminate;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
+function TThreadExt.GetOnTerminate: TNotifyEvent;
+begin
+  FCriticalSection.Enter;
+  try
+    Result := FOnTerminateExternalHandler;
+  finally
+    FCriticalSection.Leave;
+  end;
 end;
 
 procedure TThreadExt.ExecHold;
@@ -636,6 +675,15 @@ function TThreadFactory.CreateThread(
 begin
   Result := TThreadExt.
     Create(AExecProc, RegThreadProc, UnRegThreadProc, ASuspended, false);
+end;
+
+function TThreadFactory.CreateThread(
+  const AThreadName: String;
+  const AExecProc: TExecProc;
+  const ASuspended: Boolean = false): TThreadExt;
+begin
+  Result := TThreadExt.
+    Create(AThreadName, AExecProc, RegThreadProc, UnRegThreadProc, ASuspended, false);
 end;
 
 function TThreadFactory.CreateFreeOnTerminateThread(
