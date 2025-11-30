@@ -1,0 +1,68 @@
+object Form1: TForm1
+  Left = 0
+  Top = 0
+  Caption = 'Form1'
+  ClientHeight = 513
+  ClientWidth = 828
+  Fill.Color = claLightsteelblue
+  Fill.Kind = Solid
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  DesignerMasterStyle = 0
+  object ScrollBox: TScrollBox
+    Position.X = 4.000000000000000000
+    Position.Y = 4.000000000000000000
+    Size.Width = 281.000000000000000000
+    Size.Height = 427.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 1
+    Viewport.Width = 281.000000000000000000
+    Viewport.Height = 427.000000000000000000
+  end
+  object MainMenu1: TMainMenu
+    Left = 20
+    Top = 16
+    object DoPackMenuItem: TMenuItem
+      Text = 'Do pack'
+      OnClick = DoPackMenuItemClick
+    end
+    object OpenMenuItem: TMenuItem
+      Locked = True
+      Text = 'Open pack'
+      OnClick = OpenMenuItemClick
+    end
+  end
+  object Layout1: TLayout
+    Position.X = 342.000000000000000000
+    Position.Y = 6.000000000000000000
+    Size.Width = 420.000000000000000000
+    Size.Height = 307.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 3
+    object Rectangle1: TRectangle
+      Align = Contents
+      Size.Width = 420.000000000000000000
+      Size.Height = 307.000000000000000000
+      Size.PlatformDefault = False
+    end
+    object Image: TImage
+      MultiResBitmap = <
+        item
+        end>
+      Align = Contents
+      Size.Width = 420.000000000000000000
+      Size.Height = 307.000000000000000000
+      Size.PlatformDefault = False
+    end
+  end
+  object Button1: TButton
+    Position.X = 740.000000000000000000
+    Position.Y = 448.000000000000000000
+    TabOrder = 4
+    Text = 'Extract'
+    OnClick = Button1Click
+  end
+end
