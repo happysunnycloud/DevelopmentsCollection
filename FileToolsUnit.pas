@@ -56,7 +56,12 @@ type
     class procedure GetTreeOfFileNames(
       const ARootDir: String;
       const AExt: String;
-      var AFileNames: TFileNames);
+      var AFileNames: TFileNames); overload;
+    class procedure GetTreeOfFileNames(
+      const ARootDir: String;
+      const AExt: array of String;
+      var AFileNames: TFileNames); overload;
+
 
     class function CopyFile(
       const AFileNameFrom: String;
@@ -419,5 +424,62 @@ begin
   end;
   System.SysUtils.FindClose(SearchRec);
 end;
+
+class procedure TFileTools.GetTreeOfFileNames(
+  const ARootDir: String;
+  const AExt: array of String;
+  var AFileNames: TFileNames);
+
+  function _MustAdd(
+    const AExtArr: array of String;
+    const AFileName: String): Boolean;
+  var
+    i: Integer;
+  begin
+    Result := false;
+    for i := 0 to Pred(Length(AExtArr)) do
+    begin
+      if ExtractFileExt(AFileName) = '.' + AExtArr[i] then
+        Exit(true);
+    end;
+  end;
+
+var
+  SearchRec: System.SysUtils.TSearchRec;
+  IsFound: Boolean;
+  MustAdd: Boolean;
+  l: Integer;
+begin
+  IsFound := FindFirst(Concat(ARootDir, PATH_SPLITTER, '*.*'), faAnyFile, SearchRec) = 0;
+  while IsFound do
+  begin
+    if (SearchRec.Name <> '.') and
+       (SearchRec.Name <> '..')
+    then
+    begin
+      if (SearchRec.Attr and faDirectory) <> faDirectory then
+      begin
+        MustAdd := false;
+        l := Length(AExt);
+        if l = 0 then
+          MustAdd := true
+        else
+        if l > 0 then
+          MustAdd := _MustAdd(AExt, SearchRec.Name);
+
+        if MustAdd then
+          AFileNames.Add(Concat(ARootDir, PATH_SPLITTER, SearchRec.Name))
+      end
+      else
+      if (SearchRec.Attr and faDirectory) = faDirectory then
+      begin
+        GetTreeOfFileNames(Concat(ARootDir, PATH_SPLITTER, SearchRec.Name), AExt, AFileNames);
+      end;
+    end;
+    IsFound := FindNext(SearchRec) = 0;
+  end;
+  System.SysUtils.FindClose(SearchRec);
+end;
+
 
 end.
