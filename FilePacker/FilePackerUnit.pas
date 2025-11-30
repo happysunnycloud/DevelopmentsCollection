@@ -30,7 +30,8 @@ type
     procedure DoPack(
       const AVersion: String;
       const ARootDir: String;
-      const AContentDir: String);
+      const AContentDir: String;
+      const AExt: String);
 
     class procedure CheckPosition(
       const AFileStream: TFileStream;
@@ -100,6 +101,7 @@ type
       const AVersion: String;
       const ARootDir: String;
       const AContentDir: String;
+      const AExt: String;
       const APackedFileName: String);
 
     procedure ExtractToMemoryStream(
@@ -300,6 +302,7 @@ class procedure TFilePacker.Pack(
   const AVersion: String;
   const ARootDir: String;
   const AContentDir: String;
+  const AExt: String;
   const APackedFileName: String);
 var
   FilePacker: TFilePacker;
@@ -312,7 +315,7 @@ begin
 
     FilePacker := TFilePacker.Create(APackedFileName, Mode);
     try
-      FilePacker.DoPack(AVersion, ARootDir, AContentDir);
+      FilePacker.DoPack(AVersion, ARootDir, AContentDir, AExt);
     finally
       FreeAndNil(FilePacker);
     end;
@@ -345,7 +348,8 @@ end;
 procedure TFilePacker.DoPack(
   const AVersion: String;
   const ARootDir: String;
-  const AContentDir: String);
+  const AContentDir: String;
+  const AExt: String);
 var
   Version: String absolute AVersion;
   FileNames: TFileNames;
@@ -360,7 +364,7 @@ begin
   RootDir := ARootDir;
   if AContentDir.Length > 0 then
     RootDir := RootDir + INNER_SPLITTER + AContentDir;
-  TFileTools.GetFileNames(RootDir, '', 'png', FileNames);
+  TFileTools.GetFileNames(RootDir, '', AExt, FileNames);
 //  TFileTools.GetFileNames(ARootDir, AContentDir, 'png', FileNames);
 
   DestFileStream := PackFileStream;
