@@ -33,7 +33,12 @@ type
       const AInParams: TParamsExt;
       const AOutParams: TParamsExt): TDBAResultCode;
 
-    class procedure Init(const ADBFileName: String; const ATemplatesDir: String);
+    class procedure InitByPath(
+      const ADBFileName: String;
+      const ATemplatesPath: String);
+    class procedure InitByPack(
+      const ADBFileName: String;
+      const ATemplatesPath: String);
     class procedure UnInit;
   end;
 
@@ -146,11 +151,22 @@ begin
   end;
 end;
 
-class procedure TDBAccessClass.Init(const ADBFileName: String; const ATemplatesDir: String);
+class procedure TDBAccessClass.InitByPath(
+  const ADBFileName: String;
+  const ATemplatesPath: String);
 begin
   FDBFileName := ADBFileName;
 
-  FSQLTemplates := TSQLTemplates.Create(ATemplatesDir);
+  FSQLTemplates := TSQLTemplates.Create(ATemplatesPath, tkPath);
+end;
+
+class procedure TDBAccessClass.InitByPack(
+  const ADBFileName: String;
+  const ATemplatesPath: String);
+begin
+  FDBFileName := ADBFileName;
+
+  FSQLTemplates := TSQLTemplates.Create(ATemplatesPath, tkPack);
 end;
 
 class procedure TDBAccessClass.UnInit;
