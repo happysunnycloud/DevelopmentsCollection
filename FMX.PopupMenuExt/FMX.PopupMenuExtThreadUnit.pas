@@ -8,6 +8,7 @@ uses
     System.Classes
   , System.SyncObjs
   , System.SysUtils
+  , System.Types
   , FMX.PopupMenuExtFormUnit
   ;
 
@@ -28,6 +29,7 @@ type
     FClickedItem: TObject;
 
     FFormOwner: TPopupMenuExtForm;
+    FRectF: TRectF;
 
     procedure SetClickedItem(const AClickedItem: TObject);
     function GetClickedItem: TObject;
@@ -40,6 +42,8 @@ type
 
     procedure SetForm(const AForm: TPopupMenuExtForm);
     function GetForm: TPopupMenuExtForm;
+
+    function IsMouseOverForm: Boolean;
   protected
     procedure Execute; override;
   public
@@ -63,11 +67,10 @@ type
 
 implementation
 
+{$IFDEF MSWINDOWS}
 uses
-    System.Types
-  {$IFDEF MSWINDOWS}
-  , Winapi.Windows
-  {$ENDIF}
+  Winapi.Windows
+{$ENDIF}
   ;
 
 { TPopupMenuExtThread }
@@ -92,6 +95,10 @@ begin
   else
     FCountDown := 200;
 
+
+  FRectF := TRectF.Create(FForm.ClientToScreen(FForm.ClientRect.TopLeft),
+                          FForm.ClientToScreen(FForm.ClientRect.BottomRight));
+
   inherited Create(ASuspended);
 end;
 
@@ -103,9 +110,7 @@ end;
 
 procedure TPopupMenuExtThread.WaitForDone;
 begin
-  while FDoneEvent.WaitFor(300) <> wrSignaled do
-  begin
-  end;
+  FDoneEvent.WaitFor(INFINITE);
 end;
 
 procedure TPopupMenuExtThread.SetClickedItem(const AClickedItem: TObject);
@@ -188,30 +193,21 @@ begin
   end;
 end;
 
+{$IFDEF MSWINDOWS}
+function TPopupMenuExtThread.IsMouseOverForm: Boolean;
+var
+  Point: TPoint;
+begin
+  Result := false;
+
+  GetCursorPos(Point);
+
+  if FRectF.Contains(Point) then
+    Result := true;
+end;
+{$ENDIF}
+
 procedure TPopupMenuExtThread.Execute;
-  {$IFDEF MSWINDOWS}
-  function _IsMouseOverForm(const AForm: TPopupMenuExtForm): Boolean;
-  var
-    Point: TPoint;
-    RectF: TRectF;
-  begin
-    Result := false;
-
-    if not Assigned(AForm) then
-      Exit;
-
-    GetCursorPos(Point);
-
-    RectF  := TRectF.Create(AForm.ClientToScreen(AForm.ClientRect.TopLeft),
-                            AForm.ClientToScreen(AForm.ClientRect.BottomRight));
-
-    if not RectF.IsEmpty then
-      if RectF.Contains(Point) then
-      begin
-        Result := true;
-      end;
-  end;
-  {$ENDIF}
 
   procedure TimeIsOut;
   begin
@@ -219,51 +215,53 @@ procedure TPopupMenuExtThread.Execute;
 
     FTimeIsOutFixed := true;
   end;
+
 {$IFDEF MSWINDOWS}
 var
   i: Integer;
 {$ENDIF}
 begin
   FDoneEvent.ResetEvent;
+  try
+    if FStepDirection = sdForward then
+      Sleep(400);
 
-  if FStepDirection = sdForward then
-    Sleep(400);
-
-  {$IFDEF MSWINDOWS}
-  while not Terminated and not Assigned(ClickedItem) do
-  begin
-    if not _IsMouseOverForm(FForm) then
+    {$IFDEF MSWINDOWS}
+    while not Terminated and not Assigned(ClickedItem) do
     begin
-      i := CountDown;
-      while not Terminated and not _IsMouseOverForm(Form) and not Assigned(ClickedItem) do
+      if not IsMouseOverForm then
       begin
+        i := CountDown;
+        while not Terminated and not IsMouseOverForm and not Assigned(ClickedItem) do
+        begin
+          Sleep(100);
+
+          Dec(i, 100);
+
+          if i < 0 then
+            TimeIsOut;
+        end;
+      end
+      else
         Sleep(100);
+    end;
+    {$ELSE IFDEF ANDROID}
+    while not Terminated and not Assigned(ClickedItem) do
+    begin
+      // В данном случае обратный отсчет может быть сброшен кнопкой закрытия меню
+      // Эта кнопка доступна при сборке под Андроид
+      if GoBackClickFixed then
+        TimeIsOut
+      else
+        Sleep(100);
+    end;
+    {$ENDIF}
 
-        Dec(i, 100);
-
-        if i < 0 then
-          TimeIsOut;
-      end;
-    end
-    else
-      Sleep(100);
+    if Assigned(ClickedItem) then
+      FClickFixed := true;
+  finally
+    FDoneEvent.SetEvent;
   end;
-  {$ELSE IFDEF ANDROID}
-  while not Terminated and not Assigned(ClickedItem) do
-  begin
-    // В данном случае обратный отсчет может быть сброшен кнопкой закрытия меню
-    // Эта кнопка доступна при сборке под Андроид
-    if GoBackClickFixed then
-      TimeIsOut
-    else
-      Sleep(100);
-  end;
-  {$ENDIF}
-
-  if Assigned(ClickedItem) then
-    FClickFixed := true;
-
-  FDoneEvent.SetEvent;
 end;
 
 end.

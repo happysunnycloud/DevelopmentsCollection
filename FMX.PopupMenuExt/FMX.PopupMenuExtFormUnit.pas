@@ -26,6 +26,7 @@ type
       Shift: TShiftState);
   public
     constructor CreateNew(AOwner: TComponent; Dummy: NativeInt = 0); reintroduce;
+    destructor Destroy; override;
 
     property OnHardwareBackButtonClick: TNotifyEvent
       write FOnHardwareBackButtonClick;
@@ -35,20 +36,8 @@ implementation
 
 procedure TPopupMenuExtForm.Paint(Sender: TObject; Canvas: TCanvas;
   const ARect: TRectF);
-//var
-//  i: Integer;
 begin
-//  for i := 0 to Pred(Screen.FormCount) do
-//  begin
-//    if Screen.Forms[i] = Sender then
-//      Screen.Forms[i].Show;
-//  end;
   BringToFront;
-//  TThread.Queue(nil,
-//    procedure
-//    begin
-//      PaintRects(ARect);
-//    end);
 end;
 
 procedure TPopupMenuExtForm.OnCloseQueryInternalHandler(Sender: TObject; var CanClose: Boolean);
@@ -83,6 +72,12 @@ begin
   OnKeyUp := OnKeyUpHandler;
 
   FOnHardwareBackButtonClick := nil;
+end;
+
+destructor TPopupMenuExtForm.Destroy;
+begin
+  //
+  inherited;
 end;
 
 end.

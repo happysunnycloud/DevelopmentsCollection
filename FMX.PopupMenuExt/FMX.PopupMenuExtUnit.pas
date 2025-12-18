@@ -72,7 +72,7 @@ type
     ///   Выставляется в случае закрытия всего приложения
     ///   При выставленном флаге, сворачиваем работу меню
     /// </summary>
-    FToDoClose: Boolean;
+    FExternalToDoClose: Boolean;
 
     FTheme: TTheme;
 
@@ -441,7 +441,7 @@ begin
   PopupMenuThread := FPopupMenuThread;
   FPopupMenuThread := nil;
 
-  if FToDoClose then
+  if FExternalToDoClose then
     Exit;
 
   if PopupMenuThread.TimeIsOutFixed then
@@ -468,16 +468,13 @@ begin
   ParentItem := AForm.ParentItem;
   if Assigned(ParentItem) then
   begin
-    if not FToDoClose then
+    if not FExternalToDoClose then
     begin
       ParentForm := ParentItem.FormOwner;
       ParentForm.Show;
       ParentForm.Invalidate;
 
-      FPopupMenuThread :=  TPopupMenuExtThread.Create(ParentForm, sdBackward, true);
-      FPopupMenuThread.FreeOnTerminate := true;
-      FPopupMenuThread.OnTerminate := OnTerminatePopupMenuThreadHandler;
-      FPopupMenuThread.Start;
+      StartPopupMenuThread(ParentForm, sdBackward);
     end;
   end
   else
@@ -558,8 +555,8 @@ begin
 end;
 
 constructor TPopupMenuExt.Create(Owner: TComponent);
-var
-  Timer: TTimer;
+//var
+//  Timer: TTimer;
 begin
   inherited Create(Owner);
 
@@ -567,7 +564,7 @@ begin
   FPopupMenuThread := nil;
   FCallingObject := nil;
 
-  FToDoClose := false;
+  FExternalToDoClose := false;
 
   FTheme := TTheme.Create;
 
@@ -586,9 +583,9 @@ begin
   FTheme.CommonTextProps.Margins.Left := 5;
   FTheme.CommonTextProps.WordWrap := false;
 
-  Timer := TTimer.Create(Self);
-  Timer.Interval := 1000;
-  Timer.Enabled := true;
+//  Timer := TTimer.Create(Self);
+//  Timer.Interval := 1000;
+//  Timer.Enabled := true;
 end;
 
 destructor TPopupMenuExt.Destroy;
@@ -650,7 +647,7 @@ var
 begin
   if Assigned(FPopupMenuThread) then
   begin
-    FToDoClose := true;
+    FExternalToDoClose := true;
 
     FPopupMenuThread.Form := nil;
     FPopupMenuThread.Terminate;
@@ -962,17 +959,23 @@ begin
   PopupForm.FullScreen := true;
   {$ENDIF}
 
-  StartPopupMenuThread(PopupForm, sdForward);
-
   PopupForm.FormStyle := TFormStyle.StayOnTop;
   PopupForm.Parent := TForm(Owner);  // Чтобы окно было на переднем фоне
   PopupForm.Show;
+
+  StartPopupMenuThread(PopupForm, sdForward);
 end;
 
 procedure TPopupMenuExt.StartPopupMenuThread(
   const AForm: TPopupMenuExtForm;
   const AStepDirection: TStepDirection);
 begin
+  if Assigned(FPopupMenuThread) then
+  begin
+    FPopupMenuThread.Terminate;
+    FPopupMenuThread.WaitForDone;
+  end;
+
   FPopupMenuThread := TPopupMenuExtThread.Create(AForm, AStepDirection, true);
   FPopupMenuThread.FreeOnTerminate := true;
   FPopupMenuThread.OnTerminate := OnTerminatePopupMenuThreadHandler;
