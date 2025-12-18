@@ -181,12 +181,14 @@ function TFormExt.GetOnCloseQuery: TCloseQueryMethod;
 begin
   Result := OnCloseQuery;
 end;
-//asd debug корень зла - почему-то заходим сюда дважды
+
 procedure TFormExt.OnDestroyedAllFactoriesHandler(Sender: TObject);
 var
   Form: TFormExt;
 begin
   Log.d('TFormExt.OnDestroyedAllFactoriesHandler');
+  // Нилим основную фабрику формы
+  FThreadFactory := nil;
 
   Form := Self;
   TThread.ForceQueue(nil,
