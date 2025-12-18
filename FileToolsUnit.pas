@@ -29,39 +29,55 @@ type
 
   TFileTools = class
   strict private
+    /// <summary>
+    /// Рекурсивно получает дерево имен файлов
+    /// </summary>
+    class procedure RecursionFileSearch(
+      const ARootPath: String;
+      const AExt: array of String;
+      var AFileNames: TFileNames;
+      const ARecursionEnabled: Boolean = true);
+
     class function CommonCopyFile(
       const AFileNameFrom: String;
       const AFileNameTo: String): TCopyFileResult;
 
     class function GetNewFileName(const APath: String): String;
+    class function HasPathSplitter(const APath: String): Boolean;
+    /// <summary>
+    /// Используется для проверки входного параметра
+    /// - корневой папки для поиска файлов, есть ли разделитель или нет.
+    /// Возвращает при необходимости символ разделилетя, либо возвращает пустую строку
+    /// </summary>
+    class function GetRootPathSplitter(const APath: String): String;
   public
-    class procedure GetFileNameListByDir(
-      const ADir: String;
-      const AFileNameList: TStringList);
-    class procedure GetFileNameListByDirAndExt(
-      const ADir: String;
-      const AExt: String;
-      const AFileNameList: TStringList);
-    class procedure GetFileSearchRecListByDir(
-      const ADir: String;
+    /// <summary>
+    /// Возвращает список атрибутов файлов, например, время создания
+    /// </summary>
+    class procedure GetFileSearchRecList(
+      const APath: String;
       const ASearchRecList: TSearchRecList);
-
+    /// <summary>
+    /// Возвращает список имен файлов в виде TFileNames
+    /// </summary>
     class procedure GetFileNames(
-      const ARootDir: String;
-      const ASubDir: String;
-      const AExt: String;
-      var AFileNames: TFileNames);
-
-    // Рекурсивно получает дерево имен файлов
-    class procedure GetTreeOfFileNames(
-      const ARootDir: String;
-      const AExt: String;
-      var AFileNames: TFileNames); overload;
-    class procedure GetTreeOfFileNames(
-      const ARootDir: String;
+      const ARootPath: String;
       const AExt: array of String;
-      var AFileNames: TFileNames); overload;
-
+      var AFileNames: TFileNames);
+    /// <summary>
+    /// Возвращает список имен файлов в виде TStringList
+    /// </summary>
+    class procedure GetFileNameList(
+      const APath: String;
+      const AExt: array of String;
+      const AFileNameList: TStringList); overload;
+    /// <summary>
+    /// Рекурсивно получает дерево имен файлов в виде TFileNames
+    /// </summary>
+    class procedure GetTreeOfFileNames(
+      const ARootPath: String;
+      const AExt: array of String;
+      var AFileNames: TFileNames);
 
     class function CopyFile(
       const AFileNameFrom: String;
@@ -116,34 +132,35 @@ end;
 
 { TFileTools }
 
-class procedure TFileTools.GetFileNameListByDir(
-  const ADir: String;
-  const AFileNameList: TStringList);
-begin
-  TFileTools.GetFileNameListByDirAndExt(
-    ADir,
-    '',
-    AFileNameList);
-end;
+class procedure TFileTools.RecursionFileSearch(
+  const ARootPath: String;
+  const AExt: array of String;
+  var AFileNames: TFileNames;
+  const ARecursionEnabled: Boolean = true);
 
-class procedure TFileTools.GetFileNameListByDirAndExt(
-  const ADir: String;
-  const AExt: String;
-  const AFileNameList: TStringList);
+  function _MustAdd(
+    const AExtArr: array of String;
+    const AFileName: String): Boolean;
+  var
+    i: Integer;
+  begin
+    Result := false;
+    for i := 0 to Pred(Length(AExtArr)) do
+    begin
+      if ExtractFileExt(AFileName) = '.' + AExtArr[i] then
+        Exit(true);
+    end;
+  end;
+
 var
   SearchRec: System.SysUtils.TSearchRec;
   IsFound: Boolean;
   MustAdd: Boolean;
+  l: Integer;
+  RootPath: String;
 begin
-  if not Assigned(AFileNameList) then
-    raise Exception.Create('AFileNameList is nil');
-
-  aFileNameList.Clear;
-
-  if aDir = '' then
-    Exit;
-
-  IsFound := FindFirst(aDir + PATH_SPLITTER + '*.*', faAnyFile, SearchRec) = 0;
+  RootPath := Concat(ARootPath, GetRootPathSplitter(ARootPath));
+  IsFound := FindFirst(Concat(RootPath, '*.*'), faAnyFile, SearchRec) = 0;
   while IsFound do
   begin
     if (SearchRec.Name <> '.') and
@@ -153,15 +170,22 @@ begin
       if (SearchRec.Attr and faDirectory) <> faDirectory then
       begin
         MustAdd := false;
-        if AExt.IsEmpty then
+        l := Length(AExt);
+        if l = 0 then
           MustAdd := true
         else
-        if not AExt.IsEmpty then
-          if ExtractFileExt(SearchRec.Name) = '.' + AExt then
-            MustAdd := true;
+        if l > 0 then
+          MustAdd := _MustAdd(AExt, SearchRec.Name);
 
         if MustAdd then
-          aFileNameList.Add(Concat(aDir, PATH_SPLITTER, SearchRec.Name))
+          AFileNames.Add(Concat(RootPath, SearchRec.Name))
+      end
+      else
+      if (SearchRec.Attr and faDirectory) = faDirectory then
+      begin
+        if ARecursionEnabled then
+          RecursionFileSearch(
+            Concat(RootPath, SearchRec.Name), AExt, AFileNames, ARecursionEnabled);
       end;
     end;
     IsFound := FindNext(SearchRec) = 0;
@@ -169,79 +193,42 @@ begin
   System.SysUtils.FindClose(SearchRec);
 end;
 
-class procedure TFileTools.GetFileSearchRecListByDir(
-  const ADir: String;
-  const ASearchRecList: TSearchRecList);
+class function TFileTools.CommonCopyFile(
+  const AFileNameFrom: String;
+  const AFileNameTo: String): TCopyFileResult;
 var
-  SearchRec: TSearchRec;
-  IsFound: Boolean;
+  FileStreamFrom: TFileStream;
+  FileStreamTo: TFileStream;
+  DirTo: String;
 begin
-  if not Assigned(ASearchRecList) then
-    raise Exception.Create('ASearchRecList is nil');
+  if not FileExists(AFileNameFrom) then
+    Exit(crFileNotExists);
 
-  ASearchRecList.Clear;
+  DirTo := ExtractFilePath(AFileNameTo);
+  if not DirectoryExists(DirTo) then
+    ForceDirectories(DirTo);
 
-  if ADir = '' then
-    Exit;
+  try
+    FileStreamFrom := nil;
+    FileStreamTo := nil;
+    try
+      FileStreamFrom := TFileStream.Create(AFileNameFrom, fmOpenRead);
+      FileStreamTo := TFileStream.Create(AFileNameTo, fmCreate);
 
-  IsFound := FindFirst(aDir + PATH_SPLITTER + '*.*', faAnyFile, SearchRec) = 0;
-  while IsFound do
-  begin
-    if (SearchRec.Name <> '.') and
-       (SearchRec.Name <> '..')
-    then
-    begin
-      if (SearchRec.Attr and faDirectory) <> faDirectory then
-        ASearchRecList.Add(SearchRec);
+      FileStreamFrom.Position := 0;
+      FileStreamTo.CopyFrom(FileStreamFrom, FileStreamFrom.Size);
+
+      Result := crOk;
+    except
+      on e: Exception do
+        Exit(crCopyError);
     end;
-    IsFound := System.SysUtils.FindNext(SearchRec) = 0;
+  finally
+    if Assigned(FileStreamFrom) then
+      FreeAndNil(FileStreamFrom);
+    if Assigned(FileStreamTo) then
+      FreeAndNil(FileStreamTo);
   end;
-  System.SysUtils.FindClose(SearchRec);
-end;
-
-class procedure TFileTools.GetFileNames(
-  const ARootDir: String;
-  const ASubDir: String;
-  const AExt: String;
-  var AFileNames: TFileNames);
-var
-  sRec: TSearchRec;
-  isFound: Boolean;
-begin
-  isFound := FindFirst(ARootDir + PATH_SPLITTER + '*.*', faAnyFile, sRec ) = 0;
-  while isFound do
-  begin
-    if (sRec.Name <> '.') and (sRec.Name <> '..') then
-    begin
-      if (sRec.Attr and faDirectory) = faDirectory then
-      begin
-        GetFileNames(ARootDir + PATH_SPLITTER + sRec.Name, ASubDir, AExt, AFileNames);
-      end;
-      if (LowerCase(ExtractFileExt(sRec.Name)) = '.' + AExt)
-          or
-         (AExt = '')
-      then
-      begin
-        if
-            (
-              (ASubDir <> '')
-               and
-              (Pos(ASubDir, ARootDir) > 0)
-            )
-            or
-            (ASubDir = '')
-        then
-        begin
-          SetLength(AFileNames, Length(AFileNames) + 1);
-          AFileNames[Length(AFileNames) - 1] := ARootDir + PATH_SPLITTER + sRec.Name;
-        end;
-      end;
-    end;
-
-    isFound := System.SysUtils.FindNext(sRec) = 0;
-  end;
-
-  System.SysUtils.FindClose(sRec);
 end;
 
 class function TFileTools.GetNewFileName(const APath: String): String;
@@ -293,42 +280,112 @@ begin
   Result := sNewFileName;
 end;
 
-class function TFileTools.CommonCopyFile(
-  const AFileNameFrom: String;
-  const AFileNameTo: String): TCopyFileResult;
+class function TFileTools.HasPathSplitter(const APath: String): Boolean;
 var
-  FileStreamFrom: TFileStream;
-  FileStreamTo: TFileStream;
-  DirTo: String;
+  LastChar: Char;
 begin
-  if not FileExists(AFileNameFrom) then
-    Exit(crFileNotExists);
+  Result := false;
 
-  DirTo := ExtractFilePath(AFileNameTo);
-  if not DirectoryExists(DirTo) then
-    ForceDirectories(DirTo);
+  if Length(APath) = 0 then
+    Exit;
 
-  try
-    FileStreamFrom := nil;
-    FileStreamTo := nil;
-    try
-      FileStreamFrom := TFileStream.Create(AFileNameFrom, fmOpenRead);
-      FileStreamTo := TFileStream.Create(AFileNameTo, fmCreate);
+  LastChar := APath[Length(APath)];
+  if LastChar = PATH_SPLITTER then
+    Result := true;
+end;
 
-      FileStreamFrom.Position := 0;
-      FileStreamTo.CopyFrom(FileStreamFrom, FileStreamFrom.Size);
+class function TFileTools.GetRootPathSplitter(const APath: String): String;
+begin
+  Result := '';
 
-      Result := crOk;
-    except
-      on e: Exception do
-        Exit(crCopyError);
+  if not HasPathSplitter(APath) then
+    Result := PATH_SPLITTER;
+end;
+
+//class procedure TFileTools.GetFileNameListByDir(
+//  const ADir: String;
+//  const AFileNameList: TStringList);
+//begin
+//  TFileTools.GetFileNameListByDirAndExt(
+//    ADir,
+//    '',
+//    AFileNameList);
+//end;
+
+//class procedure TFileTools.GetFileNameListByDirAndExt(
+//  const ADir: String;
+//  const AExt: String;
+//  const AFileNameList: TStringList);
+//var
+//  SearchRec: System.SysUtils.TSearchRec;
+//  IsFound: Boolean;
+//  MustAdd: Boolean;
+//begin
+//  if not Assigned(AFileNameList) then
+//    raise Exception.Create('AFileNameList is nil');
+//
+//  aFileNameList.Clear;
+//
+//  if aDir = '' then
+//    Exit;
+//
+//  IsFound := FindFirst(aDir + PATH_SPLITTER + '*.*', faAnyFile, SearchRec) = 0;
+//  while IsFound do
+//  begin
+//    if (SearchRec.Name <> '.') and
+//       (SearchRec.Name <> '..')
+//    then
+//    begin
+//      if (SearchRec.Attr and faDirectory) <> faDirectory then
+//      begin
+//        MustAdd := false;
+//        if AExt.IsEmpty then
+//          MustAdd := true
+//        else
+//        if not AExt.IsEmpty then
+//          if ExtractFileExt(SearchRec.Name) = '.' + AExt then
+//            MustAdd := true;
+//
+//        if MustAdd then
+//          aFileNameList.Add(Concat(aDir, PATH_SPLITTER, SearchRec.Name))
+//      end;
+//    end;
+//    IsFound := FindNext(SearchRec) = 0;
+//  end;
+//  System.SysUtils.FindClose(SearchRec);
+//end;
+
+class procedure TFileTools.GetFileSearchRecList(
+  const APath: String;
+  const ASearchRecList: TSearchRecList);
+var
+  SearchRec: TSearchRec;
+  IsFound: Boolean;
+  Path: String;
+begin
+  Path := Concat(APath, GetRootPathSplitter(APath));
+
+  if not Assigned(ASearchRecList) then
+    raise Exception.Create('ASearchRecList is nil');
+
+  ASearchRecList.Clear;
+
+  if Path = '' then
+    Exit;
+
+  IsFound := FindFirst(Path + '*.*', faAnyFile, SearchRec) = 0;
+  while IsFound do
+  begin
+    if (SearchRec.Name <> '.') and
+       (SearchRec.Name <> '..')
+    then
+    begin
+      if (SearchRec.Attr and faDirectory) <> faDirectory then
+        ASearchRecList.Add(SearchRec);
     end;
-  finally
-    if Assigned(FileStreamFrom) then
-      FreeAndNil(FileStreamFrom);
-    if Assigned(FileStreamTo) then
-      FreeAndNil(FileStreamTo);
+    IsFound := System.SysUtils.FindNext(SearchRec) = 0;
   end;
+  System.SysUtils.FindClose(SearchRec);
 end;
 
 class function TFileTools.CopyFile(
@@ -383,50 +440,8 @@ begin
     Result := CopyFileResult;
 end;
 
-class procedure TFileTools.GetTreeOfFileNames(
-  const ARootDir: String;
-  const AExt: String;
-  var AFileNames: TFileNames);
-var
-  SearchRec: System.SysUtils.TSearchRec;
-  IsFound: Boolean;
-  MustAdd: Boolean;
-begin
-//  SetLength(AFileNames, 0);
-
-  IsFound := FindFirst(Concat(ARootDir, PATH_SPLITTER, '*.*'), faAnyFile, SearchRec) = 0;
-  while IsFound do
-  begin
-    if (SearchRec.Name <> '.') and
-       (SearchRec.Name <> '..')
-    then
-    begin
-      if (SearchRec.Attr and faDirectory) <> faDirectory then
-      begin
-        MustAdd := false;
-        if AExt.IsEmpty then
-          MustAdd := true
-        else
-        if not AExt.IsEmpty then
-          if ExtractFileExt(SearchRec.Name) = '.' + AExt then
-            MustAdd := true;
-
-        if MustAdd then
-          AFileNames.Add(Concat(ARootDir, PATH_SPLITTER, SearchRec.Name))
-      end
-      else
-      if (SearchRec.Attr and faDirectory) = faDirectory then
-      begin
-        GetTreeOfFileNames(Concat(ARootDir, PATH_SPLITTER, SearchRec.Name), AExt, AFileNames);
-      end;
-    end;
-    IsFound := FindNext(SearchRec) = 0;
-  end;
-  System.SysUtils.FindClose(SearchRec);
-end;
-
-class procedure TFileTools.GetTreeOfFileNames(
-  const ARootDir: String;
+class procedure TFileTools.GetFileNames(
+  const ARootPath: String;
   const AExt: array of String;
   var AFileNames: TFileNames);
 
@@ -449,8 +464,10 @@ var
   IsFound: Boolean;
   MustAdd: Boolean;
   l: Integer;
+  RootPath: String;
 begin
-  IsFound := FindFirst(Concat(ARootDir, PATH_SPLITTER, '*.*'), faAnyFile, SearchRec) = 0;
+  RootPath := Concat(ARootPath, GetRootPathSplitter(ARootPath));
+  IsFound := FindFirst(Concat(RootPath, '*.*'), faAnyFile, SearchRec) = 0;
   while IsFound do
   begin
     if (SearchRec.Name <> '.') and
@@ -468,12 +485,7 @@ begin
           MustAdd := _MustAdd(AExt, SearchRec.Name);
 
         if MustAdd then
-          AFileNames.Add(Concat(ARootDir, PATH_SPLITTER, SearchRec.Name))
-      end
-      else
-      if (SearchRec.Attr and faDirectory) = faDirectory then
-      begin
-        GetTreeOfFileNames(Concat(ARootDir, PATH_SPLITTER, SearchRec.Name), AExt, AFileNames);
+          AFileNames.Add(Concat(RootPath, SearchRec.Name))
       end;
     end;
     IsFound := FindNext(SearchRec) = 0;
@@ -481,5 +493,33 @@ begin
   System.SysUtils.FindClose(SearchRec);
 end;
 
+class procedure TFileTools.GetFileNameList(
+  const APath: String;
+  const AExt: array of String;
+  const AFileNameList: TStringList);
+var
+  FileNames: TFileNames;
+  i: Integer;
+begin
+  GetFileNames(
+    APath,
+    AExt,
+    FileNames);
+
+  for i := 0 to Pred(Length(FileNames)) do
+    AFileNameList.Add(FileNames[i]);
+end;
+
+class procedure TFileTools.GetTreeOfFileNames(
+  const ARootPath: String;
+  const AExt: array of String;
+  var AFileNames: TFileNames);
+begin
+  RecursionFileSearch(
+    ARootPath,
+    AExt,
+    AFileNames,
+    true);
+end;
 
 end.

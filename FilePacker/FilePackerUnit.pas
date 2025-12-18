@@ -364,8 +364,7 @@ begin
   RootDir := ARootDir;
   if AContentDir.Length > 0 then
     RootDir := RootDir + INNER_SPLITTER + AContentDir;
-  TFileTools.GetFileNames(RootDir, '', AExt, FileNames);
-//  TFileTools.GetFileNames(ARootDir, AContentDir, 'png', FileNames);
+  TFileTools.GetTreeOfFileNames(RootDir, [AExt], FileNames);
 
   DestFileStream := PackFileStream;
   try
