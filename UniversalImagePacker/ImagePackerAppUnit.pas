@@ -72,8 +72,7 @@ begin
 
   SaveDialog := TSaveDialog.Create(self);
   SaveDialog.InitialDir := ParamStr(0);
-  SaveDialog.Filter :=
-    'Packed files|*.pck';
+  SaveDialog.Filter := 'Packed files|*.pck';
   SaveDialog.FilterIndex := 2;
 
   SaveFileName := '';

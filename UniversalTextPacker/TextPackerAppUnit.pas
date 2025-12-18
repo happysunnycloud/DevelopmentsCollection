@@ -9,6 +9,9 @@ uses
   FMX.StdCtrls
   , FilePackerUnit, FMX.Menus;
 
+const
+  FILTER_FILES = 'Packed files|*.pck|Other files|*.dat|All files|*.*';
+
 type
   TForm1 = class(TForm)
     ScrollBox: TScrollBox;
@@ -74,8 +77,7 @@ begin
 
   SaveDialog := TSaveDialog.Create(self);
   SaveDialog.InitialDir := ParamStr(0);
-  SaveDialog.Filter :=
-    'Packed files|*.pck';
+  SaveDialog.Filter := FILTER_FILES;
   SaveDialog.FilterIndex := 2;
 
   SaveFileName := '';
@@ -114,7 +116,7 @@ begin
 
   OpenDialog := TOpenDialog.Create(self);
   OpenDialog.InitialDir := ParamStr(0);
-  OpenDialog.Filter := 'Packed files|*.pck';
+  OpenDialog.Filter := FILTER_FILES;
   OpenDialog.FilterIndex := 2;
 
   if OpenDialog.Execute then
@@ -147,8 +149,7 @@ var
 begin
   SaveDialog := TSaveDialog.Create(self);
   SaveDialog.InitialDir := ParamStr(0);
-  SaveDialog.Filter :=
-    'Packed files|*.png';
+  SaveDialog.Filter := FILTER_FILES;
   SaveDialog.FilterIndex := 2;
 
   SaveFileName := '';
