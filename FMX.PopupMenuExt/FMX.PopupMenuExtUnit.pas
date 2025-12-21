@@ -127,7 +127,6 @@ uses
   , FMX.Platform.Win,
   {$ELSE IFDEF ANDROID}
     FMX.StdCtrls,
-
   {$ENDIF}
     System.SysUtils
   , System.UITypes
@@ -138,6 +137,7 @@ uses
   , FMX.Objects
   , FMX.Forms
   , FMX.Controls
+  , FMX.ControlToolsUnit
   ;
 
 type
@@ -168,110 +168,6 @@ begin
 end;
 
 {$IFDEF MSWINDOWS}
-// Находит положение панели задач
-// ARect - координаты, результат - положение
-function FindTaskBarPos(var ARect: TRect; var AAutoHide: Boolean): Integer;
-var
-  AppData: TAppBarData;
-begin
-  AppData.Hwnd := FindWindowW('Shell_TrayWnd', nil);
-  if AppData.Hwnd = 0 then
-    RaiseLastOSError;
-    //RaiseLastWin32Error;
-  AppData.cbSize := SizeOf(TAppBarData);
-  if SHAppBarMessage(ABM_GETTASKBARPOS, AppData) = 0 then
-    raise Exception.Create('SHAppBarMessage runtime error for requesting Taskbar');
-  Result := AppData.uEdge;
-  ARect := AppData.rc;
-  AAutoHide := (SHAppBarMessage(ABM_GETSTATE, AppData) and ABS_AUTOHIDE) <> 0;
-end;
-
-procedure TaskBarPositionDelta(const AForm: TPopupMenuExtForm);
-
-  function OverlapRects(const R0, R1: TRect): Boolean;
-  var
-    Temp: TRect;
-  begin
-    Result := False;
-    if not UnionRect(Temp, R0, R1) then
-      Exit;
-    if (Temp.Right - Temp.Left <= R0.Right - R0.Left + R1.Right - R1.Left) and
-       (Temp.Bottom - Temp.Top <= R0.Bottom - R0.Top + R1.Bottom - R1.Top)
-    then
-      Result := True;
-  end;
-
-var
-  TaskBarRect:     TRect;
-  TaskbarAutoHide: Boolean;
-  TaskBarPos:      Integer;
-  X, Y:            Integer;
-  R0, R1:          TRect;
-begin
-  TaskBarPos := FindTaskBarPos(TaskBarRect, TaskbarAutoHide);
-
-  R0 := AForm.Bounds;
-  R1 := TaskBarRect;
-
-  X := AForm.Left;
-  Y := AForm.Top;
-  if OverlapRects(R0, R1) then
-  begin
-    case TaskBarPos of
-      ABE_BOTTOM:
-      begin
-        AForm.Left := X - AForm.Width;
-
-        if Y + AForm.Height > TaskBarRect.TopLeft.Y then
-          AForm.Top := TaskBarRect.TopLeft.Y - AForm.Height
-        else
-          AForm.Top := Y;
-      end;
-      ABE_LEFT:
-      begin
-        if X < TaskBarRect.BottomRight.X then
-          AForm.Left := TaskBarRect.BottomRight.X
-        else
-          AForm.Left := X;
-
-        if Y + AForm.Height > TaskBarRect.BottomRight.Y then
-          AForm.Top := TaskBarRect.BottomRight.Y - AForm.Height
-        else
-          AForm.Top := Y;
-      end;
-      ABE_RIGHT:
-      begin
-        if X > TaskBarRect.TopLeft.X then
-          AForm.Left := TaskBarRect.TopLeft.X - AForm.Width
-        else
-          AForm.Left := X - AForm.Width;
-
-        if Y + AForm.Height > TaskBarRect.BottomRight.Y then
-          AForm.Top := TaskBarRect.BottomRight.Y - AForm.Height
-        else
-          AForm.Top := Y;
-      end;
-      ABE_TOP:
-      begin
-        AForm.Left := X - AForm.Width;
-
-        if Y < TaskBarRect.BottomRight.Y then
-          AForm.Top := TaskBarRect.BottomRight.Y
-        else
-          AForm.Top := Y;
-      end;
-    end;
-  end;
-end;
-
-procedure ScreenSizeDelta(const AForm: TPopupMenuExtForm);
-begin
-  if AForm.Left + AForm.Width > Screen.Width then
-    AForm.Left := Screen.Width - AForm.Width;
-  if AForm.Top + AForm.Height > Screen.Height then
-    AForm.Top := Screen.Height - AForm.Height;
-end;
-
 procedure ParentFormDelta(const AForm: TPopupMenuExtForm);
 var
   ParentForm: TPopupMenuExtForm;
@@ -523,6 +419,7 @@ var
   Point: TPoint;
   ItemOwner: TItem;
   OpenedForm: TPopupMenuExtForm;
+  OnClick: TNotifyEvent;
 begin
   GetCurPos(Point);
 
@@ -541,13 +438,21 @@ begin
   begin
     if ItemOwner.Children.Count = 0 then
     begin
-      Close;
+      TThread.ForceQueue(nil,
+        procedure
+        begin
+          Close;
+        end);
+
       if Assigned(ItemOwner.OnClick) then
+      begin
+        OnClick := ItemOwner.OnClick;
         TThread.ForceQueue(nil,
           procedure
           begin
-            ItemOwner.OnClick(ItemOwner);
+            OnClick(ItemOwner);
           end);
+      end;
     end
     else
       Open(Point.X, Point.Y, FCallingObject, ItemOwner);
@@ -952,9 +857,9 @@ begin
   PopupForm.ParentItem := AParentItem;
   PopupForm.Height := Trunc(ItemsHeight);
   {$IFDEF MSWINDOWS}
-  TaskBarPositionDelta(PopupForm);
+  TControlTools.TaskBarPositionDelta(PopupForm);
   ParentFormDelta(PopupForm);
-  ScreenSizeDelta(PopupForm);
+  TControlTools.ScreenSizeDelta(PopupForm);
   {$ELSE IFDEF ANDROID}
   PopupForm.FullScreen := true;
   {$ENDIF}

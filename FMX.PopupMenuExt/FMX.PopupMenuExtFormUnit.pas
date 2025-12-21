@@ -76,7 +76,6 @@ end;
 
 destructor TPopupMenuExtForm.Destroy;
 begin
-  //
   inherited;
 end;
 
