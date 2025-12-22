@@ -95,7 +95,8 @@ begin
   else
     FCountDown := 200;
 
-
+  // Для оптимизации, что бы не вводить лишних синхноризаций
+  // Прямоугольник формы определяем на стадии инициализации трида
   FRectF := TRectF.Create(FForm.ClientToScreen(FForm.ClientRect.TopLeft),
                           FForm.ClientToScreen(FForm.ClientRect.BottomRight));
 

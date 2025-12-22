@@ -72,7 +72,7 @@ type
     ///   Выставляется в случае закрытия всего приложения
     ///   При выставленном флаге, сворачиваем работу меню
     /// </summary>
-    FExternalToDoClose: Boolean;
+    FImmediatelyToDoClose: Boolean;
 
     FTheme: TTheme;
 
@@ -337,7 +337,7 @@ begin
   PopupMenuThread := FPopupMenuThread;
   FPopupMenuThread := nil;
 
-  if FExternalToDoClose then
+  if FImmediatelyToDoClose then
     Exit;
 
   if PopupMenuThread.TimeIsOutFixed then
@@ -353,34 +353,56 @@ begin
     FPopupMenuThread.GoBackClickFixed := true;
 end;
 
+//procedure TPopupMenuExt.TimeIsOutFixed(const AForm: TPopupMenuExtForm);
+//var
+//  ParentItem: TItem;
+//  ParentForm: TPopupMenuExtForm;
+//begin
+//  if not Assigned(AForm) then
+//    Exit;
+//
+//  ParentItem := AForm.ParentItem;
+//  if Assigned(ParentItem) then
+//  begin
+//    // Если происходит немедленное закрытие,
+//    // то обработка TimeIsOutFixed вообще не производжится
+//    ParentForm := ParentItem.FormOwner;
+//    if TControlTools.IsMouseOverForm(ParentForm) then
+//    begin
+//      ParentForm.Show;
+//      ParentForm.Invalidate;
+//
+//      StartPopupMenuThread(ParentForm, sdBackward);
+//    end
+//    else
+//      CloseForm(ParentForm);
+//
+//    CloseForm(AForm);
+//  end
+//  else
+//  begin
+//    Close;
+//
+//    Exit;
+//  end;
+//end;
+
 procedure TPopupMenuExt.TimeIsOutFixed(const AForm: TPopupMenuExtForm);
 var
   ParentItem: TItem;
-  ParentForm: TPopupMenuExtForm;
 begin
   if not Assigned(AForm) then
     Exit;
 
   ParentItem := AForm.ParentItem;
   if Assigned(ParentItem) then
-  begin
-    if not FExternalToDoClose then
-    begin
-      ParentForm := ParentItem.FormOwner;
-      ParentForm.Show;
-      ParentForm.Invalidate;
-
-      StartPopupMenuThread(ParentForm, sdBackward);
-    end;
-  end
+    CloseForm(AForm)
   else
   begin
     Close;
 
     Exit;
   end;
-
-  CloseForm(AForm);
 end;
 
 procedure TPopupMenuExt.ItemClickFixed(const ASender: TObject);
@@ -438,21 +460,21 @@ begin
   begin
     if ItemOwner.Children.Count = 0 then
     begin
-      TThread.ForceQueue(nil,
-        procedure
-        begin
-          Close;
-        end);
-
       if Assigned(ItemOwner.OnClick) then
       begin
         OnClick := ItemOwner.OnClick;
         TThread.ForceQueue(nil,
           procedure
           begin
+            //asd доработать: Скроем все окна меню, что бы не видело на экране
             OnClick(ItemOwner);
           end);
       end;
+      TThread.ForceQueue(nil,
+        procedure
+        begin
+          Close;
+        end);
     end
     else
       Open(Point.X, Point.Y, FCallingObject, ItemOwner);
@@ -469,7 +491,7 @@ begin
   FPopupMenuThread := nil;
   FCallingObject := nil;
 
-  FExternalToDoClose := false;
+  FImmediatelyToDoClose := false;
 
   FTheme := TTheme.Create;
 
@@ -548,28 +570,27 @@ procedure TPopupMenuExt.Close;
 var
   Form: TPopupMenuExtForm;
   FormOwner: TPopupMenuExtForm;
-  i: Word;
 begin
+  FImmediatelyToDoClose := true;
+
   if Assigned(FPopupMenuThread) then
   begin
-    FExternalToDoClose := true;
-
     FPopupMenuThread.Form := nil;
     FPopupMenuThread.Terminate;
     FPopupMenuThread.WaitForDone;
   end;
 
-  i := ComponentCount;
-  while i > 0 do
+  if ComponentCount > 0 then
   begin
-    Dec(i);
-
-    if Components[i] is TPopupMenuExtForm then
-    begin
-      Form := TPopupMenuExtForm(Components[i]);
-      CloseForm(Form);
-    end;
+    Form := Components[Pred(ComponentCount)] as TPopupMenuExtForm;
+    CloseForm(Form);
   end;
+
+//  while ComponentCount > 0 do
+//  begin
+//    Form := Components[0] as TPopupMenuExtForm;
+//    CloseForm(Form);
+//  end;
 
   if Owner is TForm then
   begin
@@ -647,6 +668,11 @@ var
   AndroidGoBackButtonText: TText;
   {$ENDIF}
 begin
+  if Assigned(FPopupMenuThread) then
+    Exit;
+
+  FImmediatelyToDoClose := false;
+
   FCallingObject := ACallingObject;
 
   if not Assigned(AParentItem) then
@@ -888,8 +914,34 @@ begin
 end;
 
 procedure TPopupMenuExt.CloseForm(const AForm: TPopupMenuExtForm);
+var
+  ParentItem: TItem;
+  ParentForm: TPopupMenuExtForm;
 begin
-  RemoveComponent(AForm);
+  if not Assigned(AForm) then
+    Exit;
+
+//  RemoveComponent(AForm);
+
+  ParentItem := AForm.ParentItem;
+  if Assigned(ParentItem) then
+  begin
+    ParentForm := ParentItem.FormOwner;
+
+    if Assigned(ParentForm) then
+      if TControlTools.IsMouseOverForm(ParentForm) and
+         not FImmediatelyToDoClose
+      then
+      begin
+        ParentForm.Show;
+        ParentForm.Invalidate;
+
+        StartPopupMenuThread(ParentForm, sdBackward);
+      end
+      else
+        CloseForm(ParentForm);
+  end;
+
   AForm.Close;
 end;
 
