@@ -1,4 +1,4 @@
-﻿{0.2}
+﻿{0.3}
 unit ThreadFactoryRegistryUnit;
 
 interface
@@ -13,11 +13,11 @@ type
   strict private
     FOnDestroyedAllFactories: TNotifyEvent;
 
-    procedure OnDestroyFactoryHandler(Sender: TObject);
-    procedure OnAllThreadsAreDestroyedHandler(Sender: TObject);
-
+    procedure UnregThreadFactoyProc(const AThreadFactory: TThreadFactory);
     procedure CheckThreadFactoryZeroCount;
   public
+    destructor Destroy; override;
+
     function CreateThreadFactory: TThreadFactory;
     // Финишируем все фабрики нитей
     // Т.е. для всех фабрик вызывает финишер всех нитей
@@ -34,11 +34,23 @@ uses
   System.Generics.Collections,
   FMX.Types;
 
+{ TThreadFactoryRegistry }
+
+destructor TThreadFactoryRegistry.Destroy;
+begin
+  if Count > 0 then
+  begin
+    raise Exception.
+      Create('TThreadFactoryRegistry.Destroy -> There are undestroyed factories');
+  end;
+
+  inherited;
+end;
+
 function TThreadFactoryRegistry.CreateThreadFactory: TThreadFactory;
 begin
   try
-    Result := TThreadFactory.Create;
-    Result.OnDestroyFactory := OnDestroyFactoryHandler;
+    Result := TThreadFactory.Create(UnregThreadFactoyProc);
     RegisterObject(Result);
   except
     on e: Exception do
@@ -46,48 +58,19 @@ begin
   end;
 end;
 
-procedure TThreadFactoryRegistry.OnDestroyFactoryHandler(Sender: TObject);
+procedure TThreadFactoryRegistry.UnregThreadFactoyProc(
+  const AThreadFactory: TThreadFactory);
 var
-  ThreadFactory: TThreadFactory;
+  ThreadFactory: TThreadFactory absolute AThreadFactory;
 begin
-  if not Assigned(Sender) then
+  if not Assigned(ThreadFactory) then
     raise Exception.
-      Create('TThreadFactoryRegistry.OnDestroyFactoryHandler -> ' +
+      Create('TThreadFactoryRegistry.UnregThreadFactoyProc -> ' +
       'Sender is nil');
-
-  ThreadFactory := Sender as TThreadFactory;
 
   UnRegisterObject(ThreadFactory);
 
   CheckThreadFactoryZeroCount;
-end;
-
-procedure TThreadFactoryRegistry.OnAllThreadsAreDestroyedHandler(Sender: TObject);
-var
-  ThreadFactory: TThreadFactory;
-begin
-  if not Assigned(Sender) then
-    raise Exception.
-      Create('TThreadFactoryRegistry.OnAllThreadsAreDestroyedHandler -> ' +
-      'Sender is nil');
-
-  if not (Sender is TThreadFactory) then
-  begin
-    raise Exception.
-      Create('TThreadFactoryRegistry.OnAllThreadsAreDestroyedHandler -> ' +
-      'Sender is not a TThreadFactory');
-  end;
-
-  ThreadFactory := Sender as TThreadFactory;
-
-  Log.d('TThreadFactoryRegistry.OnAllThreadsAreDestroyedHandler -> ' + ThreadFactory.ThreadFactoryName);
-
-  TThread.ForceQueue(nil,
-    procedure
-    begin
-      FreeAndNil(ThreadFactory);
-    end
-  );
 end;
 
 procedure TThreadFactoryRegistry.DestroyAllThreadFactories;
@@ -110,10 +93,10 @@ begin
     Dec(i);
 
     ThreadFactory := ObjectByIndex(i);
-    // Назначим / переназначим OnAllThreadsAreDestroyed, AfterAllThreadsAreDestroyedProcRef
-    // Возможно он использовался при работе с нитью
-    // Переназначаем OnAllThreadsAreDestroyedHandler
-    ThreadFactory.OnAllThreadsAreDestroyed := OnAllThreadsAreDestroyedHandler;
+    // Отменяем выполнение обработчика,
+    // Не будем его испольнять, если уничтожаем регистр
+    ThreadFactory.OnAllThreadsAreDestroyed := nil;
+    ThreadFactory.FreeWhenAllThreadsDone := true;
 
     ThreadFactory.TerminateAllThreads;
   end

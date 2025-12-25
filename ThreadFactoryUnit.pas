@@ -1,4 +1,4 @@
-﻿{0.4}
+﻿{0.5}
 // Юнит по работе с нитями, если и переезжать, то на него
 unit ThreadFactoryUnit;
 
@@ -22,6 +22,8 @@ type
   TRegProc = reference to procedure (const AThread: TThreadExt);
   TUnRegProc = reference to procedure (const AThread: TThreadExt);
   TExecProc = reference to procedure (const AThread: TThreadExt);
+  TUnregFromThreadFactoryProc =
+    reference to procedure (const ATThreadFactory: TThreadFactory);
 
   TRegistringConstructor = reference to
     procedure (
@@ -175,9 +177,20 @@ type
   TThreadFactory = class
   strict private
     FCriticalSection: TCriticalSection;
+    FFreeWhenAllThreadsDone: Boolean;
     FThreadRegistry: TThreadRegistry;
+    // Срабатывает при уничтожении фабрики,
+    // проводит сняние с регистарции из геристра фабрик
+    FUnregFromThreadFactoryProc: TUnregFromThreadFactoryProc;
+    // Срабатывает при при разрушении фабрики
     FOnDestroyFactory: TNotifyEvent;
+    // Срабатывает после разрушения последнего трида
+    // Предназначено для общего внешнего использования
     FOnAllThreadsAreDestroyed: TNotifyEvent;
+    // Уведомляем регистр фабрик об уничтожении всех тридов
+    // Предназначено для внутренего использования, извне вызываться не должно
+    //FOnThreadFactoryRegisterNotify: TNotifyEvent;
+
     FThreadFactoryName: String;
 
     procedure SetTerminateAllThreads;
@@ -187,7 +200,8 @@ type
     procedure RegThreadProc(const AThread: TThreadExt);
     procedure UnRegThreadProc(const AThread: TThreadExt);
   public
-    constructor Create;
+    constructor Create; overload;
+    constructor Create(const AUnregProc: TUnregFromThreadFactoryProc); overload;
     destructor Destroy; override;
 
     /// <summary>
@@ -248,17 +262,23 @@ type
     procedure CreateRegistredThread(
       const ARegistringConstructor: TRegistringConstructor); overload;
 
+    procedure TerminateAllThreads;
+
+    function GetThreadByName(const AThreadName: String): TThreadExt;
+
     property OnDestroyFactory: TNotifyEvent
       write FOnDestroyFactory;
 
     property OnAllThreadsAreDestroyed: TNotifyEvent
       write SetOnAllThreadsAreDestroyed;
 
-    property ThreadFactoryName: String read  FThreadFactoryName write FThreadFactoryName;
+//    property OnThreadFactoryRegisterNotify: TNotifyEvent
+//      write FOnThreadFactoryRegisterNotify;
 
-    procedure TerminateAllThreads;
+    property ThreadFactoryName: String read FThreadFactoryName write FThreadFactoryName;
 
-    function GetThreadByName(const AThreadName: String): TThreadExt;
+    property FreeWhenAllThreadsDone: Boolean
+      read FFreeWhenAllThreadsDone write FFreeWhenAllThreadsDone;
   end;
 
 implementation
@@ -414,8 +434,6 @@ destructor TThreadExt.Destroy;
 begin
   FreeAndNil(FEventHold);
   FreeAndNil(FCriticalSection);
-
-//  FUnregProc(Self);
 
   if FExceptionMessage.Length > 0 then
   begin
@@ -628,31 +646,45 @@ begin
   Log.d('TThreadFactory.Create');
 
   FCriticalSection := TCriticalSection.Create;
+  FFreeWhenAllThreadsDone := false;
   FThreadRegistry := TThreadRegistry.Create;
+  FUnregFromThreadFactoryProc := nil;
+  FOnDestroyFactory := nil;
+  FOnAllThreadsAreDestroyed := nil;
+  FThreadFactoryName := 'NamelessThreadFactory';
+end;
+
+constructor TThreadFactory.Create(const AUnregProc: TUnregFromThreadFactoryProc);
+begin
+  Log.d('TThreadFactory.Create');
+
+  FCriticalSection := TCriticalSection.Create;
+  FFreeWhenAllThreadsDone := false;
+  FThreadRegistry := TThreadRegistry.Create;
+  FUnregFromThreadFactoryProc := AUnregProc;
   FOnDestroyFactory := nil;
   FOnAllThreadsAreDestroyed := nil;
   FThreadFactoryName := 'NamelessThreadFactory';
 end;
 
 destructor TThreadFactory.Destroy;
-var
-  ThreadFactory: TThreadFactory;
 begin
   if FThreadRegistry.Count > 0 then
   begin
-    raise Exception.Create('There are undestroyed threads');
+    raise Exception.
+      Create('TThreadFactory.Destroy -> There are undestroyed threads');
   end;
 
   FreeAndNil(FThreadRegistry);
   FreeAndNil(FCriticalSection);
 
-  ThreadFactory := Self;
+  if Assigned(FUnregFromThreadFactoryProc) then
+    FUnregFromThreadFactoryProc(Self);
+
+  // Исполняться будет так или иначе в главном потоке,
+  // По этому не откладываем
   if Assigned(FOnDestroyFactory) then
-    TThread.ForceQueue(nil,
-      procedure
-      begin
-        FOnDestroyFactory(ThreadFactory);
-      end);
+    FOnDestroyFactory(Self);
 
   inherited;
 end;
@@ -748,11 +780,18 @@ begin
 
   Log.d('TThreadFactory.CheckThreadZeroCount -> ' + ThreadFactory.ThreadFactoryName);
 
+  // Вызываем напрямую без откладывания
+  // Так или иначе выполняться будет в основном потоке
+  // Вначале идет обработка внешнего вызова
   if Assigned(FOnAllThreadsAreDestroyed) then
+    FOnAllThreadsAreDestroyed(ThreadFactory);
+
+  // Теперь идет финишная обработка, здесь фабрика отправляется на уничтожения
+  if FFreeWhenAllThreadsDone then
     TThread.ForceQueue(nil,
       procedure
       begin
-        FOnAllThreadsAreDestroyed(ThreadFactory);
+        ThreadFactory.Free;
       end);
 end;
 
