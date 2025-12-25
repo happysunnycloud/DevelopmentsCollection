@@ -13,24 +13,24 @@ uses
   , FMX.Types
   , FMX.HintFormUnit
   , FMX.HintThreadUnit
-//  , FMX.ThemeUnit
+  , FMX.ThemeUnit
   ;
 
 type
-  TMouseHandlers = record
+  THintMouseHandlers = record
     OnEnterHandler: TNotifyEvent;
     OnLeaveHandler: TNotifyEvent;
   end;
 
-  THint = class(TComponent)
+  TCustomHint = class(TComponent)
   strict private
     FHintForm: THintForm;
     FHintThread: THintThread;
     FControl: TControl;
 
-    FMouseHandlersDict: TDictionary<TControl, TMouseHandlers>;
+    FMouseHandlersDict: TDictionary<TControl, THintMouseHandlers>;
 
-    //    FTheme: TTheme;
+    FTheme: TTheme;
 
     procedure OnTerminateHintThreadHandler(Sender: TObject);
 
@@ -59,7 +59,7 @@ type
     procedure HookHints(const AParent: TFmxObject);
     procedure UnHookHints;
 
-//    property Theme: TTheme read FTheme write FTheme;
+    property Theme: TTheme read FTheme write FTheme;
   end;
 
 implementation
@@ -116,9 +116,9 @@ begin
   ShowWindow(H, SW_SHOWNOACTIVATE);
 end;
 
-{ THint }
+{ TCustomHint }
 
-procedure THint.CreateHintForm;
+procedure TCustomHint.CreateHintForm;
 var
   ParentForm: TForm;
   Point: TPoint;
@@ -132,10 +132,10 @@ begin
   Y := Point.Y;
 
   FHintForm := THintForm.CreateNew(nil);
+  FHintForm.Theme.CopyFrom(FTheme);
   FHintForm.Hint := FControl.Hint;
   FHintForm.Left := X - FHintForm.Width div 2;
   FHintForm.Top := Y - FHintForm.Height - 6;
-  FHintForm.Fill.Color := TAlphaColorRec.Black;
   FHintForm.Fill.Kind := TBrushKind.Solid;
 
   TControlTools.TaskBarPositionDelta(FHintForm);
@@ -143,18 +143,24 @@ begin
 
   FHintForm.PrepareOverlayForm;
   FHintForm.ShowOverlayAboveParent(ParentForm);
+
+  FHintForm.Theme.Apply;
 end;
 
-procedure THint.CloseHintForm;
+procedure TCustomHint.CloseHintForm;
 begin
   if Assigned(FHintForm) then
     FHintForm.Close;
   FHintForm := nil;
 end;
 
-constructor THint.Create(AOwner: TComponent);
+constructor TCustomHint.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
+
+  FTheme := TTheme.Create;
+  FTheme.BackgroundColor := TAlphaColorRec.Black;
+  FTheme.CommonTextProps.TextSettings.FontColor := TAlphaColorRec.White;
 
   // Отключаем стандартный механизм хинтов
   Application.ShowHint := False;
@@ -163,20 +169,20 @@ begin
   FHintThread := nil;
   FControl := nil;
 
-  FMouseHandlersDict := TDictionary<TControl, TMouseHandlers>.Create;
-
-    //    FTheme: TTheme;
+  FMouseHandlersDict := TDictionary<TControl, THintMouseHandlers>.Create;
 end;
 
-procedure THint.OnTerminateHintThreadHandler(Sender: TObject);
+procedure TCustomHint.OnTerminateHintThreadHandler(Sender: TObject);
 begin
   CloseHintForm;
 
   FHintThread := nil;
 end;
 
-destructor THint.Destroy;
+destructor TCustomHint.Destroy;
 begin
+  FreeAndNil(FTheme);
+
   CloseHintForm;
 
   if Assigned(FHintThread) then
@@ -195,7 +201,7 @@ begin
   inherited;
 end;
 
-procedure THint.Open(const AControl: TControl);
+procedure TCustomHint.Open(const AControl: TControl);
 begin
   if AControl.Hint.Length = 0 then
     Exit;
@@ -205,7 +211,7 @@ begin
   StartHintThread(FControl);
 end;
 
-procedure THint.StartHintThread(
+procedure TCustomHint.StartHintThread(
   const AControl: TControl);
 begin
   if Assigned(FHintThread) then
@@ -215,6 +221,9 @@ begin
     FHintThread := nil;
   end;
 
+  if not Assigned(AControl) then
+    Exit;
+
   FHintThread := THintThread.Create(AControl);
   FHintThread.CreateHintFormProc := CreateHintForm;
   FHintThread.FreeOnTerminate := true;
@@ -222,12 +231,12 @@ begin
   FHintThread.Start;
 end;
 
-procedure THint.AddOriginalHandlers(
+procedure TCustomHint.AddOriginalHandlers(
   const AControl: TControl;
   const AOnEnterHandler: TNotifyEvent;
   const AOnLeaveHandler: TNotifyEvent);
 var
-  MouseHandlers: TMouseHandlers;
+  MouseHandlers: THintMouseHandlers;
 begin
   MouseHandlers.OnEnterHandler := AOnEnterHandler;
   MouseHandlers.OnLeaveHandler := AOnLeaveHandler;
@@ -235,10 +244,10 @@ begin
   FMouseHandlersDict.Add(AControl, MouseHandlers);
 end;
 
-procedure THint.HookingOnMouseEnterHandler(Sender: TObject);
+procedure TCustomHint.HookingOnMouseEnterHandler(Sender: TObject);
 var
   Control: TControl;
-  MouseHandlers: TMouseHandlers;
+  MouseHandlers: THintMouseHandlers;
 begin
   Control := Sender as TControl;
 
@@ -249,10 +258,10 @@ begin
   Open(Control);
 end;
 
-procedure THint.HookingOnMouseLeaveHandler(Sender: TObject);
+procedure TCustomHint.HookingOnMouseLeaveHandler(Sender: TObject);
 var
   Control: TControl;
-  MouseHandlers: TMouseHandlers;
+  MouseHandlers: THintMouseHandlers;
 begin
   Control := Sender as TControl;
 
@@ -261,7 +270,7 @@ begin
       MouseHandlers.OnLeaveHandler(Sender);
 end;
 
-procedure THint.HookHints(const AParent: TFmxObject);
+procedure TCustomHint.HookHints(const AParent: TFmxObject);
 var
   I: Integer;
   Obj: TFmxObject;
@@ -288,10 +297,10 @@ begin
   end;
 end;
 
-procedure THint.UnHookHints;
+procedure TCustomHint.UnHookHints;
 var
   Control: TControl;
-  MouseHandlers: TMouseHandlers;
+  MouseHandlers: THintMouseHandlers;
 begin
   for Control in FMouseHandlersDict.Keys do
   begin

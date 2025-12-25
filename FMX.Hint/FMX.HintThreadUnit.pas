@@ -12,7 +12,7 @@ uses
   ;
 
 const
-  TO_SHOW_COUNTDOWN = 800;
+  TO_SHOW_COUNTDOWN = 600;
   TO_HIDE_COUNTDOWN = 2000;
 
 type
@@ -157,11 +157,12 @@ begin
 
       if i < 0 then
       begin
-        //TThread.Queue(nil,
-        Synchronize(
+        TThread.Queue(nil,
+        //Synchronize(
           procedure
           begin
-            FCreateHintFormProc;
+            if not Application.Terminated then
+              FCreateHintFormProc;
           end);
 
         i := TO_HIDE_COUNTDOWN;

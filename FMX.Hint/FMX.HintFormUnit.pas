@@ -9,6 +9,7 @@ uses
   , FMX.Forms
   , FMX.Graphics
   , FMX.StdCtrls
+  , FMX.ThemeUnit
   ;
 
 const
@@ -17,6 +18,8 @@ const
 type
   THintForm = class(TForm)
   strict private
+    FTheme: TTheme;
+
     FHint: String;
     FLabel: TLabel;
 
@@ -24,6 +27,8 @@ type
       const ARect: TRectF);
 
     procedure SetHint(const AHint: String);
+
+    procedure OnThemeApplyHandler(Sender: TObject);
   protected
     procedure OnCloseQueryInternalHandler(
       Sender: TObject; var CanClose: Boolean);
@@ -37,6 +42,7 @@ type
     procedure ShowOverlayAboveParent(const Parent: TForm);
     procedure HideOverlay;
 
+    property Theme: TTheme read FTheme write FTheme;
     property Hint: String write SetHint;
   end;
 
@@ -93,6 +99,9 @@ end;
 constructor THintForm.CreateNew(AOwner: TComponent; Dummy: NativeInt = 0);
 begin
   inherited CreateNew(AOwner, Dummy);
+
+  FTheme := TTheme.Create;
+  FTheme.OnApply := OnThemeApplyHandler;
 
   OnPaint := Paint;
 
@@ -170,7 +179,15 @@ end;
 
 destructor THintForm.Destroy;
 begin
+  FreeAndNil(FTheme);
+
   inherited;
+end;
+
+procedure THintForm.OnThemeApplyHandler(Sender: TObject);
+begin
+  Self.Fill.Color := FTheme.BackgroundColor;
+  FTheme.CommonTextProps.ApplyTo(Self.FLabel);
 end;
 
 end.
