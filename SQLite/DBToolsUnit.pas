@@ -38,9 +38,14 @@ type
         const AParameterName: String;
         const AParameter: String;
         const ANeedQuotes: Boolean = true);
-      procedure AddParameterAsInteger (const AParameterName: String; const AParameter: Integer);
-      procedure AddParameterAsLargeInt(const AParameterName: String; const AParameter: Int64);
-      procedure AddParameterAsBoolean (const AParameterName: String; const AParameter: Boolean);
+      procedure AddParameterAsInteger(
+        const AParameterName: String; const AParameter: Integer);
+      procedure AddParameterAsLargeInt(
+        const AParameterName: String; const AParameter: Int64);
+      procedure AddParameterAsBoolean(
+        const AParameterName: String; const AParameter: Boolean);
+      procedure AddParameterAsDouble(
+        const AParameterName: String; const AParameter: Double);
 
       procedure ClearQuery;
     end;
@@ -71,14 +76,44 @@ type
 
 implementation
 
-procedure PlaceParameterAsInteger(var ASQLQuery: String; const AParameterName: String; const AParameter: Integer);
+procedure PlaceParameterAsInteger(
+  var ASQLQuery: String;
+  const AParameterName: String;
+  const AParameter: Integer);
 begin
-  ASQLQuery := StringReplace(ASQLQuery, AParameterName, IntToStr(AParameter), [rfReplaceAll, rfIgnoreCase]);
+  ASQLQuery :=
+    StringReplace(ASQLQuery, AParameterName, IntToStr(AParameter), [rfReplaceAll, rfIgnoreCase]);
 end;
 
-procedure PlaceParameterAsInt64(var ASQLQuery: String; const AParameterName: String; const AParameter: Int64);
+procedure PlaceParameterAsInt64(
+  var ASQLQuery: String;
+  const AParameterName: String;
+  const AParameter: Int64);
 begin
-  ASQLQuery := StringReplace(ASQLQuery, AParameterName, IntToStr(AParameter), [rfReplaceAll, rfIgnoreCase]);
+  ASQLQuery :=
+    StringReplace(ASQLQuery, AParameterName, IntToStr(AParameter), [rfReplaceAll, rfIgnoreCase]);
+end;
+
+procedure PlaceParameterAsDouble(
+  var ASQLQuery: String;
+  const AParameterName: String;
+  const AParameter: Double);
+
+  function _DoubleToDotStr(const Value: Double): String;
+  var
+    FS: TFormatSettings;
+  begin
+    FS := FormatSettings;
+    FS.DecimalSeparator := '.';
+    Result := FloatToStr(Value, FS);
+  end;
+
+var
+  Parameter: String;
+begin
+  Parameter := _DoubleToDotStr(AParameter);
+  ASQLQuery :=
+    StringReplace(ASQLQuery, AParameterName, Parameter, [rfReplaceAll, rfIgnoreCase]);
 end;
 
 procedure PlaceParameterAsString(
@@ -136,6 +171,12 @@ begin
     PlaceParameterAsInteger(FSQLQuery, AParameterName, 1)
 end;
 
+procedure TDBTools.TQuery.AddParameterAsDouble(
+  const AParameterName: String; const AParameter: Double);
+begin
+  PlaceParameterAsDouble(FSQLQuery, AParameterName, AParameter);
+end;
+
 procedure TDBTools.TQuery.ClearQuery;
 begin
   FSQLQuery := '';
@@ -167,10 +208,12 @@ begin
 
     FFDQuery.Connection := fFDConnection;
   except
-    on e:Exception do
+    on e: Exception do
     begin
-      FFDQuery := nil;
-      raise Exception.Create(Format('TDataBaseTools.Create: %s', [e.Message]));
+      FreeAndNil(FDConnection);
+      FreeAndNil(FFDQuery);
+
+      raise;
     end;
   end;
 end;
