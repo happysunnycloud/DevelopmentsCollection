@@ -66,33 +66,33 @@ type
   TPopupMenuExt = class(TComponent)
   strict private
     FItems: TItems;
-    FPopupMenuThread: TPopupMenuExtThread;
     FCallingObject: TObject;
     /// <summary>
     ///   Выставляется в случае закрытия всего приложения
     ///   При выставленном флаге, сворачиваем работу меню
     /// </summary>
     FImmediatelyToDoClose: Boolean;
-
     FTheme: TTheme;
+
+    {$IFDEF MSWINDOWS}
+    FPopupMenuThread: TPopupMenuExtThread;
+    {$ENDIF}
 
     function FindOpenedForm(const AItem: TItem): TPopupMenuExtForm;
 
     procedure OnItemMouseEnterHandler(Sender: TObject);
     procedure OnItemMouseLeaveHandler(Sender: TObject);
-    procedure OnItemClickHandler(Sender: TObject);
 
-    procedure OnTerminatePopupMenuThreadHandler(Sender: TObject);
+    procedure CloseForm(const AForm: TPopupMenuExtForm);
+    procedure OnItemClickHandler(Sender: TObject);
     procedure OnAndroidGoBackButtonClickHandler(Sender: TObject);
 
-    procedure TimeIsOutFixed(const AForm: TPopupMenuExtForm);
-    procedure ItemClickFixed(const ASender: TObject);
-
+    {$IFDEF MSWINDOWS}
+    procedure OnTimeIsOutHandler(Sender: TObject);
     procedure StartPopupMenuThread(
       const AForm: TPopupMenuExtForm;
       const AStepDirection: TStepDirection);
-
-   procedure CloseForm(const AForm: TPopupMenuExtForm);
+    {$ENDIF}
   private
   public
     constructor Create(Owner: TComponent); reintroduce;
@@ -318,182 +318,84 @@ begin
   Rectangle := TRectangle(TLayout(Sender).Children[0]);
   Rectangle.Fill.Color := Theme.LightBackgroundColor;
 end;
-
+{$IFDEF MSWINDOWS}
+procedure TPopupMenuExt.OnTimeIsOutHandler(Sender: TObject);
+var
+  Form: TPopupMenuExtForm;
+begin
+  Form := FPopupMenuThread.Form;
+  CloseForm(Form);
+end;
+{$ENDIF}
 procedure TPopupMenuExt.OnItemClickHandler(Sender: TObject);
 var
   Layout: TLayout;
-  Item: TItem;
-begin
-  Layout := TLayout(Sender);
-  Item := Layout.ItemOwner;
-  if Assigned(FPopupMenuThread) then
-    FPopupMenuThread.ClickedItem := Item;
-end;
-
-procedure TPopupMenuExt.OnTerminatePopupMenuThreadHandler(Sender: TObject);
-var
-  PopupMenuThread: TPopupMenuExtThread;
-begin
-  PopupMenuThread := FPopupMenuThread;
-  FPopupMenuThread := nil;
-
-  if FImmediatelyToDoClose then
-    Exit;
-
-  if PopupMenuThread.TimeIsOutFixed then
-    TimeIsOutFixed(PopupMenuThread.Form)
-  else
-  if PopupMenuThread.ClickFixed then
-    ItemClickFixed(PopupMenuThread.ClickedItem);
-end;
-
-procedure TPopupMenuExt.OnAndroidGoBackButtonClickHandler(Sender: TObject);
-begin
-  if Assigned(FPopupMenuThread) then
-    FPopupMenuThread.GoBackClickFixed := true;
-end;
-
-//procedure TPopupMenuExt.TimeIsOutFixed(const AForm: TPopupMenuExtForm);
-//var
-//  ParentItem: TItem;
-//  ParentForm: TPopupMenuExtForm;
-//begin
-//  if not Assigned(AForm) then
-//    Exit;
-//
-//  ParentItem := AForm.ParentItem;
-//  if Assigned(ParentItem) then
-//  begin
-//    // Если происходит немедленное закрытие,
-//    // то обработка TimeIsOutFixed вообще не производжится
-//    ParentForm := ParentItem.FormOwner;
-//    if TControlTools.IsMouseOverForm(ParentForm) then
-//    begin
-//      ParentForm.Show;
-//      ParentForm.Invalidate;
-//
-//      StartPopupMenuThread(ParentForm, sdBackward);
-//    end
-//    else
-//      CloseForm(ParentForm);
-//
-//    CloseForm(AForm);
-//  end
-//  else
-//  begin
-//    Close;
-//
-//    Exit;
-//  end;
-//end;
-
-procedure TPopupMenuExt.TimeIsOutFixed(const AForm: TPopupMenuExtForm);
-var
-  ParentItem: TItem;
-begin
-  if not Assigned(AForm) then
-    Exit;
-
-  ParentItem := AForm.ParentItem;
-  if Assigned(ParentItem) then
-    CloseForm(AForm)
-  else
-  begin
-    Close;
-
-    Exit;
-  end;
-end;
-
-procedure TPopupMenuExt.ItemClickFixed(const ASender: TObject);
-
-  procedure CloseSameLevelForms(const AItemOwner: TItem);
-  var
-    Level: Word;
-    ParentItemForm: TPopupMenuExtForm;
-    Form: TPopupMenuExtForm;
-    i: Word;
-  begin
-    ParentItemForm := FindOpenedForm(AItemOwner);
-    Level := AItemOwner.Level;
-
-    i := ComponentCount;
-    while i > 0 do
-    begin
-      Dec(i);
-
-      if Components[i] is TPopupMenuExtForm then
-      begin
-        Form := TPopupMenuExtForm(Components[i]);
-        if not Assigned(Form.ParentItem) then
-          Exit;
-
-        if Form.ParentItem.Level >= Level then
-          if Form <> ParentItemForm then
-          begin
-            CloseForm(Form);
-          end;
-      end;
-    end;
-  end;
-
-var
   Point: TPoint;
-  ItemOwner: TItem;
-  OpenedForm: TPopupMenuExtForm;
+  Item: TItem;
   OnClick: TNotifyEvent;
+  Form: TPopupMenuExtForm;
 begin
+  Layout := Sender as TLayout;
+  Item := Layout.ItemOwner;
+
   GetCurPos(Point);
 
-  ItemOwner := TItem(ASender);
-  CloseSameLevelForms(ItemOwner);
-
-  OpenedForm := FindOpenedForm(ItemOwner);
-  if Assigned(OpenedForm) then
+  if Item.Children.Count > 0 then
   begin
-    {$IFDEF MSWINDOWS}
-    SetForegroundWindow(FmxHandleToHWND(OpenedForm.Handle));
-    {$ENDIF}
-    StartPopupMenuThread(OpenedForm, sdForward)
+    if Assigned(FindOpenedForm(Item)) then
+      Exit;
+
+    Open(Point.X, Point.Y, FCallingObject, Item)
   end
   else
   begin
-    if ItemOwner.Children.Count = 0 then
+    if Assigned(Item.OnClick) then
     begin
-      if Assigned(ItemOwner.OnClick) then
-      begin
-        OnClick := ItemOwner.OnClick;
-        TThread.ForceQueue(nil,
-          procedure
-          begin
-            //asd доработать: Скроем все окна меню, что бы не видело на экране
-            OnClick(ItemOwner);
-          end);
-      end;
+      {$IFDEF MSWINDOWS}
+      FPopupMenuThread.ClickFixed := true;
+      {$ENDIF}
+      OnClick := Item.OnClick;
       TThread.ForceQueue(nil,
         procedure
         begin
-          Close;
+          //asd доработать: Скроем все окна меню, что бы не висело на экране
+          OnClick(Item);
         end);
-    end
-    else
-      Open(Point.X, Point.Y, FCallingObject, ItemOwner);
-  end;
+
+      Form := TControlTools.FindParentForm(Layout) as TPopupMenuExtForm;
+      TThread.ForceQueue(nil,
+        procedure
+        begin
+          CloseForm(Form);
+        end);
+    end;
+  end
+end;
+
+procedure TPopupMenuExt.OnAndroidGoBackButtonClickHandler(Sender: TObject);
+var
+  Layout: TLayout;
+  Form: TPopupMenuExtForm;
+begin
+  Layout := Sender as TLayout;
+  Form := TControlTools.FindParentForm(Layout) as TPopupMenuExtForm;
+  CloseForm(Form);
+//  if Assigned(FPopupMenuThread) then
+//    FPopupMenuThread.GoBackClickFixed := true;
 end;
 
 constructor TPopupMenuExt.Create(Owner: TComponent);
-//var
-//  Timer: TTimer;
 begin
   inherited Create(Owner);
 
   FItems := TItems.Create;
-  FPopupMenuThread := nil;
   FCallingObject := nil;
 
   FImmediatelyToDoClose := false;
 
   FTheme := TTheme.Create;
+
+  { --- Defaults --- }
 
   FTheme.BackgroundColor := $FFB7B7B7;//$FF2A001A;//TAlphaColorRec.Black;
   FTheme.LightBackgroundColor := $FFE0E0E0;//TAlphaColorRec.Black;//$FFE0E0E0;
@@ -510,9 +412,14 @@ begin
   FTheme.CommonTextProps.Margins.Left := 5;
   FTheme.CommonTextProps.WordWrap := false;
 
-//  Timer := TTimer.Create(Self);
-//  Timer.Interval := 1000;
-//  Timer.Enabled := true;
+  { --- Defaults --- }
+
+  {$IFDEF MSWINDOWS}
+  FPopupMenuThread := TPopupMenuExtThread.Create(TStepDirection.sdForward, true);
+  FPopupMenuThread.FreeOnTerminate := true;
+  FPopupMenuThread.OnTimeIsOut := OnTimeIsOutHandler;
+  FPopupMenuThread.Start;
+  {$ENDIF}
 end;
 
 destructor TPopupMenuExt.Destroy;
@@ -572,25 +479,19 @@ var
   FormOwner: TPopupMenuExtForm;
 begin
   FImmediatelyToDoClose := true;
-
+  {$IFDEF MSWINDOWS}
   if Assigned(FPopupMenuThread) then
   begin
-    FPopupMenuThread.Form := nil;
     FPopupMenuThread.Terminate;
+    FPopupMenuThread.HoldEvent.SetEvent;
     FPopupMenuThread.WaitForDone;
   end;
-
+  {$ENDIF}
   if ComponentCount > 0 then
   begin
     Form := Components[Pred(ComponentCount)] as TPopupMenuExtForm;
     CloseForm(Form);
   end;
-
-//  while ComponentCount > 0 do
-//  begin
-//    Form := Components[0] as TPopupMenuExtForm;
-//    CloseForm(Form);
-//  end;
 
   if Owner is TForm then
   begin
@@ -668,26 +569,23 @@ var
   AndroidGoBackButtonText: TText;
   {$ENDIF}
 begin
-  if Assigned(FPopupMenuThread) then
-    Exit;
-
-  FImmediatelyToDoClose := false;
-
-  FCallingObject := ACallingObject;
-
   if not Assigned(AParentItem) then
   begin
     OpenedForm := FindOpenedForm(nil);
     if Assigned(OpenedForm) then
     begin
-      OpenedForm.Left := Trunc(X);
-      OpenedForm.Top := Trunc(Y);
-      {$IFDEF MSWINDOWS}
-      SetForegroundWindow(FmxHandleToHWND(OpenedForm.Handle));
-      {$ENDIF}
+//      OpenedForm.Left := Trunc(X);
+//      OpenedForm.Top := Trunc(Y);
+//      {$IFDEF MSWINDOWS}
+//      SetForegroundWindow(FmxHandleToHWND(OpenedForm.Handle));
+//      {$ENDIF}
       Exit;
     end;
   end;
+
+  FImmediatelyToDoClose := false;
+
+  FCallingObject := ACallingObject;
 
   PopupForm := TPopupMenuExtForm.CreateNew(Self);
   PopupForm.BorderStyle := TFmxFormBorderStyle.None;
@@ -894,24 +792,27 @@ begin
   PopupForm.Parent := TForm(Owner);  // Чтобы окно было на переднем фоне
   PopupForm.Show;
 
+  {$IFDEF MSWINDOWS}
   StartPopupMenuThread(PopupForm, sdForward);
+  {$ENDIF}
 end;
 
+{$IFDEF MSWINDOWS}
 procedure TPopupMenuExt.StartPopupMenuThread(
   const AForm: TPopupMenuExtForm;
   const AStepDirection: TStepDirection);
 begin
   if Assigned(FPopupMenuThread) then
   begin
-    FPopupMenuThread.Terminate;
-    FPopupMenuThread.WaitForDone;
-  end;
+    FPopupMenuThread.HoldEvent.SetEvent;
+    FPopupMenuThread.Form := AForm;
 
-  FPopupMenuThread := TPopupMenuExtThread.Create(AForm, AStepDirection, true);
-  FPopupMenuThread.FreeOnTerminate := true;
-  FPopupMenuThread.OnTerminate := OnTerminatePopupMenuThreadHandler;
-  FPopupMenuThread.Start;
+    FPopupMenuThread.TimeIsOutFixed := false;
+    FPopupMenuThread.ClickFixed := false;
+    FPopupMenuThread.HoldEvent.SetEvent;
+  end;
 end;
+{$ENDIF}
 
 procedure TPopupMenuExt.CloseForm(const AForm: TPopupMenuExtForm);
 var
@@ -927,7 +828,7 @@ begin
   if Assigned(ParentItem) then
   begin
     ParentForm := ParentItem.FormOwner;
-
+    {$IFDEF MSWINDOWS}
     if Assigned(ParentForm) then
       if TControlTools.IsMouseOverForm(ParentForm) and
          not FImmediatelyToDoClose
@@ -940,6 +841,10 @@ begin
       end
       else
         CloseForm(ParentForm);
+    {$ELSE IFDEF ANDROID}
+    if Assigned(ParentForm) then
+      CloseForm(ParentForm);
+    {$ENDIF}
   end;
 
   AForm.Close;
