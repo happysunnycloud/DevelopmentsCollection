@@ -101,6 +101,11 @@ type
 
 implementation
 
+{$IFDEF ANDROID}
+uses
+  Posix.Unistd;
+{$ENDIF}
+
 { TFileNamesHelper }
 
 procedure TFileNamesHelper.Add(const AFileName: String);
