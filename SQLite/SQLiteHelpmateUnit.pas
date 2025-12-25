@@ -7,6 +7,7 @@ type
   public
     class function StrToDateTime(const AStr: String): TDateTime;
     class function DateTimeToStr(const ADateTime: TDateTime): String;
+    class function IntToBool(const AValue: Integer): Boolean;
   end;
 
 implementation
@@ -47,6 +48,14 @@ begin
       _DigitAlign(Min),
       _DigitAlign(Sec)
       ])
+end;
+
+class function TSQLiteHelpmate.IntToBool(const AValue: Integer): Boolean;
+begin
+  Result := false;
+
+  if AValue > 0 then
+    Result := true;
 end;
 
 end.
