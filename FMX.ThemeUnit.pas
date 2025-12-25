@@ -55,12 +55,8 @@ type
     FDarkBackgroundColor: TAlphaColor;
     FLightBackgroundColor: TAlphaColor;
     FMemoColor: TAlphaColor;
-//    FTextColor: TAlphaColor;
-//    FTextFontSize: Single;
-
-//    FTextSettings: TTextSettings;
-
     FCommonTextProps: TCommonTextProps;
+    FOnApply: TNotifyEvent;
   public
     constructor Create;
     destructor Destroy; override;
@@ -70,18 +66,17 @@ type
 
     procedure CopyTo(const ATheme: TTheme);
     procedure CopyFrom(const ATheme: TTheme);
+    procedure Apply;
 
     property BackgroundColor: TAlphaColor read FBackgroundColor write FBackgroundColor;
     property DarkBackgroundColor: TAlphaColor read FDarkBackgroundColor write FDarkBackgroundColor;
     property LightBackgroundColor: TAlphaColor read FLightBackgroundColor write FLightBackgroundColor;
     property MemoColor: TAlphaColor read FMemoColor write FMemoColor;
-//    property TextColor: TAlphaColor read FTextColor write FTextColor;
-//    property TextFontSize: Single read FTextFontSize write FTextFontSize;
 
-//    property TextSettings: TTextSettings
-//      read FTextSettings write FTextSettings;
     property CommonTextProps: TCommonTextProps
       read FCommonTextProps write FCommonTextProps;
+
+    property OnApply: TNotifyEvent read FOnApply write FOnApply;
   end;
 
 implementation
@@ -150,11 +145,6 @@ end;
 
 procedure TCommonTextProps.ApplyTo(const AText: TText);
 begin
-//  AText.Margins.Assign(inherited Margins);
-//  AText.Align := inherited Align;
-//  AText.WordWrap := inherited WordWrap;
-//  AText.HitTest := inherited HitTest;
-
   AText.Margins.Assign(Margins);
   AText.Align := Align;
   AText.WordWrap := WordWrap;
@@ -167,7 +157,6 @@ procedure TCommonTextProps.ApplyTo(const ALabel: TLabel);
 begin
   ALabel.Margins.Assign(Margins);
   ALabel.Align := Align;
-//  ALabel.WordWrap := WordWrap;
   ALabel.HitTest := HitTest;
 
   ALabel.TextSettings.Assign(FTextSettings);
@@ -219,20 +208,20 @@ end;
 constructor TTheme.Create;
 begin
   FCommonTextProps := TCommonTextProps.Create;
-//  FTextSettings := TTextSettings.Create(nil);
 
   FBackgroundColor := TAlphaColorRec.Gray;
+  FDarkBackgroundColor := TAlphaColorRec.Gray;
+  FLightBackgroundColor := TAlphaColorRec.Gray;
   FMemoColor := TAlphaColorRec.Whitesmoke;
-//  FTextColor := TAlphaColorRec.Black;
   FCommonTextProps.TextSettings.Font.Size := 12;
-//  FTextFontSize := 14;
 
   FStyleBookMemoryStream := TMemoryStream.Create;
+
+  FOnApply := nil;
 end;
 
 destructor TTheme.Destroy;
 begin
-//  FreeAndNil(FTextSettings);
   FreeAndNil(FCommonTextProps);
 
   FreeAndNil(FStyleBookMemoryStream);
@@ -290,9 +279,7 @@ begin
     ATheme.DarkBackgroundColor := FDarkBackgroundColor;
     ATheme.LightBackgroundColor := FLightBackgroundColor;
     ATheme.MemoColor := FMemoColor;
-//    ATheme.TextColor := FTextColor;
-//    ATheme.TextFontSize := FTextFontSize;
-//    ATheme.TextSettings.Assign(FTextSettings);
+
     ATheme.CommonTextProps.Assign(FCommonTextProps);
   except
     on e: Exception do
@@ -324,6 +311,12 @@ begin
     on e: Exception do
       raise Exception.CreateFmt('%s -> %s', [METHOD, e.Message]);
   end;
+end;
+
+procedure TTheme.Apply;
+begin
+  if Assigned(FOnApply) then
+    FOnApply(Self);
 end;
 
 end.
