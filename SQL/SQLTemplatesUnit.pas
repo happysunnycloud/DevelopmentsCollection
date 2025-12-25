@@ -6,9 +6,12 @@ uses
     System.Classes
   , System.SyncObjs
   , System.Generics.Collections
+  , FilePackerUnit
   ;
 
 type
+  TTemplatesKind = (tkNone = -1, tkPath = 1, tkPack = 2);
+
   TSQLTemplate = class
   strict private
     FIdent: String;
@@ -25,8 +28,14 @@ type
   strict private
     FAccessCriticalSection: TCriticalSection;
     FTemplateList: TList<TSQLTemplate>;
+    FFilePacker: TFilePacker;
+
+    procedure InitFromPath(const APath: String);
+    procedure InitFromPack(const APath: String);
   public
-    constructor Create(const aTemplateDir: String);
+    constructor Create(
+      const APath: String;
+      const ATemplatesKind: TTemplatesKind = tkPath);
     destructor Destroy; override;
 
     function GetTemplate(const aIdent: String): String;
@@ -37,6 +46,7 @@ implementation
 uses
     System.SysUtils
   , FileToolsUnit
+  , TextExtractorUnit
   ;
 
 constructor TSQLTemplate.Create(const aIdent, aSQL: String);
@@ -50,21 +60,22 @@ begin
   inherited;
 end;
 
-constructor TSQLTEmplates.Create(const aTemplateDir: String);
+procedure TSQLTEmplates.InitFromPath(const APath: String);
 var
   FileNameList: TStringList;
   FileName: String;
-  TemplateFile: TextFile;
   Template: String;
+  TemplateFile: TextFile;
   ReadedLine: String;
   Ident: String;
 begin
-  FAccessCriticalSection := TCriticalSection.Create;
-  FTemplateList := TList<TSQLTEmplate>.Create;
+  if not DirectoryExists(APath) then
+    raise Exception.CreateFmt('Path "%s" not exists', [APath]);
+
   FileNameList := TStringList.Create;
   try
     try
-      TFileTools.GetFileNameListByDir(aTemplateDir, FileNameList);
+      TFileTools.GetFileNameList(APath, [], FileNameList);
       if FileNameList.Count > 0 then
       begin
         for FileName in FileNameList do
@@ -84,13 +95,57 @@ begin
           CloseFile(TemplateFile);
         end;
       end;
-      if FileNameList.Count = 0 then
-        raise Exception.Create('SQL template list is empty');
     except
       raise;
     end;
   finally
     FreeAndNil(FileNameList);
+  end;
+end;
+
+procedure TSQLTEmplates.InitFromPack(const APath: String);
+var
+  FileNameList: TStringList;
+  FileName: String;
+  Ident: String;
+  Template: String;
+begin
+  if not FileExists(APath) then
+    raise Exception.CreateFmt('TSQLTEmplates.Create -> Path "%s" not exists', [APath]);
+
+  FFilePacker := TFilePacker.Create(APath, fmOpenRead);
+
+  FileNameList := TStringList.Create;
+  try
+    FFilePacker.GetFileList(FileNameList);
+    for FileName in FileNameList do
+    begin
+      Ident := ExtractFileName(FileName).Replace('.sql', '');
+      Template := TTextExtractor.ExtractToString(FFilePacker, FileName);
+      FTemplateList.Add(TSQLTemplate.Create(Ident, Template));
+    end;
+  finally
+    FreeAndNil(FileNameList);
+  end;
+end;
+
+constructor TSQLTEmplates.Create(
+  const APath: String;
+  const ATemplatesKind: TTemplatesKind = tkPath);
+begin
+  FAccessCriticalSection := TCriticalSection.Create;
+  FTemplateList := TList<TSQLTEmplate>.Create;
+  try
+    if ATemplatesKind = tkPath then
+      InitFromPath(APath)
+    else
+    if ATemplatesKind = tkPack then
+      InitFromPack(APath)
+    else
+      raise Exception.Create('TSQLTEmplates.Create -> TTemplatesKind not defined');
+  except
+    FreeAndNil(FAccessCriticalSection);
+    FreeAndNil(FTemplateList);
   end;
 end;
 
@@ -102,6 +157,9 @@ begin
     Template.Free;
   FreeAndNil(FTemplateList);
   FreeAndNil(FAccessCriticalSection);
+
+  if Assigned(FFilePacker) then
+    FreeAndNil(FFilePacker);
 
   inherited;
 end;
@@ -122,6 +180,10 @@ begin
   finally
     FAccessCriticalSection.Leave;
   end;
+
+  if Length(Trim(Result)) = 0 then
+    raise Exception.
+      Create(Format('SQL template "%s" not found or empty', [aIdent]));
 end;
 
 end.
