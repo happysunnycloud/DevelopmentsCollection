@@ -484,7 +484,8 @@ var
   Parent: TFmxObject;
 begin
   if not Assigned(AChildControl) then
-    raise Exception.Create('TControlTools.FindParentForm: AChildControl is nil');
+    raise Exception.
+      Create('TControlTools.FindParentForm: AChildControl is nil');
 
   Parent := AChildControl.Parent;
   if Parent is TForm then
@@ -496,7 +497,9 @@ begin
   else
   if not Assigned(Parent) then
   begin
-    raise Exception.Create(Format('Parent form not found for control: %s', [AChildControl.Name]));
+    raise Exception.
+      Create(Format('TControlTools.FindParentForm: Parent form not found for control: %s',
+        [AChildControl.Name]));
   end
   else
   begin
@@ -522,7 +525,8 @@ begin
   if not Assigned(Parent) then
   begin
     raise Exception.Create(
-      Format('TControlTools.FindParentFrame: Parent frame not found for control: %s', [AChildControl.Name]));
+      Format('TControlTools.FindParentFrame: Parent frame not found for control: %s',
+        [AChildControl.Name]));
   end
   else
   begin
@@ -530,7 +534,8 @@ begin
   end;
 end;
 
-class function TControlTools.FindControl(const AParentControl: TControl; const AControlName: String): TControl;
+class function TControlTools.FindControl(
+  const AParentControl: TControl; const AControlName: String): TControl;
 var
   i: Word;
   Parent: TFmxObject;
@@ -696,7 +701,7 @@ begin
   GetCursorPos(Point);
 
   RectF := TRectF.Create(AForm.ClientToScreen(AForm.ClientRect.TopLeft),
-                          AForm.ClientToScreen(AForm.ClientRect.BottomRight));
+                         AForm.ClientToScreen(AForm.ClientRect.BottomRight));
 
   if RectF.Contains(Point) then
     Result := true;
