@@ -838,10 +838,14 @@ begin
   Thread := nil;
 
   FThreadRegistry.Enumerator(
-    procedure (const AThread: TThreadExt)
+    procedure (const AThread: TThreadExt; var ABreak: Boolean)
     begin
       if AThread.ThreadName = AThreadName then
+      begin
         Thread := AThread;
+
+        ABreak := true;
+      end;
     end);
 
   Result := Thread;

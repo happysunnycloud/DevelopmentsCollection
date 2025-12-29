@@ -9,8 +9,10 @@ uses
   , System.Classes
   , System.SyncObjs
   , FMX.PopupMenuExtFormUnit
-  , FMX.PopupMenuExtThreadUnit
   , FMX.ThemeUnit
+  {$IFDEF MSWINDOWS}
+  , FMX.PopupMenuExtThreadUnit
+  {$ENDIF}
   ;
 
 const
@@ -83,15 +85,17 @@ type
     procedure OnItemMouseEnterHandler(Sender: TObject);
     procedure OnItemMouseLeaveHandler(Sender: TObject);
 
-    procedure CloseForm(const AForm: TPopupMenuExtForm);
+    procedure CloseForm(
+      const AForm: TPopupMenuExtForm; const ARecursiveClose: Boolean = false);
     procedure OnItemClickHandler(Sender: TObject);
-    procedure OnAndroidGoBackButtonClickHandler(Sender: TObject);
-
     {$IFDEF MSWINDOWS}
     procedure OnTimeIsOutHandler(Sender: TObject);
     procedure StartPopupMenuThread(
       const AForm: TPopupMenuExtForm;
       const AStepDirection: TStepDirection);
+    {$ENDIF}
+    {$IFDEF ANDROID}
+    procedure OnAndroidGoBackButtonClickHandler(Sender: TObject);
     {$ENDIF}
   private
   public
@@ -366,12 +370,12 @@ begin
       TThread.ForceQueue(nil,
         procedure
         begin
-          CloseForm(Form);
+          CloseForm(Form, true);
         end);
     end;
   end
 end;
-
+{$IFDEF ANDROID}
 procedure TPopupMenuExt.OnAndroidGoBackButtonClickHandler(Sender: TObject);
 var
   Layout: TLayout;
@@ -380,10 +384,8 @@ begin
   Layout := Sender as TLayout;
   Form := TControlTools.FindParentForm(Layout) as TPopupMenuExtForm;
   CloseForm(Form);
-//  if Assigned(FPopupMenuThread) then
-//    FPopupMenuThread.GoBackClickFixed := true;
 end;
-
+{$ENDIF}
 constructor TPopupMenuExt.Create(Owner: TComponent);
 begin
   inherited Create(Owner);
@@ -490,7 +492,7 @@ begin
   if ComponentCount > 0 then
   begin
     Form := Components[Pred(ComponentCount)] as TPopupMenuExtForm;
-    CloseForm(Form);
+    CloseForm(Form, true);
   end;
 
   if Owner is TForm then
@@ -561,6 +563,7 @@ var
   PopupFormWidth: Integer;
   PopupForm: TPopupMenuExtForm;
   OpenedForm: TPopupMenuExtForm;
+  Parent: TControl;
   ItemIsSplitter: Boolean;
   ScrollBox: TScrollBox;
   {$IFDEF ANDROID}
@@ -581,6 +584,13 @@ begin
 //      {$ENDIF}
       Exit;
     end;
+
+    Parent := TControl(Owner);
+  end
+  else
+  begin
+    //OpenedForm := FindOpenedForm(AParentItem);
+    Parent := TControl(AParentItem.FormOwner);
   end;
 
   FImmediatelyToDoClose := false;
@@ -592,7 +602,7 @@ begin
   PopupForm.Left := Trunc(X);
   PopupForm.Top := Trunc(Y);
   PopupForm.Height := 0;
-  PopupForm.OnHardwareBackButtonClick := OnAndroidGoBackButtonClickHandler;
+//  PopupForm.OnHardwareBackButtonClick := OnAndroidGoBackButtonClickHandler;
 
   PopupFormWidth := 0;
   ItemsHeight := 0;
@@ -726,7 +736,7 @@ begin
 
       PopupFormWidth := Trunc(
         (
-          MaxTextWidth + ParentArrowWidth + 10 {just simple}
+          MaxTextWidth + ParentArrowWidth + 10 { just simple }
         ) +
         (
           Text.Margins.Left +
@@ -785,12 +795,21 @@ begin
   ParentFormDelta(PopupForm);
   TControlTools.ScreenSizeDelta(PopupForm);
   {$ELSE IFDEF ANDROID}
-  PopupForm.FullScreen := true;
+  //PopupForm.FullScreen := true;
+  //asd debug
+  PopupForm.Width := 200;
+  PopupForm.Height := 200;
+//  PopupForm.Top := 500;
+//  PopupForm.Left := 500;
+//  PopupForm.Top := Random(1000);
+//  PopupForm.Left := Random(1000);
+  //asd debug
   {$ENDIF}
 
   PopupForm.FormStyle := TFormStyle.StayOnTop;
-  PopupForm.Parent := TForm(Owner);  // Чтобы окно было на переднем фоне
+  PopupForm.Parent := Parent;  // Чтобы окно было на переднем фоне
   PopupForm.Show;
+  PopupForm.BringToFront;
 
   {$IFDEF MSWINDOWS}
   StartPopupMenuThread(PopupForm, sdForward);
@@ -814,7 +833,8 @@ begin
 end;
 {$ENDIF}
 
-procedure TPopupMenuExt.CloseForm(const AForm: TPopupMenuExtForm);
+procedure TPopupMenuExt.CloseForm(
+  const AForm: TPopupMenuExtForm; const ARecursiveClose: Boolean = false);
 var
   ParentItem: TItem;
   ParentForm: TPopupMenuExtForm;
@@ -824,10 +844,22 @@ begin
 
 //  RemoveComponent(AForm);
 
+  ParentForm := nil;
   ParentItem := AForm.ParentItem;
   if Assigned(ParentItem) then
-  begin
     ParentForm := ParentItem.FormOwner;
+
+  AForm.Close;
+
+  if not Assigned(ParentForm) then
+    Exit;
+
+  if ARecursiveClose then
+  begin
+    CloseForm(ParentForm, ARecursiveClose);
+  end
+  else
+  begin
     {$IFDEF MSWINDOWS}
     if Assigned(ParentForm) then
       if TControlTools.IsMouseOverForm(ParentForm) and
@@ -840,14 +872,9 @@ begin
         StartPopupMenuThread(ParentForm, sdBackward);
       end
       else
-        CloseForm(ParentForm);
-    {$ELSE IFDEF ANDROID}
-    if Assigned(ParentForm) then
-      CloseForm(ParentForm);
+        CloseForm(ParentForm, ARecursiveClose);
     {$ENDIF}
   end;
-
-  AForm.Close;
 end;
 
 end.

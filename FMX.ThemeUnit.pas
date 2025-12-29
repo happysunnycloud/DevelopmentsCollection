@@ -6,6 +6,7 @@ uses
     System.Classes
   , System.Types
   , System.UITypes
+  , System.SysUtils
   , FMX.Controls
   , FMX.StdCtrls
   , FMX.Types
@@ -54,9 +55,13 @@ type
     FBackgroundColor: TAlphaColor;
     FDarkBackgroundColor: TAlphaColor;
     FLightBackgroundColor: TAlphaColor;
+    FNormalBackgroundColor: TAlphaColor;
+    FFocusedBackgroundColor: TAlphaColor;
+    FMouseOverBackgroundColor: TAlphaColor;
     FMemoColor: TAlphaColor;
     FCommonTextProps: TCommonTextProps;
     FOnApply: TNotifyEvent;
+    FOnApplyProcRef: TProc;
   public
     constructor Create;
     destructor Destroy; override;
@@ -71,19 +76,25 @@ type
     property BackgroundColor: TAlphaColor read FBackgroundColor write FBackgroundColor;
     property DarkBackgroundColor: TAlphaColor read FDarkBackgroundColor write FDarkBackgroundColor;
     property LightBackgroundColor: TAlphaColor read FLightBackgroundColor write FLightBackgroundColor;
+    property NormalBackgroundColor: TAlphaColor
+      read FNormalBackgroundColor write FNormalBackgroundColor;
+    property FocusedBackgroundColor: TAlphaColor
+      read FFocusedBackgroundColor write FFocusedBackgroundColor;
+    property MouseOverBackgroundColor: TAlphaColor
+      read FMouseOverBackgroundColor write FMouseOverBackgroundColor;
     property MemoColor: TAlphaColor read FMemoColor write FMemoColor;
 
     property CommonTextProps: TCommonTextProps
       read FCommonTextProps write FCommonTextProps;
 
     property OnApply: TNotifyEvent read FOnApply write FOnApply;
+    property OnApplyProcRef: TProc read FOnApplyProcRef write FOnApplyProcRef;
   end;
 
 implementation
 
 uses
-    System.SysUtils
-  , FMX.Styles
+    FMX.Styles
   , FMX.ControlToolsUnit
   ;
 
@@ -212,12 +223,16 @@ begin
   FBackgroundColor := TAlphaColorRec.Gray;
   FDarkBackgroundColor := TAlphaColorRec.Gray;
   FLightBackgroundColor := TAlphaColorRec.Gray;
+  FNormalBackgroundColor := TAlphaColorRec.Gray;
+  FFocusedBackgroundColor := TAlphaColorRec.Gray;
+  FMouseOverBackgroundColor := TAlphaColorRec.Gray;
   FMemoColor := TAlphaColorRec.Whitesmoke;
   FCommonTextProps.TextSettings.Font.Size := 12;
 
   FStyleBookMemoryStream := TMemoryStream.Create;
 
   FOnApply := nil;
+  FOnApplyProcRef := nil;
 end;
 
 destructor TTheme.Destroy;
@@ -278,6 +293,9 @@ begin
     ATheme.BackgroundColor := FBackgroundColor;
     ATheme.DarkBackgroundColor := FDarkBackgroundColor;
     ATheme.LightBackgroundColor := FLightBackgroundColor;
+    ATheme.NormalBackgroundColor := FNormalBackgroundColor;
+    ATheme.FocusedBackgroundColor := FFocusedBackgroundColor;
+    ATheme.MouseOverBackgroundColor := FMouseOverBackgroundColor;
     ATheme.MemoColor := FMemoColor;
 
     ATheme.CommonTextProps.Assign(FCommonTextProps);
@@ -305,6 +323,9 @@ begin
     FBackgroundColor := ATheme.BackgroundColor;
     FDarkBackgroundColor := ATheme.DarkBackgroundColor;
     FLightBackgroundColor := ATheme.LightBackgroundColor;
+    FNormalBackgroundColor := ATheme.NormalBackgroundColor;
+    FFocusedBackgroundColor := ATheme.FocusedBackgroundColor;
+    FMouseOverBackgroundColor := ATheme.MouseOverBackgroundColor;
     FMemoColor := ATheme.MemoColor;
     FCommonTextProps.Assign(ATheme.CommonTextProps);
   except
@@ -316,7 +337,10 @@ end;
 procedure TTheme.Apply;
 begin
   if Assigned(FOnApply) then
-    FOnApply(Self);
+    FOnApply(Self)
+  else
+  if Assigned(FOnApplyProcRef) then
+    FOnApplyProcRef;
 end;
 
 end.

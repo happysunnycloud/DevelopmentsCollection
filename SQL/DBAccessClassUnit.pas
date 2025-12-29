@@ -1,4 +1,5 @@
-﻿unit DBAccessClassUnit;
+﻿{ упразднить, перейти на DBAccessUnit }
+unit DBAccessClassUnit;
 
 interface
 

@@ -11,7 +11,7 @@ uses
 type
   TThreadFactoryRegistry = class(TObjectRegistry<TThreadFactory>)
   strict private
-    FOnDestroyedAllFactories: TNotifyEvent;
+    FOnAllThreadFactoriesAreDestroyed: TNotifyEvent;
 
     procedure UnregThreadFactoyProc(const AThreadFactory: TThreadFactory);
     procedure CheckThreadFactoryZeroCount;
@@ -23,8 +23,8 @@ type
     // Т.е. для всех фабрик вызывает финишер всех нитей
     procedure DestroyAllThreadFactories;
 
-    property OnDestroyedAllFactories: TNotifyEvent
-      read FOnDestroyedAllFactories write FOnDestroyedAllFactories;
+    property OnAllThreadFactoriesAreDestroyed: TNotifyEvent
+      read FOnAllThreadFactoriesAreDestroyed write FOnAllThreadFactoriesAreDestroyed;
   end;
 
 implementation
@@ -107,10 +107,9 @@ begin
   if Count > 0 then
     Exit;
 
-  if Assigned(FOnDestroyedAllFactories) then
+  if Assigned(FOnAllThreadFactoriesAreDestroyed) then
   begin
-    Log.d('TThreadFactoryRegistry.CheckThreadFactoryZeroCount -> FOnDestroyedAllFactories ');
-    FOnDestroyedAllFactories(Self);
+    FOnAllThreadFactoriesAreDestroyed(Self);
   end;
 end;
 

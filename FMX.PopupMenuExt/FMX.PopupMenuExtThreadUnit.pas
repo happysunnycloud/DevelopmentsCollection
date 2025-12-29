@@ -1,6 +1,4 @@
-﻿//{$UnDef MSWINDOWS}
-//{$Define ANDROID}
-unit FMX.PopupMenuExtThreadUnit;
+﻿unit FMX.PopupMenuExtThreadUnit;
 
 interface
 
@@ -53,10 +51,7 @@ type
     procedure SetClickFixed(const AClickFixed: Boolean);
     function GetClickFixed: Boolean;
 
-//    procedure OnTerminateHandler(Sender: TObject);
-    {$IFDEF MSWINDOWS}
     function IsMouseOverForm: Boolean;
-    {$ENDIF}
   protected
     procedure Execute; override;
   public
@@ -84,9 +79,7 @@ type
 implementation
 
 uses
-{$IFDEF MSWINDOWS}
     Winapi.Windows,
-{$ENDIF}
     FMX.Forms
   ;
 
@@ -115,8 +108,6 @@ begin
   else
     FCountDown := 1000;
 
-//  OnTerminate := OnTerminateHandler;
-
   inherited Create(ASuspended);
 end;
 
@@ -126,11 +117,6 @@ begin
   FreeAndNil(FHoldEvent);
   FreeAndNil(FCriticalSection);
 end;
-
-//procedure TPopupMenuExtThread.OnTerminateHandler(Sender: TObject);
-//begin
-//  FOnTimeIsOut := nil;
-//end;
 
 procedure TPopupMenuExtThread.WaitForDone;
 begin
@@ -226,7 +212,6 @@ begin
   end;
 end;
 
-{$IFDEF MSWINDOWS}
 function TPopupMenuExtThread.IsMouseOverForm: Boolean;
 var
   Point: TPoint;
@@ -238,7 +223,6 @@ begin
   if FRectF.Contains(Point) then
     Result := true;
 end;
-{$ENDIF}
 
 function TPopupMenuExtThread.GetHoldEvent: TEvent;
 begin
@@ -291,10 +275,8 @@ begin
 end;
 
 procedure TPopupMenuExtThread.Execute;
-{$IFDEF MSWINDOWS}
 var
   i: Integer;
-{$ENDIF}
 begin
   FDoneEvent.ResetEvent;
   HoldEvent.ResetEvent;
@@ -302,7 +284,6 @@ begin
   try
     while not Terminated do
     begin
-      {$IFDEF MSWINDOWS}
       while not Terminated and not ClickFixed and not TimeIsOutFixed do
       begin
         if not IsMouseOverForm then
@@ -321,17 +302,6 @@ begin
         else
           Sleep(100);
       end;
-//      {$ELSE IFDEF ANDROID}
-//      while not Terminated and not ClickFixed and not TimeIsOutFixed do
-//      begin
-//        // В данном случае обратный отсчет может быть сброшен кнопкой закрытия меню
-//        // Эта кнопка доступна при сборке под Андроид
-//        if GoBackClickFixed then
-//          TimeIsOutFixed := true
-//        else
-//          Sleep(100);
-//      end;
-      {$ENDIF}
 
       if not Terminated then
       begin

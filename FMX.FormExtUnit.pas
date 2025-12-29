@@ -9,6 +9,7 @@ uses
     System.Classes
   , System.UITypes
   , FMX.Forms
+  , FMX.ThemeUnit
   , ThreadFactoryRegistryUnit
   , ThreadFactoryUnit
   ;
@@ -45,6 +46,7 @@ type
     /// </summary>
     FToDoClose: Boolean;
     FCanClose: Boolean;
+    FTheme: TTheme;
 
     procedure OnDestroyedAllFactoriesHandler(Sender: TObject);
 
@@ -69,6 +71,7 @@ type
     property OnClose: TCloseMethod read GetOnClose write SetOnClose;
 
     property ToDoClose: Boolean read FToDoClose write FToDoClose;
+    property Theme: TTheme read FTheme;
   end;
 
 implementation
@@ -117,12 +120,14 @@ begin
   Method.Code := PKeyUpAddr;
   Method.Data := Self;
   FOnKeyUpExternalHandler := TKeyUpMethod(Method);
+
+  FTheme := TTheme.Create;
 end;
 
 destructor TFormExt.Destroy;
 begin
-  if Assigned(FThreadFactoryRegistry) then
-    FreeAndNil(FThreadFactoryRegistry);
+  FreeAndNil(FThreadFactoryRegistry);
+  FreeAndNil(FTheme);
 
   inherited;
 end;
@@ -141,7 +146,8 @@ begin
       if Assigned(FOnCloseQueryExternalHandler) then
         FOnCloseQueryExternalHandler(Sender, CanClose);
 
-      FThreadFactoryRegistry.OnDestroyedAllFactories := OnDestroyedAllFactoriesHandler;
+      FThreadFactoryRegistry.OnAllThreadFactoriesAreDestroyed :=
+        OnDestroyedAllFactoriesHandler;
       FThreadFactoryRegistry.DestroyAllThreadFactories;
     end;
   end;

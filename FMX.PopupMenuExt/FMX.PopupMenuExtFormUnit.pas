@@ -1,3 +1,5 @@
+﻿//{$UnDef MSWINDOWS}
+//{$Define ANDROID}
 unit FMX.PopupMenuExtFormUnit;
 
 interface
@@ -69,7 +71,7 @@ begin
   OnCloseQuery := OnCloseQueryInternalHandler;
   OnClose := OnCloseInternalHandler;
 
-  OnKeyUp := OnKeyUpHandler;
+//  OnKeyUp := OnKeyUpHandler;
 
   FOnHardwareBackButtonClick := nil;
 end;

@@ -1,15 +1,32 @@
-unit StringToolsUnit;
+﻿unit StringToolsUnit;
 
 interface
 
 type
   TStringTools = class
+  strict private
+    // Инкрементный счетчик инициализирующийся при инициализации юнита
+    // Обнуляется при каждом перезапуске приложения
+    class var FGlobalIdentCounter: Int64;
+    class function IncGlobalIdentCounter: Int64;
   public
+    class procedure Init;
     class function DateTimeToStandartFormatString(ADateTime: TDateTime): String;
     class function IsContainsOnlyDigits(AString: String): Boolean;
     class function IsIP4(AString: String): Boolean;
-    class function GetHumanTime(AMediaTime: Int64; AMediaTimeScale: Int64): String;
-    class function GenIdent: String;
+    /// <summary>
+    ///   Приводит MediaTime к человекочитаемому формату
+    /// </summary>
+    class function GetHumanTime(
+      const AMediaTime: Int64; const AMediaTimeScale: Int64): String;
+    /// <summary>
+    ///  Генерирует уникальный текстовый идентификатор на основе счетчика
+    ///  Счетчик перезапускается при перезапуске приложения
+    /// </summary>
+    class function GenIdent: String; overload;
+    class function GenIdent(
+      const ARootName: String;
+      const ASplitter: String = '_'): String; overload;
     class function ExtractFromBrackets(const ASource: String): String;
   end;
 
@@ -17,7 +34,20 @@ implementation
 
 uses
     System.SysUtils
+  , System.SyncObjs
   ;
+
+{ TStringTools }
+
+class procedure TStringTools.Init;
+begin
+  FGlobalIdentCounter := 0;
+end;
+
+class function TStringTools.IncGlobalIdentCounter: Int64;
+begin
+  Result := TInterlocked.Increment(FGlobalIdentCounter);
+end;
 
 class function TStringTools.DateTimeToStandartFormatString(ADateTime: TDateTime): String;
 var
@@ -85,8 +115,10 @@ begin
   end;
 end;
 
-class function TStringTools.GetHumanTime(AMediaTime: Int64; AMediaTimeScale: Int64): String;
-  function GetNormalLength(ANumber: Integer): String;
+class function TStringTools.GetHumanTime(
+  const AMediaTime: Int64; const AMediaTimeScale: Int64): String;
+
+  function _GetNormalLength(const ANumber: Integer): String;
   var
     sNumber: String;
   begin
@@ -98,20 +130,11 @@ class function TStringTools.GetHumanTime(AMediaTime: Int64; AMediaTimeScale: Int
 
     Result := sNumber;
   end;
+
 var
-  //H,
   M, S: Integer;
   slTime: Single;
 begin
-//  Result := '';
-//
-//  slTime := fMediaTime / MediaTimeScale;
-//  H := Trunc(slTime / 3600);
-//  M := Trunc((slTime - (H * 3600)) / 60);
-//  S := Trunc(slTime - (H * 3600) - (M * 60));
-
-//  Result := GetNormalLength(H) + ':' + GetNormalLength(M) + ':' + GetNormalLength(S);
-
   Result := '';
 
   slTime := AMediaTime / AMediaTimeScale;
@@ -119,21 +142,22 @@ begin
   M := Trunc(slTime / 60);
   S := Trunc(slTime - (M * 60));
 
-  Result := GetNormalLength(M) + ':' + GetNormalLength(S);
+  Result := _GetNormalLength(M) + ':' + _GetNormalLength(S);
 end;
 
 class function TStringTools.GenIdent: String;
 var
-  Hour, Min, Sec, MSec: Word;
+  Val: Int64;
 begin
-  DecodeTime(Now, Hour, Min, Sec, MSec);
-  Result := Concat(
-    Hour.ToString,
-    Min.ToString,
-    Sec.ToString,
-    MSec.ToString,
-    '::',
-    Random(1000).ToString);
+  Val := IncGlobalIdentCounter;
+  Result := Val.ToString;
+end;
+
+class function TStringTools.GenIdent(
+  const ARootName: String;
+  const ASplitter: String = '_'): String;
+begin
+  Result := Concat(ARootName, ASplitter, GenIdent);
 end;
 
 class function TStringTools.ExtractFromBrackets(const ASource: String): String;
@@ -166,5 +190,8 @@ begin
       Exit;
   end;
 end;
+
+initialization
+  TStringTools.Init;
 
 end.

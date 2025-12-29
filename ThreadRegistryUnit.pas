@@ -11,6 +11,8 @@ type
   TThreadRegistry<T> = class
   type
     TCallbackProc = reference to procedure (const AThread: T);
+    TBreakingCallbackProc = reference to procedure (
+      const AThread: T; var ABreak: Boolean);
   strict private
     FThreadList: TThreadList<T>;
 
@@ -23,7 +25,8 @@ type
     function UnRegisterThread(const AThread: T): Word;
 
     function ThreadByIndex(const AIndex: Word): T;
-    procedure Enumerator(const ACallbackProc: TCallbackProc);
+    procedure Enumerator(const ACallbackProc: TCallbackProc); overload; deprecated 'Use Enumerator(const ABreakingCallbackProc: TBreakingCallbackProc)';
+    procedure Enumerator(const ABreakingCallbackProc: TBreakingCallbackProc); overload;
 
     property Count: Word read GetCount;
   end;
@@ -113,6 +116,34 @@ begin
     FThreadList.UnlockList;
   end;
 end;
+
+procedure TThreadRegistry<T>.Enumerator(
+  const ABreakingCallbackProc: TBreakingCallbackProc);
+var
+  ThreadList: TList<T>;
+  Thread: T;
+  i: Word;
+  DoBreak: Boolean;
+begin
+  DoBreak := false;
+
+  ThreadList := FThreadList.LockList;
+  try
+    i := ThreadList.Count;
+    while i > 0 do
+    begin
+      Dec(i);
+
+      ABreakingCallbackProc(ThreadList[i], DoBreak);
+
+      if DoBreak then
+        Break;
+    end;
+  finally
+    FThreadList.UnlockList;
+  end;
+end;
+
 
 function TThreadRegistry<T>.GetCount: Word;
 var
