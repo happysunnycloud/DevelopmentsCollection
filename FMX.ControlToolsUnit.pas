@@ -9,7 +9,8 @@ uses
   System.Types,
   FMX.Controls,
   FMX.Forms,
-  FMX.Types
+  FMX.Types,
+  FMX.Layouts
   ;
 
 type
@@ -162,6 +163,12 @@ type
 {$ENDIF}
   end;
 
+  TScrollBoxHelper = class helper for TScrollBox
+  public
+    procedure ControlsEnumerator(
+      const AControlEnumeratorCallbackProc: TControlEnumeratorCallbackProc);
+  end;
+
 implementation
 
 uses
@@ -170,8 +177,42 @@ uses
   , Winapi.Windows,
 {$ENDIF}
     System.SysUtils
-  , FMX.Layouts
   ;
+
+{ TScrollBoxHelper }
+
+procedure TScrollBoxHelper.ControlsEnumerator(
+  const AControlEnumeratorCallbackProc: TControlEnumeratorCallbackProc);
+
+  procedure _EnumControls(const AObj: TObject);
+  var
+    Component: TComponent;
+    Control: TControl;
+    i: Word;
+  begin
+    if not (AObj is TComponent) then
+      Exit;
+
+    Component := AObj as TComponent;
+    i := Component.ComponentCount;
+    while i > 0 do
+    begin
+      Dec(i);
+
+      if Component.Components[i] is TControl then
+      begin
+        Control := Component.Components[i] as TControl;
+        AControlEnumeratorCallbackProc(Control);
+
+        if Control.ComponentCount > 0 then
+          _EnumControls(Control);
+      end;
+    end;
+  end;
+
+begin
+  _EnumControls(Self);
+end;
 
 { TControlTools }
 

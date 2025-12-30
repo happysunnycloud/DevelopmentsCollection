@@ -1,4 +1,4 @@
-﻿{0.7}
+﻿{1.0}
 unit BorderFrameUnit;
 
 interface
@@ -7,9 +7,15 @@ uses
   System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
   FMX.Types, FMX.Graphics, FMX.Controls, FMX.Forms, FMX.Dialogs, FMX.StdCtrls,
   FMX.Layouts, FMX.Objects, FMX.Effects,
-  FMX.TrayIcon.Win, FMX.Controls.Presentation;
+  FMX.Controls.Presentation
+  {$IFDEF MSWINDOWS}
+  , FMX.TrayIcon.Win
+  {$ENDIF}
+  ;
 
 type
+  TBorderFrameKind = (bfkNone = -1, bfkNormal = 0, bfkNoCaption = 1);
+
   TBorderFrame = class(TFrame)
     TopLayout: TLayout;
     BottomLayout: TLayout;
@@ -138,6 +144,17 @@ type
       AMinHeigth: Integer = 0;
       AMaxWidth: Integer = 0;
       AMaxHeigth: Integer = 0;
+      ACaptionColor: TAlphaColor = TAlphaColorRec.White;
+      ABorderColor: TAlphaColor = TAlphaColorRec.Cornflowerblue;
+      ACloseButtonColor: TAlphaColor = TAlphaColorRec.White;
+      ACloseButtonMouseOverColor: TAlphaColor = TAlphaColorRec.Lime
+      ); reintroduce; overload;
+    constructor Create(
+      AOwner: TComponent;
+      ABorderFrameKind: TBorderFrameKind;
+      ACaption: String = '';
+      AMinWidth: Integer = 0;
+      AMinHeigth: Integer = 0;
       ACaptionColor: TAlphaColor = TAlphaColorRec.White;
       ABorderColor: TAlphaColor = TAlphaColorRec.Cornflowerblue;
       ACloseButtonColor: TAlphaColor = TAlphaColorRec.White;
@@ -352,6 +369,131 @@ begin
   FTrayIcon.Hint := CaptionText.Text;
   FTrayIcon.OnMouseDown := InnerTrayIconMouseDown;
   FTrayIcon.Visible := true;
+end;
+
+constructor TBorderFrame.Create(
+  AOwner: TComponent;
+  ABorderFrameKind: TBorderFrameKind;
+  ACaption: String = '';
+  AMinWidth: Integer = 0;
+  AMinHeigth: Integer = 0;
+  ACaptionColor: TAlphaColor = TAlphaColorRec.White;
+  ABorderColor: TAlphaColor = TAlphaColorRec.Cornflowerblue;
+  ACloseButtonColor: TAlphaColor = TAlphaColorRec.White;
+  ACloseButtonMouseOverColor: TAlphaColor = TAlphaColorRec.Lime
+  );
+var
+  Form: TForm;
+  ContentsLayout: TLayout;
+  Control: TControl;
+  i: Integer;
+begin
+  if not (AOwner is TForm) then
+    raise Exception.Create('Owner is not TForm');
+
+  inherited Create(AOwner);
+
+  Form := AOwner as TForm;
+
+  FMinWidth := AMinWidth;
+  FMinHeight := AMinHeigth;
+
+  FMaxWidth := 0;
+  FMaxHeight := 0;
+
+  FIsMouseDown := false;
+
+  for Control in [CaptionLayout,
+                  CaptionText,
+                  LeftTopLayout,
+                  RightTopLayout,
+                  LeftBottomLayout,
+                  RightBottomLayout,
+                  LeftLayout,
+                  RightLayout,
+                  BottomLayout,
+                  TopLayout]
+  do
+  begin
+    Control.OnMouseDown := BorderMouseDown;
+    Control.OnMouseUp := BorderMouseUp;
+    Control.OnMouseLeave := BorderMouseLeave;
+  end;
+
+  Form.BorderStyle := TFmxFormBorderStyle.None;
+  ContentsLayout := TLayout.Create(Form);
+  ContentsLayout.Align := TAlignLayout.Contents;
+  ContentsLayout.HitTest := false;
+  ContentsLayout.Visible := true;
+
+  MinWidth := Form.ClientWidth;
+  MinHeight := Form.ClientHeight;
+
+  Self.Parent := TForm(AOwner);
+  Self.Align := TAlignLayout.Contents;
+  ContentsLayout.Parent := Self.ContentLayout;
+
+  TopBorderRectangle.Fill.Color := ABorderColor;
+  CaptionRectangle.Fill.Color := ABorderColor;
+  UnderCaptionRectangle.Fill.Color := ABorderColor;
+
+  LeftBorderRectangle.Fill.Color := ABorderColor;
+  RightBorderRectangle.Fill.Color := ABorderColor;
+  BottomBorderRectangle.Fill.Color := ABorderColor;
+
+  BackgroundCloseButtonRectangle.Fill.Color := ABorderColor;
+  BackgroundRolldownButtonRectangle.Fill.Color := ABorderColor;
+
+  ForegroundCloseButtonRectangle.Fill.Color := ACloseButtonMouseOverColor;
+  ForegroundRolldownButtonRectangle.Fill.Color := ACloseButtonMouseOverColor;
+
+  CaptionText.Text := ACaption;
+  CaptionText.OnMouseMove := CaptionLayoutMouseMove;
+  CaptionText.TextSettings.FontColor := ACaptionColor;
+
+  TImageTools.ReplaceColor(
+    CloseButtonRectangle.Fill.Bitmap.Bitmap,
+    TAlphaColorRec.White,
+    ACaptionColor);
+
+  TImageTools.ReplaceColor(
+    RolldownButtonRectangle.Fill.Bitmap.Bitmap,
+    TAlphaColorRec.White,
+    ACaptionColor);
+
+  CaptionLayout.BringToFront;
+  BottomLayout.BringToFront;
+  LeftLayout.BringToFront;
+  RightLayout.BringToFront;
+  TopLayout.BringToFront;
+  UnderCaptionLayout.BringToFront;
+
+  ContentLayout.SendToBack;
+
+  FTrayIcon := TCustomTrayIcon.Create(Self);
+  FTrayIcon.Hint := CaptionText.Text;
+  FTrayIcon.OnMouseDown := InnerTrayIconMouseDown;
+  FTrayIcon.Visible := true;
+
+  i := Form.ComponentCount;
+  while i > 0 do
+  begin
+    Dec(i);
+
+    if Form.Components[i] is TControl then
+    begin
+      Control := Form.Components[i] as TControl;
+
+      if Control = ContentsLayout then
+        Continue;
+
+      if Control = Self then
+        Continue;
+
+      if Control.Parent = Form then
+        Control.Parent := ContentsLayout;
+    end;
+  end;
 end;
 
 procedure TBorderFrame.ForegroundCloseButtonRectangleMouseLeave(
