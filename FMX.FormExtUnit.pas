@@ -13,11 +13,17 @@ uses
   , ThreadFactoryRegistryUnit
   , ThreadFactoryUnit
   {$IFDEF MSWINDOWS}
+  , FMX.Types
+  , FMX.TrayIcon.Win
+  , BorderFrameTypesUnit
   , BorderFrameUnit
   {$ENDIF}
   ;
 
 type
+  {$IFDEF MSWINDOWS}
+  TBorderFrameKind = BorderFrameTypesUnit.TBorderFrameKind;
+  {$ENDIF}
   PCloseQueryMethod = ^TCloseQueryMethod;
   TCloseQueryMethod = procedure(Sender: TObject; var CanClose: Boolean) of object;
 
@@ -51,9 +57,21 @@ type
     FCanClose: Boolean;
     FTheme: TTheme;
     {$IFDEF MSWINDOWS}
+//    FCustomBorder: TCustomBorder;
     FBorderFrame: TBorderFrame;
     FBorderFrameKind: TBorderFrameKind;
+
+    FTrayIcon: TCustomTrayIcon;
+    FTrayIconMouseRightButtonDown: TMouseEvent;
+    FTrayIconMouseLeftButtonDown: TMouseEvent;
     {$ENDIF}
+
+    // Нарочно вводим переменную, так как мы всегда используем Close для формы
+    // При этом нужно иметь ввиду, что:
+    // Вызов Close для модальной формы по умолчанию устанавливает ее
+    // ModalResult в mrCancel, что может перезаписать ваше собственное значение.
+    // Таким образом мы обходим сброс ModalResult в Close
+    FModalResult: TModalResult;
 
     procedure OnDestroyedAllFactoriesHandler(Sender: TObject);
 
@@ -68,18 +86,33 @@ type
     procedure OnKeyUpInternalHandler(Sender: TObject; var Key: Word; var KeyChar: Char;
       Shift: TShiftState); virtual;
 
+    {$IFDEF MSWINDOWS}
     function GetClientWidth: Integer;
     function GetClientHeight: Integer;
 
     procedure SetClientWidth(const AClientWidth: Integer);
     procedure SetClientHeight(const AClientHeight: Integer);
-    
-    {$IFDEF MSWINDOWS}
-    procedure SetBorderFrameKind(const ABorderFrameKind: TBorderFrameKind);    
-    {$ENDIF}    
+
+//    procedure SetBorderFrameKind(const ABorderFrameKind: TBorderFrameKind);
+
+    function GetMinClientWidth: Integer;
+    function GetMinClientHeight: Integer;
+    procedure SetMinClientWidth(const AMinClientWidth: Integer);
+    procedure SetMinClientHeight(const AMinClientHeight: Integer);
+
+    function GetMaxClientWidth: Integer;
+    function GetMaxClientHeight: Integer;
+    procedure SetMaxClientWidth(const AMaxClientWidth: Integer);
+    procedure SetMaxClientHeight(const AMaxClientHeight: Integer);
+
+    function GetTrayIcon: TCustomTrayIcon;
+    procedure InnerTrayIconMouseDown(
+      Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Single);
+    {$ENDIF}
   protected
     {$IFDEF MSWINDOWS}
-    property BorderFrameKind: TBorderFrameKind write SetBorderFrameKind;  
+//    property BorderFrameKind: TBorderFrameKind write SetBorderFrameKind;
+    property BorderFrame: TBorderFrame read FBorderFrame;
     {$ENDIF}
   public
     constructor Create(AOwner: TComponent); override;
@@ -93,19 +126,42 @@ type
 
     property ToDoClose: Boolean read FToDoClose write FToDoClose;
     property Theme: TTheme read FTheme;
-
+    {$IFDEF MSWINDOWS}
     property ClientWidth: Integer read GetClientWidth write SetClientWidth;
     property ClientHeight: Integer read GetClientHeight write SetClientHeight;
+
+    property MinClientWidth: Integer read GetMinClientWidth write SetMinClientWidth;
+    property MinClientHeight: Integer read GetMinClientHeight write SetMinClientHeight;
+
+    property MaxClientWidth: Integer read GetMaxClientWidth write SetMaxClientWidth;
+    property MaxClientHeight: Integer read GetMaxClientHeight write SetMaxClientHeight;
+
+    property TrayIcon: TCustomTrayIcon read GetTrayIcon;
+
+    property TrayIconMouseRightButtonDown: TMouseEvent
+      read FTrayIconMouseRightButtonDown write FTrayIconMouseRightButtonDown;
+    property TrayIconMouseLeftButtonDown: TMouseEvent
+      read FTrayIconMouseLeftButtonDown write FTrayIconMouseLeftButtonDown;
+    {$ENDIF}
   end;
 
 implementation
 
 uses
     System.SysUtils
-  //asd debug
-  , FMX.Types
-  //asd debug
+  {$IFDEF MSWINDOWS}
+  , Winapi.Windows
+  , FMX.Platform.Win
+  {$ENDIF}
   ;
+
+//{ TCustomBorder }
+//
+//constructor TCustomBorder.Create;
+//begin
+//  FBorderFrame := TBorderFrame.Cre
+//
+//end;
 
 { TFormExt }
 
@@ -121,6 +177,8 @@ begin
   inherited OnCloseQuery := OnCloseQueryInternalHandler;
   inherited OnClose := OnCloseInternalHandler;
   inherited OnKeyUp := OnKeyUpInternalHandler;
+
+  FModalResult := mrNone;
 
   FToDoClose := false;
   FCanClose := false;
@@ -150,7 +208,16 @@ begin
   FTheme := TTheme.Create;
 
   {$IFDEF MSWINDOWS}
-  FBorderFrameKind := bfkNone;                  
+  FBorderFrame := TBorderFrame.Create(
+    Self,
+    TBorderFrameKind.bfkNone,
+    Self.Caption);
+  FTrayIcon := TCustomTrayIcon.Create(Self);
+  FTrayIcon.Hint := Caption;
+  FTrayIcon.OnMouseDown := InnerTrayIconMouseDown;
+  FTrayIcon.Visible := true;
+  FTrayIconMouseRightButtonDown := nil;
+  FTrayIconMouseLeftButtonDown := nil;
   {$ENDIF}
 end;
 
@@ -158,66 +225,140 @@ destructor TFormExt.Destroy;
 begin
   FreeAndNil(FThreadFactoryRegistry);
   FreeAndNil(FTheme);
+  {$IFDEF MSWINDOWS}
+  FreeAndNil(FBorderFrame);
+  {$ENDIF}
 
   inherited;
 end;
 {$IFDEF MSWINDOWS}
-procedure TFormExt.SetBorderFrameKind(const ABorderFrameKind: TBorderFrameKind);
-begin
-  FBorderFrameKind := ABorderFrameKind;
+//procedure TFormExt.SetBorderFrameKind(const ABorderFrameKind: TBorderFrameKind);
+//begin
+//  FBorderFrame.BorderFrameKind := ABorderFrameKind;
+//end;
 
-  if FBorderFrameKind = bfkNormal then
-  begin
-    FBorderFrame := TBorderFrame.Create(
-      Self,
-      FBorderFrameKind,
-      Self.Caption,
-      100,
-      100);
-  end;
-end;
-{$ENDIF}
 function TFormExt.GetClientWidth: Integer;
 begin
   Result := inherited ClientWidth;
 
-  {$IFDEF MSWINDOWS}
   if FBorderFrameKind > bfkNone then
     Result := FBorderFrame.ClientWidth;
-  {$ENDIF}
 end;
 
 function TFormExt.GetClientHeight: Integer;
 begin
   Result := inherited ClientHeight;
-  {$IFDEF MSWINDOWS}  
+
   if FBorderFrameKind > bfkNone then
     Result := FBorderFrame.ClientHeight;
-  {$ENDIF}
 end;
 
 procedure TFormExt.SetClientWidth(const AClientWidth: Integer);
 begin
   inherited ClientWidth := AClientWidth;
-  {$IFDEF MSWINDOWS}
+
   if FBorderFrameKind > bfkNone then
     FBorderFrame.ClientWidth := AClientWidth;
-  {$ENDIF}
 end;
 
 procedure TFormExt.SetClientHeight(const AClientHeight: Integer);
 begin
   inherited ClientHeight := AClientHeight;
-  {$IFDEF MSWINDOWS}
+
   if FBorderFrameKind > bfkNone then
     FBorderFrame.ClientHeight := AClientHeight;
-  {$ENDIF}
 end;
 
+function TFormExt.GetMinClientWidth: Integer;
+begin
+  Result := 0;
+
+  if FBorderFrameKind > bfkNone then
+    Result := FBorderFrame.MinClientWidth;
+end;
+
+function TFormExt.GetMinClientHeight: Integer;
+begin
+  Result := 0;
+
+  if FBorderFrameKind > bfkNone then
+    Result := FBorderFrame.MinClientHeight;
+end;
+
+procedure TFormExt.SetMinClientWidth(const AMinClientWidth: Integer);
+begin
+  if FBorderFrameKind > bfkNone then
+    FBorderFrame.MinClientWidth := AMinClientWidth;
+end;
+
+procedure TFormExt.SetMinClientHeight(const AMinClientHeight: Integer);
+begin
+  if FBorderFrameKind > bfkNone then
+    FBorderFrame.MinClientHeight := AMinClientHeight;
+end;
+
+function TFormExt.GetMaxClientWidth: Integer;
+begin
+  Result := 0;
+
+  if FBorderFrameKind > bfkNone then
+    Result := FBorderFrame.MaxClientWidth;
+end;
+
+function TFormExt.GetMaxClientHeight: Integer;
+begin
+  Result := 0;
+
+  if FBorderFrameKind > bfkNone then
+    Result := FBorderFrame.MinClientHeight;
+end;
+
+procedure TFormExt.SetMaxClientWidth(const AMaxClientWidth: Integer);
+begin
+  if FBorderFrameKind > bfkNone then
+    FBorderFrame.MaxClientWidth := AMaxClientWidth;
+end;
+
+procedure TFormExt.SetMaxClientHeight(const AMaxClientHeight: Integer);
+begin
+  if FBorderFrameKind > bfkNone then
+    FBorderFrame.MaxClientHeight := AMaxClientHeight;
+end;
+
+function TFormExt.GetTrayIcon: TCustomTrayIcon;
+begin
+  Result := FTrayIcon;
+end;
+
+procedure TFormExt.InnerTrayIconMouseDown(
+  Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Single);
+begin
+  if Button = TMouseButton.mbLeft then
+  begin
+    if not Self.Visible then
+    begin
+      ShowWindow(ApplicationHwnd, SW_SHOW);
+      Self.Show;
+    end
+    else
+    begin
+      Self.Hide;
+      ShowWindow(ApplicationHwnd, SW_HIDE);
+    end;
+
+    if Assigned(FTrayIconMouseLeftButtonDown) then
+      FTrayIconMouseLeftButtonDown(Sender, Button, Shift, X, Y);
+  end
+  else
+  if Button = TMouseButton.mbRight then
+  begin
+    if Assigned(FTrayIconMouseRightButtonDown) then
+      FTrayIconMouseRightButtonDown(Sender, Button, Shift, X, Y);
+  end;
+end;
+{$ENDIF}
 procedure TFormExt.OnCloseQueryInternalHandler(Sender: TObject; var CanClose: Boolean);
 begin
-  Log.d('TFormExt.OnCloseQueryInternalHandler');
-
   CanClose := FCanClose;
   if not CanClose then
   begin
@@ -231,13 +372,18 @@ begin
       FThreadFactoryRegistry.OnAllThreadFactoriesAreDestroyed :=
         OnDestroyedAllFactoriesHandler;
       FThreadFactoryRegistry.DestroyAllThreadFactories;
+
+      // Сохраняем значение, что бы восстановить его в OnCloseInternalHandler
+      // Так как при вызове Close для модалок оно сбрасывается
+      FModalResult := ModalResult;
     end;
   end;
 end;
 
 procedure TFormExt.OnCloseInternalHandler(Sender: TObject; var Action: TCloseAction);
 begin
-  Log.d('TFormExt.OnCloseInternalHandler');
+  // Восстанавливаем значение, что бы передать на выход ShowModal
+  ModalResult := FModalResult;
 
   Action := TCloseAction.caFree;
 
@@ -248,8 +394,6 @@ end;
 procedure TFormExt.OnKeyUpInternalHandler(Sender: TObject; var Key: Word; var KeyChar: Char;
   Shift: TShiftState);
 begin
-  Log.d('TFormExt.OnKeyUpInternalHandler');
-
   // vkHardwareBack - Андроидная кнопка назад
   if Key = vkHardwareBack then
   begin
@@ -274,7 +418,6 @@ procedure TFormExt.OnDestroyedAllFactoriesHandler(Sender: TObject);
 var
   Form: TFormExt;
 begin
-  Log.d('TFormExt.OnDestroyedAllFactoriesHandler');
   // Нилим основную фабрику формы
   FThreadFactory := nil;
 

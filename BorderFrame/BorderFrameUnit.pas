@@ -8,14 +8,10 @@ uses
   FMX.Types, FMX.Graphics, FMX.Controls, FMX.Forms, FMX.Dialogs, FMX.StdCtrls,
   FMX.Layouts, FMX.Objects, FMX.Effects,
   FMX.Controls.Presentation
-  {$IFDEF MSWINDOWS}
-  , FMX.TrayIcon.Win
-  {$ENDIF}
+  , BorderFrameTypesUnit
   ;
 
 type
-  TBorderFrameKind = (bfkNone = -1, bfkNormal = 0, bfkNoCaption = 1);
-
   TBorderFrame = class(TFrame)
     TopLayout: TLayout;
     BottomLayout: TLayout;
@@ -43,7 +39,6 @@ type
     RolldownButtonLayout: TLayout;
     ForegroundRolldownButtonRectangle: TRectangle;
     BackgroundRolldownButtonRectangle: TRectangle;
-    ContentBackgroundRectangle: TRectangle;
     procedure RightBottomLayoutMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Single);
     procedure LeftBottomLayoutMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Single);
     procedure RightTopLayoutMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Single);
@@ -82,20 +77,19 @@ type
     FIsMouseDown: Boolean;
     FStartX, FStartY: Single;
 
-    FTrayIcon: TCustomTrayIcon;
-    FTrayIconMouseRightButtonDown: TMouseEvent;
-    FTrayIconMouseLeftButtonDown: TMouseEvent;
+    FBorderColor: TAlphaColor;
+    FCaptionColor: TAlphaColor;
+    FToolButtonColor: TAlphaColor;
+    FToolButtonMouseOverColor: TAlphaColor;
+    FCaption: String;
+    FBorderFrameKind: TBorderFrameKind;
 
     procedure LeftConstraint(const X: Single);
     procedure RightConstraint(const X: Single);
     procedure TopConstraint(const Y: Single);
     procedure BottomConstraint(const Y: Single);
 
-    function GetCaption: TText;
-    function GetTrayIcon: TCustomTrayIcon;
-
-    procedure InnerTrayIconMouseDown(
-      Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Single);
+    //function GetCaption: TText;
 
     procedure SetMinWidth(const AMinWidth: Integer);
     procedure SetMinHeight(const AMinHeight: Integer);
@@ -105,10 +99,17 @@ type
     function GetMinClientHeight: Integer;
     procedure SetMinClientHeight(const AMinClientHeight: Integer);
 
+    function GetMaxClientWidth: Integer;
+    procedure SetMaxClientWidth(const AMaxClientWidth: Integer);
+    function GetMaxClientHeight: Integer;
+    procedure SetMaxClientHeight(const AMaxClientHeight: Integer);
+
     procedure SetFormWidth(const AFormWidth: Integer);
     procedure SetFormHeight(const AFormHeight: Integer);
     procedure SetClientWidth(const AClientWidth: Integer);
     procedure SetClientHeight(const AClientHeight: Integer);
+
+    procedure SetBorderFrameKind(const ABorderFrameKind: TBorderFrameKind);
 
     function GetFormWidth: Integer;
     function GetFormHeight: Integer;
@@ -118,37 +119,49 @@ type
     function GetWidthDelta: Integer;
     function GetHeightDelta: Integer;
 
+    procedure SetBorderColor(const ABorderColor: TAlphaColor);
+    procedure SetToolButtonColor(const AToolButtonColor: TAlphaColor);
+    procedure SetToolButtonMouseOverColor(const AToolButtonMouseOverColor: TAlphaColor);
+    procedure SetCaptionColor(const ACaptionColor: TAlphaColor);
+    procedure SetCaption(const ACaption: String);
+
     procedure BorderMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Single);
     procedure BorderMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Single);
     procedure BorderMouseLeave(Sender: TObject);
 
+    procedure Mount;
+    procedure UnMount;
+
+    procedure ApplyChanges;
+
     property WidthDelta: Integer read GetWidthDelta;
     property HeightDelta: Integer read GetHeightDelta;
+
   public
-    constructor Create(
-      AOwner: TComponent;
-      AContentLayout: TLayout;
-      ACaption: String = '';
-      AMinWidth: Integer = 0;
-      AMinHeigth: Integer = 0;
-      ACaptionColor: TAlphaColor = TAlphaColorRec.White;
-      ABorderColor: TAlphaColor = TAlphaColorRec.Cornflowerblue;
-      ACloseButtonColor: TAlphaColor = TAlphaColorRec.White;
-      ACloseButtonMouseOverColor: TAlphaColor = TAlphaColorRec.Lime
-      ); reintroduce; overload;
-    constructor Create(
-      AOwner: TComponent;
-      AContentLayout: TLayout;
-      ACaption: String = '';
-      AMinWidth: Integer = 0;
-      AMinHeigth: Integer = 0;
-      AMaxWidth: Integer = 0;
-      AMaxHeigth: Integer = 0;
-      ACaptionColor: TAlphaColor = TAlphaColorRec.White;
-      ABorderColor: TAlphaColor = TAlphaColorRec.Cornflowerblue;
-      ACloseButtonColor: TAlphaColor = TAlphaColorRec.White;
-      ACloseButtonMouseOverColor: TAlphaColor = TAlphaColorRec.Lime
-      ); reintroduce; overload;
+//    constructor Create(
+//      AOwner: TComponent;
+//      AContentLayout: TLayout;
+//      ACaption: String = '';
+//      AMinWidth: Integer = 0;
+//      AMinHeigth: Integer = 0;
+//      ACaptionColor: TAlphaColor = TAlphaColorRec.White;
+//      ABorderColor: TAlphaColor = TAlphaColorRec.Cornflowerblue;
+//      ACloseButtonColor: TAlphaColor = TAlphaColorRec.White;
+//      ACloseButtonMouseOverColor: TAlphaColor = TAlphaColorRec.Lime
+//      ); reintroduce; overload;
+//    constructor Create(
+//      AOwner: TComponent;
+//      AContentLayout: TLayout;
+//      ACaption: String = '';
+//      AMinWidth: Integer = 0;
+//      AMinHeigth: Integer = 0;
+//      AMaxWidth: Integer = 0;
+//      AMaxHeigth: Integer = 0;
+//      ACaptionColor: TAlphaColor = TAlphaColorRec.White;
+//      ABorderColor: TAlphaColor = TAlphaColorRec.Cornflowerblue;
+//      ACloseButtonColor: TAlphaColor = TAlphaColorRec.White;
+//      ACloseButtonMouseOverColor: TAlphaColor = TAlphaColorRec.Lime
+//      ); reintroduce; overload;
     constructor Create(
       AOwner: TComponent;
       ABorderFrameKind: TBorderFrameKind;
@@ -157,23 +170,18 @@ type
       AMinHeigth: Integer = 0;
       ACaptionColor: TAlphaColor = TAlphaColorRec.White;
       ABorderColor: TAlphaColor = TAlphaColorRec.Cornflowerblue;
-      ACloseButtonColor: TAlphaColor = TAlphaColorRec.White;
-      ACloseButtonMouseOverColor: TAlphaColor = TAlphaColorRec.Lime
+      AToolButtonColor: TAlphaColor = TAlphaColorRec.White;
+      AToolButtonMouseOverColor: TAlphaColor = TAlphaColorRec.Lime
       ); reintroduce; overload;
-
-    property Caption: TText read GetCaption;
-    property TrayIcon: TCustomTrayIcon read GetTrayIcon;
-
-    property TrayIconMouseRightButtonDown: TMouseEvent
-      read FTrayIconMouseRightButtonDown write FTrayIconMouseRightButtonDown;
-    property TrayIconMouseLeftButtonDown: TMouseEvent
-      read FTrayIconMouseLeftButtonDown write FTrayIconMouseLeftButtonDown;
 
     property MinWidth: Integer read FMinWidth write SetMinWidth;
     property MinHeight: Integer read FMinHeight write SetMinHeight;
 
     property MinClientWidth: Integer read GetMinClientWidth write SetMinClientWidth;
     property MinClientHeight: Integer read GetMinClientHeight write SetMinClientHeight;
+
+    property MaxClientWidth: Integer read GetMaxClientWidth write SetMaxClientWidth;
+    property MaxClientHeight: Integer read GetMaxClientHeight write SetMaxClientHeight;
 
     /// <summary>
     ///   Ширина окна вместе с бортами
@@ -191,6 +199,13 @@ type
     ///   Высота окна внутри бортов
     /// </summary>
     property ClientHeight: Integer read GetClientHeight write SetClientHeight;
+
+    property BorderFrameKind: TBorderFrameKind read FBorderFrameKind write SetBorderFrameKind;
+    property BorderColor: TAlphaColor read FBorderColor write SetBorderColor;
+    property ToolButtonColor: TAlphaColor read FToolButtonColor write SetToolButtonColor;
+    property ToolButtonMouseOverColor: TAlphaColor read FToolButtonMouseOverColor write SetToolButtonMouseOverColor;
+    property CaptionColor: TAlphaColor read FCaptionColor write SetCaptionColor;
+    property Caption: String write SetCaption;
   end;
 
 implementation
@@ -201,6 +216,7 @@ uses
     Winapi.Windows
   , FMX.Platform.Win
   , FMX.ImageToolsUnit
+  , FMX.FormExtUnit
   ;
 
 procedure MouseLeaveControl(
@@ -248,218 +264,27 @@ begin
     CloseButtonRectangle);
 end;
 
-constructor TBorderFrame.Create(
-  AOwner: TComponent;
-  AContentLayout: TLayout;
-  ACaption: String = '';
-  AMinWidth: Integer = 0;
-  AMinHeigth: Integer = 0;
-  ACaptionColor: TAlphaColor = TAlphaColorRec.White;
-  ABorderColor: TAlphaColor = TAlphaColorRec.Cornflowerblue;
-  ACloseButtonColor: TAlphaColor = TAlphaColorRec.White;
-  ACloseButtonMouseOverColor: TAlphaColor = TAlphaColorRec.Lime
-);
-begin
-  Create(
-    AOwner,
-    AContentLayout,
-    ACaption,
-    AMinWidth,
-    AMinHeigth,
-    0,
-    0,
-    ACaptionColor,
-    ABorderColor,
-    ACloseButtonColor,
-    ACloseButtonMouseOverColor
-    );
-end;
-
-constructor TBorderFrame.Create(
-  AOwner: TComponent;
-  AContentLayout: TLayout;
-  ACaption: String = '';
-  AMinWidth: Integer = 0;
-  AMinHeigth: Integer = 0;
-  AMaxWidth: Integer = 0;
-  AMaxHeigth: Integer = 0;
-  ACaptionColor: TAlphaColor = TAlphaColorRec.White;
-  ABorderColor: TAlphaColor = TAlphaColorRec.Cornflowerblue;
-  ACloseButtonColor: TAlphaColor = TAlphaColorRec.White;
-  ACloseButtonMouseOverColor: TAlphaColor = TAlphaColorRec.Lime
-  );
-var
-  Control: TControl;
-begin
-  inherited Create(AOwner);
-
-  FMinWidth := AMinWidth;
-  FMinHeight := AMinHeigth;
-
-  FMaxWidth := AMaxWidth;
-  FMaxHeight := AMaxHeigth;
-
-  FIsMouseDown := false;
-
-  for Control in [CaptionLayout,
-                  CaptionText,
-                  LeftTopLayout,
-                  RightTopLayout,
-                  LeftBottomLayout,
-                  RightBottomLayout,
-                  LeftLayout,
-                  RightLayout,
-                  BottomLayout,
-                  TopLayout]
-  do
-  begin
-    Control.OnMouseDown := BorderMouseDown;
-    Control.OnMouseUp := BorderMouseUp;
-    Control.OnMouseLeave := BorderMouseLeave;
-  end;
-
-  if AOwner is TForm then
-    TForm(AOwner).BorderStyle := TFmxFormBorderStyle.None;
-
-  MinWidth := Trunc(AContentLayout.Width);
-  MinHeight := Trunc(AContentLayout.Height);
-
-  Self.Parent := TForm(AOwner);
-  Self.Align := TAlignLayout.Contents;
-  AContentLayout.Parent := Self.ContentLayout;
-
-  TopBorderRectangle.Fill.Color := ABorderColor;
-  CaptionRectangle.Fill.Color := ABorderColor;
-  UnderCaptionRectangle.Fill.Color := ABorderColor;
-
-  LeftBorderRectangle.Fill.Color := ABorderColor;
-  RightBorderRectangle.Fill.Color := ABorderColor;
-  BottomBorderRectangle.Fill.Color := ABorderColor;
-
-  BackgroundCloseButtonRectangle.Fill.Color := ABorderColor;
-  BackgroundRolldownButtonRectangle.Fill.Color := ABorderColor;
-
-  ForegroundCloseButtonRectangle.Fill.Color := ACloseButtonMouseOverColor;
-  ForegroundRolldownButtonRectangle.Fill.Color := ACloseButtonMouseOverColor;
-
-  CaptionText.Text := ACaption;
-  CaptionText.OnMouseMove := CaptionLayoutMouseMove;
-  CaptionText.TextSettings.FontColor := ACaptionColor;
-
-  TImageTools.ReplaceColor(
-    CloseButtonRectangle.Fill.Bitmap.Bitmap,
-    TAlphaColorRec.White,
-    ACaptionColor);
-
-  TImageTools.ReplaceColor(
-    RolldownButtonRectangle.Fill.Bitmap.Bitmap,
-    TAlphaColorRec.White,
-    ACaptionColor);
-
-  CaptionLayout.BringToFront;
-  BottomLayout.BringToFront;
-  LeftLayout.BringToFront;
-  RightLayout.BringToFront;
-  TopLayout.BringToFront;
-  UnderCaptionLayout.BringToFront;
-
-  ContentLayout.SendToBack;
-
-  FTrayIcon := TCustomTrayIcon.Create(Self);
-  FTrayIcon.Hint := CaptionText.Text;
-  FTrayIcon.OnMouseDown := InnerTrayIconMouseDown;
-  FTrayIcon.Visible := true;
-end;
-
-constructor TBorderFrame.Create(
-  AOwner: TComponent;
-  ABorderFrameKind: TBorderFrameKind;
-  ACaption: String = '';
-  AMinWidth: Integer = 0;
-  AMinHeigth: Integer = 0;
-  ACaptionColor: TAlphaColor = TAlphaColorRec.White;
-  ABorderColor: TAlphaColor = TAlphaColorRec.Cornflowerblue;
-  ACloseButtonColor: TAlphaColor = TAlphaColorRec.White;
-  ACloseButtonMouseOverColor: TAlphaColor = TAlphaColorRec.Lime
-  );
+procedure TBorderFrame.Mount;
 var
   Form: TForm;
   ContentsLayout: TLayout;
   Control: TControl;
   i: Integer;
 begin
-  if not (AOwner is TForm) then
-    raise Exception.Create('Owner is not TForm');
-
-  inherited Create(AOwner);
-
-  Form := AOwner as TForm;
-
-  FMinWidth := AMinWidth;
-  FMinHeight := AMinHeigth;
-
-  FMaxWidth := 0;
-  FMaxHeight := 0;
-
-  FIsMouseDown := false;
-
-  for Control in [CaptionLayout,
-                  CaptionText,
-                  LeftTopLayout,
-                  RightTopLayout,
-                  LeftBottomLayout,
-                  RightBottomLayout,
-                  LeftLayout,
-                  RightLayout,
-                  BottomLayout,
-                  TopLayout]
-  do
-  begin
-    Control.OnMouseDown := BorderMouseDown;
-    Control.OnMouseUp := BorderMouseUp;
-    Control.OnMouseLeave := BorderMouseLeave;
-  end;
-
+  Form := Owner as TForm;
   Form.BorderStyle := TFmxFormBorderStyle.None;
+
   ContentsLayout := TLayout.Create(Form);
   ContentsLayout.Align := TAlignLayout.Contents;
   ContentsLayout.HitTest := false;
-  ContentsLayout.Visible := true;
 
-  MinWidth := Form.ClientWidth;
-  MinHeight := Form.ClientHeight;
-
-  Self.Parent := TForm(AOwner);
+  Self.Parent := Form;
   Self.Align := TAlignLayout.Contents;
   ContentsLayout.Parent := Self.ContentLayout;
 
-  TopBorderRectangle.Fill.Color := ABorderColor;
-  CaptionRectangle.Fill.Color := ABorderColor;
-  UnderCaptionRectangle.Fill.Color := ABorderColor;
-
-  LeftBorderRectangle.Fill.Color := ABorderColor;
-  RightBorderRectangle.Fill.Color := ABorderColor;
-  BottomBorderRectangle.Fill.Color := ABorderColor;
-
-  BackgroundCloseButtonRectangle.Fill.Color := ABorderColor;
-  BackgroundRolldownButtonRectangle.Fill.Color := ABorderColor;
-
-  ForegroundCloseButtonRectangle.Fill.Color := ACloseButtonMouseOverColor;
-  ForegroundRolldownButtonRectangle.Fill.Color := ACloseButtonMouseOverColor;
-
-  CaptionText.Text := ACaption;
   CaptionText.OnMouseMove := CaptionLayoutMouseMove;
-  CaptionText.TextSettings.FontColor := ACaptionColor;
 
-  TImageTools.ReplaceColor(
-    CloseButtonRectangle.Fill.Bitmap.Bitmap,
-    TAlphaColorRec.White,
-    ACaptionColor);
-
-  TImageTools.ReplaceColor(
-    RolldownButtonRectangle.Fill.Bitmap.Bitmap,
-    TAlphaColorRec.White,
-    ACaptionColor);
+  ApplyChanges;
 
   CaptionLayout.BringToFront;
   BottomLayout.BringToFront;
@@ -469,11 +294,6 @@ begin
   UnderCaptionLayout.BringToFront;
 
   ContentLayout.SendToBack;
-
-  FTrayIcon := TCustomTrayIcon.Create(Self);
-  FTrayIcon.Hint := CaptionText.Text;
-  FTrayIcon.OnMouseDown := InnerTrayIconMouseDown;
-  FTrayIcon.Visible := true;
 
   i := Form.ComponentCount;
   while i > 0 do
@@ -494,6 +314,256 @@ begin
         Control.Parent := ContentsLayout;
     end;
   end;
+
+  if FBorderFrameKind = bfkNoCaption then
+  begin
+    CaptionLayout.Visible := false;
+    UnderCaptionLayout.Visible := false;
+  end;
+end;
+
+procedure TBorderFrame.UnMount;
+var
+  Form: TForm;
+  ContentsLayout: TLayout;
+  Control: TControl;
+  i: Integer;
+begin
+  Form := Owner as TForm;
+  Form.BorderStyle := TFmxFormBorderStyle.Sizeable;
+
+  ContentsLayout := Self.ContentLayout;
+
+  i := ContentsLayout.ChildrenCount;
+  while i > 0 do
+  begin
+    Dec(i);
+
+    if ContentsLayout.Children[i] is TControl then
+    begin
+      Control := ContentsLayout.Children[i] as TControl;
+
+      if Control = ContentsLayout then
+        Continue;
+
+      if Control = Self then
+        Continue;
+
+      if Control.Parent = ContentsLayout then
+        Control.Parent := Form;
+    end;
+  end;
+
+  Self.Parent := nil;
+end;
+
+procedure TBorderFrame.ApplyChanges;
+begin
+  TopBorderRectangle.Fill.Color := FBorderColor;
+  CaptionRectangle.Fill.Color := FBorderColor;
+  UnderCaptionRectangle.Fill.Color := FBorderColor;
+
+  LeftBorderRectangle.Fill.Color := FBorderColor;
+  RightBorderRectangle.Fill.Color := FBorderColor;
+  BottomBorderRectangle.Fill.Color := FBorderColor;
+
+  BackgroundCloseButtonRectangle.Fill.Color := FBorderColor;
+  BackgroundRolldownButtonRectangle.Fill.Color := FBorderColor;
+
+  ForegroundCloseButtonRectangle.Fill.Color := FToolButtonMouseOverColor;
+  ForegroundRolldownButtonRectangle.Fill.Color := FToolButtonMouseOverColor;
+
+  CaptionText.Text := FCaption;
+  CaptionText.TextSettings.FontColor := FCaptionColor;
+
+  TImageTools.ReplaceColor(
+    CloseButtonRectangle.Fill.Bitmap.Bitmap,
+    TAlphaColorRec.White,
+    FToolButtonColor);
+
+  TImageTools.ReplaceColor(
+    RolldownButtonRectangle.Fill.Bitmap.Bitmap,
+    TAlphaColorRec.White,
+    FToolButtonColor);
+end;
+
+//constructor TBorderFrame.Create(
+//  AOwner: TComponent;
+//  AContentLayout: TLayout;
+//  ACaption: String = '';
+//  AMinWidth: Integer = 0;
+//  AMinHeigth: Integer = 0;
+//  ACaptionColor: TAlphaColor = TAlphaColorRec.White;
+//  ABorderColor: TAlphaColor = TAlphaColorRec.Cornflowerblue;
+//  ACloseButtonColor: TAlphaColor = TAlphaColorRec.White;
+//  ACloseButtonMouseOverColor: TAlphaColor = TAlphaColorRec.Lime
+//);
+//begin
+//  Create(
+//    AOwner,
+//    AContentLayout,
+//    ACaption,
+//    AMinWidth,
+//    AMinHeigth,
+//    0,
+//    0,
+//    ACaptionColor,
+//    ABorderColor,
+//    ACloseButtonColor,
+//    ACloseButtonMouseOverColor
+//    );
+//end;
+
+//constructor TBorderFrame.Create(
+//  AOwner: TComponent;
+//  AContentLayout: TLayout;
+//  ACaption: String = '';
+//  AMinWidth: Integer = 0;
+//  AMinHeigth: Integer = 0;
+//  AMaxWidth: Integer = 0;
+//  AMaxHeigth: Integer = 0;
+//  ACaptionColor: TAlphaColor = TAlphaColorRec.White;
+//  ABorderColor: TAlphaColor = TAlphaColorRec.Cornflowerblue;
+//  ACloseButtonColor: TAlphaColor = TAlphaColorRec.White;
+//  ACloseButtonMouseOverColor: TAlphaColor = TAlphaColorRec.Lime
+//  );
+//var
+//  Control: TControl;
+//begin
+//  inherited Create(AOwner);
+//
+//  FMinWidth := AMinWidth;
+//  FMinHeight := AMinHeigth;
+//
+//  FMaxWidth := AMaxWidth;
+//  FMaxHeight := AMaxHeigth;
+//
+//  FBorderColor := 0;
+//
+//  FIsMouseDown := false;
+//
+//  for Control in [CaptionLayout,
+//                  CaptionText,
+//                  LeftTopLayout,
+//                  RightTopLayout,
+//                  LeftBottomLayout,
+//                  RightBottomLayout,
+//                  LeftLayout,
+//                  RightLayout,
+//                  BottomLayout,
+//                  TopLayout]
+//  do
+//  begin
+//    Control.OnMouseDown := BorderMouseDown;
+//    Control.OnMouseUp := BorderMouseUp;
+//    Control.OnMouseLeave := BorderMouseLeave;
+//  end;
+//
+//  if AOwner is TForm then
+//    TForm(AOwner).BorderStyle := TFmxFormBorderStyle.None;
+//
+//  MinWidth := Trunc(AContentLayout.Width);
+//  MinHeight := Trunc(AContentLayout.Height);
+//
+//  Self.Parent := TForm(AOwner);
+//  Self.Align := TAlignLayout.Contents;
+//  AContentLayout.Parent := Self.ContentLayout;
+//
+//  TopBorderRectangle.Fill.Color := ABorderColor;
+//  CaptionRectangle.Fill.Color := ABorderColor;
+//  UnderCaptionRectangle.Fill.Color := ABorderColor;
+//
+//  LeftBorderRectangle.Fill.Color := ABorderColor;
+//  RightBorderRectangle.Fill.Color := ABorderColor;
+//  BottomBorderRectangle.Fill.Color := ABorderColor;
+//
+//  BackgroundCloseButtonRectangle.Fill.Color := ABorderColor;
+//  BackgroundRolldownButtonRectangle.Fill.Color := ABorderColor;
+//
+//  ForegroundCloseButtonRectangle.Fill.Color := ACloseButtonMouseOverColor;
+//  ForegroundRolldownButtonRectangle.Fill.Color := ACloseButtonMouseOverColor;
+//
+//  CaptionText.Text := ACaption;
+//  CaptionText.OnMouseMove := CaptionLayoutMouseMove;
+//  CaptionText.TextSettings.FontColor := ACaptionColor;
+//
+//  TImageTools.ReplaceColor(
+//    CloseButtonRectangle.Fill.Bitmap.Bitmap,
+//    TAlphaColorRec.White,
+//    ACaptionColor);
+//
+//  TImageTools.ReplaceColor(
+//    RolldownButtonRectangle.Fill.Bitmap.Bitmap,
+//    TAlphaColorRec.White,
+//    ACaptionColor);
+//
+//  CaptionLayout.BringToFront;
+//  BottomLayout.BringToFront;
+//  LeftLayout.BringToFront;
+//  RightLayout.BringToFront;
+//  TopLayout.BringToFront;
+//  UnderCaptionLayout.BringToFront;
+//
+//  ContentLayout.SendToBack;
+//end;
+
+constructor TBorderFrame.Create(
+  AOwner: TComponent;
+  ABorderFrameKind: TBorderFrameKind;
+  ACaption: String = '';
+  AMinWidth: Integer = 0;
+  AMinHeigth: Integer = 0;
+  ACaptionColor: TAlphaColor = TAlphaColorRec.White;
+  ABorderColor: TAlphaColor = TAlphaColorRec.Cornflowerblue;
+  AToolButtonColor: TAlphaColor = TAlphaColorRec.White;
+  AToolButtonMouseOverColor: TAlphaColor = TAlphaColorRec.Lime
+  );
+var
+  Form: TForm;
+  Control: TControl;
+begin
+  if not (AOwner is TForm) then
+    raise Exception.Create('Owner is not TForm');
+
+  inherited Create(AOwner);
+
+  Form := AOwner as TForm;
+
+  FMinWidth := AMinWidth;
+  FMinHeight := AMinHeigth;
+
+  FMaxWidth := 0;
+  FMaxHeight := 0;
+
+  MinWidth := Form.ClientWidth;
+  MinHeight := Form.ClientHeight;
+
+  FIsMouseDown := false;
+
+  for Control in [CaptionLayout,
+                  CaptionText,
+                  LeftTopLayout,
+                  RightTopLayout,
+                  LeftBottomLayout,
+                  RightBottomLayout,
+                  LeftLayout,
+                  RightLayout,
+                  BottomLayout,
+                  TopLayout]
+  do
+  begin
+    Control.OnMouseDown := BorderMouseDown;
+    Control.OnMouseUp := BorderMouseUp;
+    Control.OnMouseLeave := BorderMouseLeave;
+  end;
+
+  FBorderColor := ABorderColor;
+  FCaptionColor := ACaptionColor;
+  FToolButtonColor := AToolButtonColor;
+  FToolButtonMouseOverColor := AToolButtonMouseOverColor;
+  FCaption := Form.Caption;
+
+  BorderFrameKind := ABorderFrameKind;
 end;
 
 procedure TBorderFrame.ForegroundCloseButtonRectangleMouseLeave(
@@ -514,73 +584,224 @@ begin
     RolldownButtonRectangle);
 end;
 
+// Работаем именно c внешними размерами формы,
+// что бы не делать лишних приведений Single -> Integer
+// Такой ход избавляет от дражания борта, за который тянем,
+// при регулировании размеров мышкой
 procedure TBorderFrame.LeftConstraint(const X: Single);
 var
   XDelta: Integer;
+  ShiftVal: Integer;
+  RightX: Integer;
+  Form: TForm;
 begin
+  Form := Owner as TForm;
   XDelta := Trunc(X - FStartX);
+  ShiftVal := Form.Width - XDelta;
 
-  if (TForm(Owner).Width - XDelta >= FMinWidth) and
-     ((TForm(Owner).Width - XDelta <= FMaxWidth) or (FMaxWidth = 0))
-  then
+  if XDelta < 0 then
   begin
-    TForm(Owner).Left := TForm(Owner).Left + XDelta;
-    TForm(Owner).Width := TForm(Owner).Width - XDelta;
+    if FMaxWidth > 0 then
+    begin
+      if ShiftVal <= FMaxWidth then
+      begin
+        Form.Left := Form.Left + XDelta;
+        Form.Width := Form.Width - XDelta;
+      end
+      else
+      if ShiftVal > FMaxWidth then
+      begin
+        RightX := Form.Left + Form.Width;
+        Form.Left := RightX - FMaxWidth;
+        Form.Width := FMaxWidth;
+      end;
+    end
+    else
+    begin
+      Form.Left := Form.Left + XDelta;
+      Form.Width := Form.Width - XDelta;
+    end
+  end
+  else
+  if XDelta > 0 then
+  begin
+    if FMinWidth > 0 then
+    begin
+      if ShiftVal >= FMinWidth then
+      begin
+        Form.Left := Form.Left + XDelta;
+        Form.Width := Form.Width - XDelta;
+      end
+      else
+      if ShiftVal < FMinWidth then
+      begin
+        RightX := Form.Left + Form.Width;
+        Form.Left := RightX - FMinWidth;
+        Form.Width := FMinWidth;
+      end;
+    end
+    else
+    begin
+      Form.Left := Form.Left + XDelta;
+      Form.Width := Form.Width - XDelta;
+    end;
   end;
 end;
 
+// Работаем именно c внешними размерами формы,
+// что бы не делать лишних приведений Single -> Integer
+// Такой ход избавляет от дражания борта, за который тянем,
+// при регулировании размеров мышкой
 procedure TBorderFrame.RightConstraint(const X: Single);
 var
   XDelta: Integer;
+  ShiftVal: Integer;
+  Form: TFormExt;
 begin
+  Form := Owner as TFormExt;
   XDelta := Trunc(X - FStartX);
+  ShiftVal := Form.Width + XDelta;
 
-  if (TForm(Owner).Width + XDelta >= FMinWidth) and
-     ((TForm(Owner).Width + XDelta <= FMaxWidth) or (FMaxWidth = 0))
-  then
+  if XDelta < 0 then
   begin
-    TForm(Owner).Width := TForm(Owner).Width + XDelta;
+    if FMinWidth > 0 then
+    begin
+      if ShiftVal >= FMinWidth then
+        Form.Width := Form.Width + XDelta
+      else
+      if ShiftVal < FMinWidth then
+        Form.Width := FMinWidth;
+    end
+    else
+      Form.Width := Form.Width + XDelta;
+  end
+  else
+  if XDelta > 0 then
+  begin
+    if FMaxWidth > 0 then
+    begin
+      if ShiftVal <= FMaxWidth then
+        Form.Width := Form.Width + XDelta
+      else
+      if ShiftVal > FMaxWidth then
+        Form.Width := FMaxWidth;
+    end
+    else
+      Form.Width := Form.Width + XDelta;
   end;
 end;
 
+// Работаем именно c внешними размерами формы,
+// что бы не делать лишних приведений Single -> Integer
+// Такой ход избавляет от дражания борта, за который тянем,
+// при регулировании размеров мышкой
 procedure TBorderFrame.TopConstraint(const Y: Single);
 var
   YDelta: Integer;
+  ShiftVal: Integer;
+  BottomY: Integer;
+  Form: TForm;
 begin
+  Form := Owner as TForm;
   YDelta := Trunc(Y - FStartY);
+  ShiftVal := Form.Height - YDelta;
 
-  if (TForm(Owner).Height - YDelta >= FMinHeight) and
-     ((TForm(Owner).Height - YDelta <= FMaxHeight) or (FMaxHeight = 0))
-  then
+  if YDelta < 0 then
   begin
-    TForm(Owner).Top := TForm(Owner).Top + YDelta;
-    TForm(Owner).Height := TForm(Owner).Height - YDelta;
+    if FMaxHeight > 0 then
+    begin
+      if ShiftVal <= FMaxHeight then
+      begin
+        Form.Top := Form.Top + YDelta;
+        Form.Height := Form.Height - YDelta;
+      end
+      else
+      if ShiftVal > FMaxHeight then
+      begin
+        BottomY := Form.Top + Form.Height;
+        Form.Top := BottomY - FMaxHeight;
+        Form.Height := FMaxHeight;
+      end;
+    end
+    else
+    begin
+      Form.Top := Form.Top + YDelta;
+      Form.Height := Form.Height - YDelta;
+    end
+  end
+  else
+  if YDelta > 0 then
+  begin
+    if FMinHeight > 0 then
+    begin
+      if ShiftVal >= FMinHeight then
+      begin
+        Form.Top := Form.Top + YDelta;
+        Form.Height := Form.Height - YDelta;
+      end
+      else
+      if ShiftVal < FMinHeight then
+      begin
+        BottomY := Form.Top + Form.Height;
+        Form.Top := BottomY - FMinHeight;
+        Form.Height := FMinHeight;
+      end;
+    end
+    else
+    begin
+      Form.Top := Form.Top + YDelta;
+      Form.Height := Form.Height - YDelta;
+    end
   end;
 end;
 
+// Работаем именно c внешними размерами формы,
+// что бы не делать лишних приведений Single -> Integer
+// Такой ход избавляет от дражания борта, за который тянем,
+// при регулировании размеров мышкой
 procedure TBorderFrame.BottomConstraint(const Y: Single);
 var
   YDelta: Integer;
+  ShiftVal: Integer;
+  Form: TForm;
 begin
+  Form := Owner as TForm;
   YDelta := Trunc(Y - FStartY);
+  ShiftVal := Form.Height + YDelta;
 
-  if (TForm(Owner).Height + YDelta >= FMinHeight) and
-     ((TForm(Owner).Height + YDelta <= FMaxHeight) or (FMaxHeight = 0))
-  then
+  if YDelta < 0 then
   begin
-    TForm(Owner).Height := TForm(Owner).Height + YDelta;
+    if FMinHeight > 0 then
+    begin
+      if (ShiftVal >= FMinHeight) then
+        Form.Height := ShiftVal
+      else
+      if (Form.Height + YDelta < FMinHeight) then
+        Form.Height := FMinHeight;
+    end
+    else
+      Form.Height := ShiftVal;
+  end
+  else
+  if YDelta > 0 then
+  begin
+    if FMaxHeight > 0 then
+    begin
+      if (ShiftVal <= FMaxHeight) then
+        Form.Height := ShiftVal
+      else
+      if (ShiftVal > FMaxHeight) then
+        Form.Height := FMaxHeight;
+    end
+    else
+      Form.Height := ShiftVal;
   end;
 end;
 
-function TBorderFrame.GetCaption: TText;
-begin
-  Result := CaptionText;
-end;
-
-function TBorderFrame.GetTrayIcon: TCustomTrayIcon;
-begin
-  Result := FTrayIcon;
-end;
+//function TBorderFrame.GetCaption: TText;
+//begin
+//  Result := CaptionText;
+//end;
 
 procedure TBorderFrame.BorderMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Single);
 begin
@@ -766,33 +987,6 @@ begin
   Cursor := crSizeNWSE;
 end;
 
-procedure TBorderFrame.InnerTrayIconMouseDown(
-  Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Single);
-begin
-  if Button = TMouseButton.mbLeft then
-  begin
-    if not TForm(Owner).Visible then
-    begin
-      ShowWindow(ApplicationHwnd, SW_SHOW);
-      TForm(Owner).Show;
-    end
-    else
-    begin
-      TForm(Owner).Hide;
-      ShowWindow(ApplicationHwnd, SW_HIDE);
-    end;
-
-    if Assigned(FTrayIconMouseLeftButtonDown) then
-      FTrayIconMouseLeftButtonDown(Sender, Button, Shift, X, Y);
-  end
-  else
-  if Button = TMouseButton.mbRight then
-  begin
-    if Assigned(FTrayIconMouseRightButtonDown) then
-      FTrayIconMouseRightButtonDown(Sender, Button, Shift, X, Y);
-  end;
-end;
-
 procedure TBorderFrame.SetMinWidth(const AMinWidth: Integer);
 begin
   FMinWidth := AMinWidth + WidthDelta;
@@ -825,6 +1019,28 @@ begin
   FMinHeight := AMinClientHeight + HeightDelta;
 end;
 
+function TBorderFrame.GetMaxClientWidth: Integer;
+begin
+  Result := FMaxWidth - WidthDelta;
+end;
+
+procedure TBorderFrame.SetMaxClientWidth(const AMaxClientWidth: Integer);
+begin
+  FMaxWidth := AMaxClientWidth + WidthDelta;
+  Width := FMaxWidth;
+end;
+
+function TBorderFrame.GetMaxClientHeight: Integer;
+begin
+  Result := FMaxHeight - WidthDelta;
+end;
+
+procedure TBorderFrame.SetMaxClientHeight(const AMaxClientHeight: Integer);
+begin
+  FMaxHeight := AMaxClientHeight + HeightDelta;
+  Height := FMaxHeight;
+end;
+
 procedure TBorderFrame.TopLayoutMouseEnter(Sender: TObject);
 begin
   Cursor := crSizeNS;
@@ -848,6 +1064,53 @@ end;
 procedure TBorderFrame.SetClientHeight(const AClientHeight: Integer);
 begin
   Height := AClientHeight + HeightDelta;
+end;
+
+procedure TBorderFrame.SetBorderFrameKind(const ABorderFrameKind: TBorderFrameKind);
+begin
+  UnMount;
+
+  FBorderFrameKind := ABorderFrameKind;
+
+  if ABorderFrameKind = bfkNone then
+    Exit;
+
+  Mount;
+end;
+
+procedure TBorderFrame.SetBorderColor(const ABorderColor: TAlphaColor);
+begin
+  FBorderColor := ABorderColor;
+
+  ApplyChanges;
+end;
+
+procedure TBorderFrame.SetToolButtonColor(const AToolButtonColor: TAlphaColor);
+begin
+  FToolButtonColor := AToolButtonColor;
+
+  ApplyChanges;
+end;
+
+procedure TBorderFrame.SetToolButtonMouseOverColor(const AToolButtonMouseOverColor: TAlphaColor);
+begin
+  FToolButtonMouseOverColor := AToolButtonMouseOverColor;
+
+  ApplyChanges;
+end;
+
+procedure TBorderFrame.SetCaptionColor(const ACaptionColor: TAlphaColor);
+begin
+  FCaptionColor := ACaptionColor;
+
+  ApplyChanges;
+end;
+
+procedure TBorderFrame.SetCaption(const ACaption: String);
+begin
+  FCaption := ACaption;
+
+  ApplyChanges;
 end;
 
 function TBorderFrame.GetWidthDelta: Integer;

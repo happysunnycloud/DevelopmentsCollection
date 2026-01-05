@@ -108,15 +108,6 @@ object BorderFrame: TBorderFrame
     Size.Height = 278.000000000000000000
     Size.PlatformDefault = False
     TabOrder = 5
-    object ContentBackgroundRectangle: TRectangle
-      Align = Contents
-      Size.Width = 358.000000000000000000
-      Size.Height = 278.000000000000000000
-      Size.PlatformDefault = False
-      Stroke.Kind = None
-      Stroke.Thickness = 0.000000000000000000
-      Visible = False
-    end
   end
   object LeftLayout: TLayout
     Align = Left
