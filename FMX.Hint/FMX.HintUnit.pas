@@ -32,7 +32,9 @@ type
 
     FTheme: TTheme;
 
-    procedure OnTerminateHintThreadHandler(Sender: TObject);
+//    procedure OnTerminateHintThreadHandler(Sender: TObject);
+    procedure OnToShowHintTimeoutHandler(Sender: TObject);
+    procedure OnToHideHintTimeoutHandler(Sender: TObject);
 
     procedure StartHintThread(
       const AControl: TControl);
@@ -170,13 +172,12 @@ begin
   FControl := nil;
 
   FMouseHandlersDict := TDictionary<TControl, THintMouseHandlers>.Create;
-end;
 
-procedure TCustomHint.OnTerminateHintThreadHandler(Sender: TObject);
-begin
-  CloseHintForm;
-
-  FHintThread := nil;
+  FHintThread := THintThread.Create(true);
+  FHintThread.OnToShowHintTimeout := OnToShowHintTimeoutHandler;
+  FHintThread.OnToHideHintTimeout := OnToHideHintTimeoutHandler;
+  FHintThread.FreeOnTerminate := true;
+  FHintThread.Start;
 end;
 
 destructor TCustomHint.Destroy;
@@ -201,6 +202,16 @@ begin
   inherited;
 end;
 
+procedure TCustomHint.OnToShowHintTimeoutHandler(Sender: TObject);
+begin
+  CreateHintForm;
+end;
+
+procedure TCustomHint.OnToHideHintTimeoutHandler(Sender: TObject);
+begin
+  CloseHintForm;
+end;
+
 procedure TCustomHint.Open(const AControl: TControl);
 begin
   if AControl.Hint.Length = 0 then
@@ -214,21 +225,16 @@ end;
 procedure TCustomHint.StartHintThread(
   const AControl: TControl);
 begin
-  if Assigned(FHintThread) then
-  begin
-    FHintThread.Terminate;
-    FHintThread.WaitForDone;
-    FHintThread := nil;
-  end;
-
   if not Assigned(AControl) then
     Exit;
 
-  FHintThread := THintThread.Create(AControl);
-  FHintThread.CreateHintFormProc := CreateHintForm;
-  FHintThread.FreeOnTerminate := true;
-  FHintThread.OnTerminate := OnTerminateHintThreadHandler;
-  FHintThread.Start;
+  if Application.Terminated then
+    Exit;
+
+  if Assigned(FHintThread) then
+  begin
+    FHintThread.Control := FControl;
+  end;
 end;
 
 procedure TCustomHint.AddOriginalHandlers(

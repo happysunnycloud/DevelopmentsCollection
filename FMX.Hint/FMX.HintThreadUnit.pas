@@ -8,100 +8,92 @@ uses
   , System.SysUtils
   , System.Types
   , FMX.Controls
-  , FMX.Forms
   ;
 
 const
-  TO_SHOW_COUNTDOWN = 600;
+  COUNTDOWN = 1000;
+  TO_SHOW_COUNTDOWN = 1000;
   TO_HIDE_COUNTDOWN = 2000;
 
 type
   THintThread = class(TThread)
   strict private
     FCriticalSection: TCriticalSection;
-    FCreateHintFormProc: TProc;
     FControl: TControl;
+    FHoldEvent: TEvent;
     FDoneEvent: TEvent;
+    FCountDown: Integer;
+//    FTimeout: Integer;
+
     FTimeIsOutFixed: Boolean;
+
     FRectF: TRectF;
-    FExternalOnTerminateHandler: TNotifyEvent;
+    //FOnTimeIsOut: TNotifyEvent;
+
+    FOnToShowHintTimeout: TNotifyEvent;
+    FOnToHideHintTimeout: TNotifyEvent;
+
+    procedure SetCountDown(const ACountDown: Integer);
+    function GetCountDown: Integer;
+
+    procedure SetControl(const AControl: TControl);
+    function GetControl: TControl;
+
+    procedure SetTimeIsOutFixed(const ATimeIsOutFixed: Boolean);
+    function GetTimeIsOutFixed: Boolean;
+
+//    procedure SetTimeout(const ATimeout: Integer);
+//    function GetTimeout: Integer;
 
     function IsMouseOverControl: Boolean;
-
-    procedure InternalOnTerminateHandler(Sender: TObject);
-
-    procedure GetCurPos(var APoint: TPoint);
-    procedure SetOnTerminate(const ANotifyEvent: TNotifyEvent);
   protected
     procedure Execute; override;
   public
     constructor Create(
-      const AControl: TControl);
+      const ASuspended: Boolean);
     destructor Destroy; override;
 
     procedure WaitForDone;
 
-    property TimeIsOutFixed: Boolean read FTimeIsOutFixed;
+    property TimeIsOutFixed: Boolean read GetTimeIsOutFixed write SetTimeIsOutFixed;
+    property Control: TControl read GetControl write SetControl;
+    property CountDown: Integer read GetCountDown write SetCountDown;
+//    property Timeout: Integer read GetTimeout write SetTimeout;
 
-    property OnTerminate: TNotifyEvent write SetOnTerminate;
-    property CreateHintFormProc: TProc write FCreateHintFormProc;
+//    property OnTimeIsOut: TNotifyEvent write FOnTimeIsOut;
+
+    property OnToShowHintTimeout: TNotifyEvent write FOnToShowHintTimeout;
+    property OnToHideHintTimeout: TNotifyEvent write FOnToHideHintTimeout;
   end;
 
 implementation
 
 uses
-    System.UITypes
-  , Winapi.Windows
-  , Winapi.ShellAPI
-  , FMX.Types
-  , FMX.Graphics
-  , FMX.Platform
-  , FMX.Platform.Win
-  , FMX.ControlToolsUnit
-  ;
+      Winapi.Windows
+    , FMX.Forms
+    , FMX.ControlToolsUnit
+    ;
 
 { THintThread }
 
-procedure THintThread.InternalOnTerminateHandler(Sender: TObject);
-begin
-  if Assigned(FExternalOnTerminateHandler) then
-    FExternalOnTerminateHandler(Self);
-end;
-
-procedure THintThread.SetOnTerminate(const ANotifyEvent: TNotifyEvent);
-begin
-  FExternalOnTerminateHandler := ANotifyEvent;
-end;
-
-procedure THintThread.GetCurPos(var APoint: TPoint);
-begin
-  {$IFDEF MSWINDOWS}
-  GetCursorPos(APoint);
-  {$ELSE IFDEF ANDROID}
-  APoint.X := 0;
-  APoint.Y := 0;
-  {$ENDIF}
-end;
-
 constructor THintThread.Create(
-  const AControl: TControl);
-var
-  ParentForm: TForm;
+  const ASuspended: Boolean);
 begin
   FCriticalSection := TCriticalSection.Create;
-  FControl := AControl;
-  FCreateHintFormProc := nil;
+  FControl := nil;
   FDoneEvent := TEvent.Create(nil, true, false, '', false);
+  FHoldEvent := TEvent.Create(nil, true, false, '', false);
   FTimeIsOutFixed := false;
-  ParentForm := TControlTools.FindParentForm(FControl);
 
-  FExternalOnTerminateHandler := nil;
+  FRectF.Empty;
+//  FOnTimeIsOut := nil;
 
-  FRectF := TRectF.Create(
-    ParentForm.ClientToScreen(FControl.LocalToAbsolute(FControl.ClipRect.TopLeft)),
-    ParentForm.ClientToScreen(FControl.LocalToAbsolute(FControl.ClipRect.BottomRight)));
+  FOnToShowHintTimeout := nil;
+  FOnToHideHintTimeout := nil;
 
-  inherited OnTerminate := InternalOnTerminateHandler;
+  FCountDown := COUNTDOWN;
+
+//  FTimeout := FCountDown;
 
   inherited Create(true);
 end;
@@ -109,73 +101,201 @@ end;
 destructor THintThread.Destroy;
 begin
   FreeAndNil(FDoneEvent);
+  FreeAndNil(FHoldEvent);
   FreeAndNil(FCriticalSection);
 end;
 
 procedure THintThread.WaitForDone;
 begin
+  FHoldEvent.SetEvent;
   FDoneEvent.WaitFor(INFINITE);
 end;
 
+procedure THintThread.SetCountDown(const ACountDown: Integer);
+begin
+  FCriticalSection.Enter;
+  try
+    FCountDown := ACountDown;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
+function THintThread.GetCountDown: Integer;
+begin
+  FCriticalSection.Enter;
+  try
+    Result := FCountDown;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
+procedure THintThread.SetControl(const AControl: TControl);
+var
+  ParentForm: TForm;
+begin
+  FCriticalSection.Enter;
+  try
+    FControl := AControl;
+    if Assigned(FControl) then
+    begin
+      ParentForm := TControlTools.FindParentForm(FControl);
+      // Для оптимизации, что бы не вводить лишних синхноризаций
+      // Прямоугольник контрола определяем на стадии присвоения контрола
+      FRectF := TRectF.Create(
+        ParentForm.ClientToScreen(FControl.LocalToAbsolute(FControl.ClipRect.TopLeft)),
+        ParentForm.ClientToScreen(FControl.LocalToAbsolute(FControl.ClipRect.BottomRight)));
+
+      //FTimeout := FCountDown;
+      FTimeIsOutFixed := false;
+    end
+    else
+    begin
+      FRectF.Width := 0;
+      FRectF.Height := 0;
+    end;
+
+    FHoldEvent.SetEvent;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
+function THintThread.GetControl: TControl;
+begin
+  FCriticalSection.Enter;
+  try
+    Result := FControl;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
 function THintThread.IsMouseOverControl: Boolean;
+  function _Contains(const ARectF: TRectF; const APointF: TPointF): Boolean;
+  begin
+    Result :=
+      (APointF.X >= ARectF.Left)    and
+      (APointF.X <= ARectF.Right)   and
+      (APointF.Y >= ARectF.Top)     and
+      (APointF.Y <= ARectF.Bottom)
+      ;
+  end;
 var
   Point: TPoint;
   PointF: TPointF;
 begin
   Result := false;
 
-  GetCurPos(Point);
+  GetCursorPos(Point);
 
   PointF.X := Point.X;
   PointF.Y := Point.Y;
 
   if not FRectF.IsEmpty then
-    if FRectF.Contains(PointF) then
+    if _Contains(FRectF, PointF) then
       Result := true;
 end;
 
-procedure THintThread.Execute;
+procedure THintThread.SetTimeIsOutFixed(const ATimeIsOutFixed: Boolean);
+begin
+  FCriticalSection.Enter;
+  try
+    FTimeIsOutFixed := ATimeIsOutFixed;
 
-  procedure TimeIsOut;
-  begin
-    Terminate;
-
-    FTimeIsOutFixed := true;
+    if FTimeIsOutFixed then
+      FHoldEvent.ResetEvent;
+  finally
+    FCriticalSection.Leave;
   end;
+end;
 
+function THintThread.GetTimeIsOutFixed: Boolean;
+begin
+  FCriticalSection.Enter;
+  try
+    Result := FTimeIsOutFixed;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
+//procedure THintThread.SetTimeout(const ATimeout: Integer);
+//begin
+//  FCriticalSection.Enter;
+//  try
+//    FTimeout := ATimeout;
+//  finally
+//    FCriticalSection.Leave;
+//  end;
+//end;
+//
+//function THintThread.GetTimeout: Integer;
+//begin
+//  FCriticalSection.Enter;
+//  try
+//    Result := FTimeout;
+//  finally
+//    FCriticalSection.Leave;
+//  end;
+//end;
+
+procedure THintThread.Execute;
 var
   i: Integer;
 begin
   FDoneEvent.ResetEvent;
+  FHoldEvent.ResetEvent;
+  FHoldEvent.WaitFor(INFINITE);
   try
-    i := TO_SHOW_COUNTDOWN;
-    while not Terminated and IsMouseOverControl do
+    while not Terminated do
     begin
-      Sleep(100);
-
-      Dec(i, 100);
-
-      if i < 0 then
+      while not Terminated do
       begin
-        TThread.Queue(nil,
-        //Synchronize(
-          procedure
-          begin
-            if not Application.Terminated then
-              FCreateHintFormProc;
-          end);
-
-        i := TO_HIDE_COUNTDOWN;
-        while not Terminated and IsMouseOverControl do
+        i := TO_SHOW_COUNTDOWN;
+        while not Terminated and IsMouseOverControl and (i > 0) do
         begin
           Sleep(100);
 
           Dec(i, 100);
-
-          if i < 0 then
-            Terminate;
         end;
-      end
+
+        if not IsMouseOverControl then
+          Break;
+
+        if Assigned(FOnToShowHintTimeout) then
+          TThread.ForceQueue(nil,
+            procedure
+            begin
+              if not Application.Terminated then
+                FOnToShowHintTimeout(nil);
+            end);
+
+        i := TO_HIDE_COUNTDOWN;
+        while not Terminated and IsMouseOverControl and (i > 0) do
+        begin
+          Sleep(100);
+
+          Dec(i, 100);
+        end;
+
+        if Assigned(FOnToHideHintTimeout) then
+          TThread.ForceQueue(nil,
+            procedure
+            begin
+              if not Application.Terminated then
+                FOnToHideHintTimeout(nil);
+            end);
+
+        Break;
+      end;
+
+      if not Terminated then
+      begin
+        FHoldEvent.ResetEvent;
+        FHoldEvent.WaitFor(INFINITE);
+      end;
     end;
   finally
     FDoneEvent.SetEvent;

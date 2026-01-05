@@ -108,11 +108,6 @@ begin
   OnCloseQuery := OnCloseQueryInternalHandler;
   OnClose := OnCloseInternalHandler;
 
-//  Self.BorderStyle := TFmxFormBorderStyle.None;
-//  Self.FormStyle := TFormStyle.StayOnTop;
-//  Self.Fill.Color := TAlphaColorRec.Limegreen;
-//  Self.Fill.Kind := TBrushKind.Solid;
-
   FHint := '';
 
   FLabel := TLabel.Create(Self);
@@ -148,6 +143,7 @@ begin
     SWP_NOMOVE or SWP_NOSIZE or SWP_NOACTIVATE or SWP_FRAMECHANGED
   );
 end;
+
 procedure THintForm.ShowOverlayAboveParent(const Parent: TForm);
 var
   HOverlay: HWND;
@@ -167,6 +163,7 @@ begin
     SWP_NOMOVE or SWP_NOSIZE or SWP_NOACTIVATE
   );
 end;
+
 procedure THintForm.HideOverlay;
 var
   H: HWND;
