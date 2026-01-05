@@ -21,6 +21,7 @@ type
     FHoldEvent: TEvent;
     FDoneEvent: TEvent;
     FCountDown: Integer;
+    FTimeout: Integer;
 
     FTimeIsOutFixed: Boolean;
     FClickFixed: Boolean;
@@ -43,7 +44,7 @@ type
     procedure SetForm(const AForm: TPopupMenuExtForm);
     function GetForm: TPopupMenuExtForm;
 
-    function GetHoldEvent: TEvent;
+//    function GetHoldEvent: TEvent;
 
     procedure SetTimeIsOutFixed(const ATimeIsOutFixed: Boolean);
     function GetTimeIsOutFixed: Boolean;
@@ -51,7 +52,12 @@ type
     procedure SetClickFixed(const AClickFixed: Boolean);
     function GetClickFixed: Boolean;
 
+    procedure SetTimeout(const ATimeout: Integer);
+    function GetTimeout: Integer;
+
     function IsMouseOverForm: Boolean;
+
+//    property HoldEvent: TEvent read GetHoldEvent;
   protected
     procedure Execute; override;
   public
@@ -70,8 +76,7 @@ type
     property ClickedItem: TObject read GetClickedItem write SetClickedItem;
     property FormOwner: TPopupMenuExtForm read FFormOwner write FFormOwner;
     property CountDown: Integer read GetCountDown write SetCountDown;
-
-    property HoldEvent: TEvent read GetHoldEvent;
+    property Timeout: Integer read GetTimeout write SetTimeout;
 
     property OnTimeIsOut: TNotifyEvent write FOnTimeIsOut;
   end;
@@ -108,6 +113,8 @@ begin
   else
     FCountDown := 1000;
 
+  FTimeout := FCountDown;
+
   inherited Create(ASuspended);
 end;
 
@@ -120,6 +127,7 @@ end;
 
 procedure TPopupMenuExtThread.WaitForDone;
 begin
+  FHoldEvent.SetEvent;
   FDoneEvent.WaitFor(INFINITE);
 end;
 
@@ -192,11 +200,24 @@ begin
   FCriticalSection.Enter;
   try
     FForm := AForm;
+    if Assigned(FForm) then
+    begin
+      // Для оптимизации, что бы не вводить лишних синхноризаций
+      // Прямоугольник формы определяем на стадии инициализации трида
+      FRectF := TRectF.Create(FForm.ClientToScreen(FForm.ClientRect.TopLeft),
+                              FForm.ClientToScreen(FForm.ClientRect.BottomRight));
 
-    // Для оптимизации, что бы не вводить лишних синхноризаций
-    // Прямоугольник формы определяем на стадии инициализации трида
-    FRectF := TRectF.Create(FForm.ClientToScreen(FForm.ClientRect.TopLeft),
-                            FForm.ClientToScreen(FForm.ClientRect.BottomRight));
+      FTimeout := FCountDown;
+      FTimeIsOutFixed := false;
+      FClickFixed := false;
+    end
+    else
+    begin
+      FRectF.Width := 0;
+      FRectF.Height := 0;
+    end;
+
+    FHoldEvent.SetEvent;
   finally
     FCriticalSection.Leave;
   end;
@@ -224,10 +245,10 @@ begin
     Result := true;
 end;
 
-function TPopupMenuExtThread.GetHoldEvent: TEvent;
-begin
-  Result := FHoldEvent;
-end;
+//function TPopupMenuExtThread.GetHoldEvent: TEvent;
+//begin
+//  Result := FHoldEvent;
+//end;
 
 procedure TPopupMenuExtThread.SetTimeIsOutFixed(const ATimeIsOutFixed: Boolean);
 begin
@@ -274,13 +295,31 @@ begin
   end;
 end;
 
+procedure TPopupMenuExtThread.SetTimeout(const ATimeout: Integer);
+begin
+  FCriticalSection.Enter;
+  try
+    FTimeout := ATimeout;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
+function TPopupMenuExtThread.GetTimeout: Integer;
+begin
+  FCriticalSection.Enter;
+  try
+    Result := FTimeout;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
 procedure TPopupMenuExtThread.Execute;
-var
-  i: Integer;
 begin
   FDoneEvent.ResetEvent;
-  HoldEvent.ResetEvent;
-  HoldEvent.WaitFor(INFINITE);
+  FHoldEvent.ResetEvent;
+  FHoldEvent.WaitFor(INFINITE);
   try
     while not Terminated do
     begin
@@ -288,14 +327,14 @@ begin
       begin
         if not IsMouseOverForm then
         begin
-          i := CountDown;
+          Timeout := CountDown;
           while not Terminated and not IsMouseOverForm and not ClickFixed and not TimeIsOutFixed do
           begin
             Sleep(100);
 
-            Dec(i, 100);
+            Timeout := Timeout - 100;
 
-            if i < 0 then
+            if Timeout < 0 then
               TimeIsOutFixed := true;
           end;
         end
@@ -322,7 +361,8 @@ begin
         end;
       end;
 
-      HoldEvent.WaitFor(INFINITE);
+      if not Terminated then
+        FHoldEvent.WaitFor(INFINITE);
     end;
   finally
     FDoneEvent.SetEvent;

@@ -327,8 +327,13 @@ procedure TPopupMenuExt.OnTimeIsOutHandler(Sender: TObject);
 var
   Form: TPopupMenuExtForm;
 begin
+  // Если Timeout > 0, значит таймер был перезапущен, окно закрывать не нужно
+  if FPopupMenuThread.Timeout > 0 then
+    Exit;
+
   Form := FPopupMenuThread.Form;
-  CloseForm(Form);
+  if Assigned(Form) then
+    CloseForm(Form);
 end;
 {$ENDIF}
 procedure TPopupMenuExt.OnItemClickHandler(Sender: TObject);
@@ -485,7 +490,8 @@ begin
   if Assigned(FPopupMenuThread) then
   begin
     FPopupMenuThread.Terminate;
-    FPopupMenuThread.HoldEvent.SetEvent;
+    FPopupMenuThread.Form := nil;
+//    FPopupMenuThread.HoldEvent.SetEvent;
     FPopupMenuThread.WaitForDone;
   end;
   {$ENDIF}
@@ -547,6 +553,36 @@ procedure TPopupMenuExt.Open(
 
     Result := MaxTextWidth;
   end;
+
+  procedure _CloseSameLevelForms(const AItemOwner: TItem);
+  var
+    Level: Word;
+    ParentItemForm: TPopupMenuExtForm;
+    Form: TPopupMenuExtForm;
+    i: Word;
+  begin
+    ParentItemForm := FindOpenedForm(AItemOwner);
+    Level := AItemOwner.Level;
+
+    i := ComponentCount;
+    while i > 0 do
+    begin
+      Dec(i);
+
+      if Components[i] is TPopupMenuExtForm then
+      begin
+        Form := Components[i] as TPopupMenuExtForm;
+        if not Assigned(Form.ParentItem) then
+          Exit;
+
+        if Form.ParentItem.Level >= Level then
+          if Form <> ParentItemForm then
+//            Form.Close;
+            CloseForm(Form, false);
+      end;
+    end;
+  end;
+
 var
   Item: TItem;
   Layout: TLayout;
@@ -584,12 +620,15 @@ begin
 //      {$ENDIF}
       Exit;
     end;
-
     Parent := TControl(Owner);
   end
   else
   begin
     //OpenedForm := FindOpenedForm(AParentItem);
+    {$IFDEF MSWINDOWS}
+    FPopupMenuThread.Form := nil;
+    {$ENDIF}
+    _CloseSameLevelForms(AParentItem);
     Parent := TControl(AParentItem.FormOwner);
   end;
 
@@ -795,15 +834,7 @@ begin
   ParentFormDelta(PopupForm);
   TControlTools.ScreenSizeDelta(PopupForm);
   {$ELSE IFDEF ANDROID}
-  //PopupForm.FullScreen := true;
-  //asd debug
-  PopupForm.Width := 200;
-  PopupForm.Height := 200;
-//  PopupForm.Top := 500;
-//  PopupForm.Left := 500;
-//  PopupForm.Top := Random(1000);
-//  PopupForm.Left := Random(1000);
-  //asd debug
+  PopupForm.FullScreen := true;
   {$ENDIF}
 
   PopupForm.FormStyle := TFormStyle.StayOnTop;
@@ -822,14 +853,7 @@ procedure TPopupMenuExt.StartPopupMenuThread(
   const AStepDirection: TStepDirection);
 begin
   if Assigned(FPopupMenuThread) then
-  begin
-    FPopupMenuThread.HoldEvent.SetEvent;
     FPopupMenuThread.Form := AForm;
-
-    FPopupMenuThread.TimeIsOutFixed := false;
-    FPopupMenuThread.ClickFixed := false;
-    FPopupMenuThread.HoldEvent.SetEvent;
-  end;
 end;
 {$ENDIF}
 
