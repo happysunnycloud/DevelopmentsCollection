@@ -8,6 +8,7 @@ uses
   FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs, FMX.Memo.Types,
   FMX.Layouts, FMX.Controls.Presentation, FMX.ScrollBox, FMX.Memo, FMX.Objects,
   FMX.StdCtrls, System.Generics.Collections
+  , FMX.FormExtUnit
   , FMX.ThemeUnit;
 
 const
@@ -68,7 +69,7 @@ type
     property _IndexOf[const AIdent: String]: Integer read GetIndexOf;
   end;
 
-  TNoteForm = class(TForm)
+  TNoteForm = class(TFormExt)
     NoteMemo: TMemo;
     NoteMemoLayout: TLayout;
     ControlLayout: TLayout;
@@ -267,21 +268,22 @@ begin
     mrContinue:     Result := 'mrContinue';
   end;
 {
-  mrNone     = 0;
-  mrOk       = idOk;
-  mrCancel   = idCancel;
-  mrAbort    = idAbort;
-  mrRetry    = idRetry;
-  mrIgnore   = idIgnore;
-  mrYes      = idYes;
-  mrNo       = idNo;
-  mrClose    = idClose;
-  mrHelp     = idHelp;
-  mrTryAgain = idTryAgain;
-  mrContinue = idContinue;
-  mrAll      = mrContinue + 1;
-  mrNoToAll  = mrAll + 1;
-  mrYesToAll = mrNoToAll + 1;}
+  mrNone     = 0;                      0
+  mrOk       = idOk;                   1
+  mrCancel   = idCancel;               2
+  mrAbort    = idAbort;                3
+  mrRetry    = idRetry;                4
+  mrIgnore   = idIgnore;               5
+  mrYes      = idYes;                  6
+  mrNo       = idNo;                   7
+  mrClose    = idClose;                8
+  mrHelp     = idHelp;                 9
+  mrTryAgain = idTryAgain;             10
+  mrContinue = idContinue;             11
+  mrAll      = mrContinue + 1;         12
+  mrNoToAll  = mrAll + 1;              13
+  mrYesToAll = mrNoToAll + 1;          14
+}
 end;
 
 class function TModalResultHelper.StrToModalResult(const AVal: String): TModalResult;
@@ -654,16 +656,11 @@ begin
   YesNoButtonsLayout.Visible := false;
   DontShowNextTimeCheckBox.Visible := false;
 
-  TBorderFrame.Create(
-    Self,
-    loContent,
-    NoteIdent.Caption,
-    Round(loScreen.Width * SCALE_VALUE) + 50,
-    Round(loScreen.Height * SCALE_VALUE) + 10,
-    TAlphaColorRec.White,
-    $FF2A001A,
-    $FF4C002F,
-    $FF9B0060);
+  BorderFrame.BorderFrameKind := TBorderFrameKind.bfkNormal;
+  BorderFrame.CaptionColor := $FFFFFFFF;
+  BorderFrame.BorderColor := $FF2A001A;
+  BorderFrame.ToolButtonColor := BorderFrame.CaptionColor;
+  BorderFrame.ToolButtonMouseOverColor := $FF9B0060;
 
   Self.Fill.Kind := TBrushKind.Solid;
   Self.Fill.Color := FTheme.LightBackgroundColor;

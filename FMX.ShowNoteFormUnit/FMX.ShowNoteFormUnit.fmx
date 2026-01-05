@@ -1141,8 +1141,8 @@ object NoteForm: TNoteForm
           StyleLookup = 'NoteMemoStyle'
           TabOrder = 0
           OnApplyStyleLookup = NoteMemoApplyStyleLookup
-          Viewport.Width = 491.000000000000000000
-          Viewport.Height = 216.000000000000000000
+          Viewport.Width = 511.000000000000000000
+          Viewport.Height = 236.000000000000000000
         end
       end
       object ControlLayout: TLayout
@@ -1167,6 +1167,7 @@ object NoteForm: TNoteForm
           TabOrder = 0
           object OkButton: TButton
             Align = Right
+            ModalResult = 1
             Margins.Left = 10.000000000000000000
             Margins.Top = 7.000000000000000000
             Margins.Right = 10.000000000000000000
@@ -1190,6 +1191,7 @@ object NoteForm: TNoteForm
           object YesButton: TButton
             Align = Right
             Anchors = []
+            ModalResult = 6
             Margins.Top = 7.000000000000000000
             Margins.Bottom = 7.000000000000000000
             Position.X = 331.000000000000000000
@@ -1203,6 +1205,7 @@ object NoteForm: TNoteForm
           end
           object NoButton: TButton
             Align = Right
+            ModalResult = 7
             Margins.Left = 10.000000000000000000
             Margins.Top = 7.000000000000000000
             Margins.Right = 10.000000000000000000
