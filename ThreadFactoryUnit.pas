@@ -264,7 +264,9 @@ type
 
     procedure TerminateAllThreads;
 
-    function GetThreadByName(const AThreadName: String): TThreadExt;
+    function GetThreadByName(const AThreadName: String): TThreadExt; deprecated 'Use FindThread()';
+    function FindThread(const AThreadName: String): TThreadExt;
+    procedure TerminateThread(const AThreadName: String);
 
     property OnDestroyFactory: TNotifyEvent
       write FOnDestroyFactory;
@@ -800,23 +802,32 @@ begin
   FOnAllThreadsAreDestroyed := ANotifyEvent;
 end;
 
+//procedure TThreadFactory.SetTerminateAllThreads;
+//var
+//  i: Word;
+//  Thread: TThreadExt;
+//begin
+//  i := FThreadRegistry.Count;
+//  while i > 0 do
+//  begin
+//    Dec(i);
+//
+//    Thread := FThreadRegistry.ThreadByIndex(i);
+//
+//    Log.d('TThreadFactory.SetTerminateAllThreads -> Thread.ThreadName = ' + Thread.ThreadName + ' ' +
+//    'Self.ThreadFactoryName = ' + Self.ThreadFactoryName);
+//
+//    Thread.Terminate;
+//  end;
+//end;
+
 procedure TThreadFactory.SetTerminateAllThreads;
-var
-  i: Word;
-  Thread: TThreadExt;
 begin
-  i := FThreadRegistry.Count;
-  while i > 0 do
-  begin
-    Dec(i);
-
-    Thread := FThreadRegistry.ThreadByIndex(i);
-
-    Log.d('TThreadFactory.SetTerminateAllThreads -> Thread.ThreadName = ' + Thread.ThreadName + ' ' +
-    'Self.ThreadFactoryName = ' + Self.ThreadFactoryName);
-
-    Thread.Terminate;
-  end;
+  FThreadRegistry.Enumerator(
+    procedure (const AThread: TThreadExt; var ABreak: Boolean)
+    begin
+      AThread.Terminate;
+    end);
 end;
 
 procedure TThreadFactory.TerminateAllThreads;
@@ -850,5 +861,40 @@ begin
 
   Result := Thread;
 end;
+
+function TThreadFactory.FindThread(const AThreadName: String): TThreadExt;
+var
+  Thread: TThreadExt;
+begin
+  Thread := nil;
+
+  FThreadRegistry.Enumerator(
+    procedure (const AThread: TThreadExt; var ABreak: Boolean)
+    begin
+      if AThread.ThreadName = AThreadName then
+      begin
+        Thread := AThread;
+
+        ABreak := true;
+      end;
+    end);
+
+  Result := Thread;
+end;
+
+procedure TThreadFactory.TerminateThread(const AThreadName: String);
+begin
+  FThreadRegistry.Enumerator(
+    procedure (const AThread: TThreadExt; var ABreak: Boolean)
+    begin
+      if AThread.ThreadName = AThreadName then
+      begin
+        AThread.Terminate;
+
+        ABreak := true;
+      end;
+    end);
+end;
+
 
 end.

@@ -71,8 +71,6 @@ type
     function    ReadAsVariant (const AIndex: Integer = CURRENT_POSITION): Variant;
     function    ReadAsSingle  (const AIndex: Integer = CURRENT_POSITION): Single;
     function    ReadAsBoolean (const AIndex: Integer = CURRENT_POSITION): Boolean;
-    //asd debug зачем нам эта функция, если есть свойство Data: TMemoryStream read FData write FData;
-    //function    ReadData: TMemoryStream;
 
     procedure   SetZeroSize;
     procedure   SetZeroPosition;
