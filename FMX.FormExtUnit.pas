@@ -375,7 +375,10 @@ begin
 
       // Сохраняем значение, что бы восстановить его в OnCloseInternalHandler
       // Так как при вызове Close для модалок оно сбрасывается
-      FModalResult := ModalResult;
+      if ModalResult <> mrNone then
+        FModalResult := ModalResult
+      else
+        FModalResult := mrCancel;
     end;
   end;
 end;
