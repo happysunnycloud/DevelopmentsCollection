@@ -44,8 +44,6 @@ type
     procedure SetForm(const AForm: TPopupMenuExtForm);
     function GetForm: TPopupMenuExtForm;
 
-//    function GetHoldEvent: TEvent;
-
     procedure SetTimeIsOutFixed(const ATimeIsOutFixed: Boolean);
     function GetTimeIsOutFixed: Boolean;
 
@@ -56,8 +54,6 @@ type
     function GetTimeout: Integer;
 
     function IsMouseOverForm: Boolean;
-
-//    property HoldEvent: TEvent read GetHoldEvent;
   protected
     procedure Execute; override;
   public
@@ -79,6 +75,7 @@ type
     property Timeout: Integer read GetTimeout write SetTimeout;
 
     property OnTimeIsOut: TNotifyEvent write FOnTimeIsOut;
+    property HoldEvent: TEvent read FHoldEvent;
   end;
 
 implementation
@@ -241,14 +238,14 @@ begin
 
   GetCursorPos(Point);
 
-  if FRectF.Contains(Point) then
-    Result := true;
+  FCriticalSection.Enter;
+  try
+    if FRectF.Contains(Point) then
+      Result := true;
+  finally
+    FCriticalSection.Leave;
+  end;
 end;
-
-//function TPopupMenuExtThread.GetHoldEvent: TEvent;
-//begin
-//  Result := FHoldEvent;
-//end;
 
 procedure TPopupMenuExtThread.SetTimeIsOutFixed(const ATimeIsOutFixed: Boolean);
 begin
@@ -316,6 +313,8 @@ begin
 end;
 
 procedure TPopupMenuExtThread.Execute;
+var
+  OnTimeIsOut: TNotifyEvent;
 begin
   FDoneEvent.ResetEvent;
   FHoldEvent.ResetEvent;
@@ -352,12 +351,15 @@ begin
         if TimeIsOutFixed then
         begin
           if Assigned(FOnTimeIsOut) then
+          begin
+            OnTimeIsOut := FOnTimeIsOut;
             TThread.ForceQueue(nil,
               procedure
               begin
                 if not Application.Terminated then
-                  FOnTimeIsOut(nil);
+                  OnTimeIsOut(nil);
               end);
+          end;
         end;
       end;
 

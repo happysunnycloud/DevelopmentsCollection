@@ -367,7 +367,7 @@ begin
       TThread.ForceQueue(nil,
         procedure
         begin
-          //asd доработать: Скроем все окна меню, что бы не висело на экране
+          { TODO : Скроем все окна меню, что бы не висело на экране }
           OnClick(Item);
         end);
 
@@ -404,20 +404,10 @@ begin
 
   { --- Defaults --- }
 
-  FTheme.BackgroundColor := $FFB7B7B7;//$FF2A001A;//TAlphaColorRec.Black;
-  FTheme.LightBackgroundColor := $FFE0E0E0;//TAlphaColorRec.Black;//$FFE0E0E0;
+  FTheme.BackgroundColor := TAlphaColorRec.Black;//$FFB7B7B7;//$FF2A001A;//TAlphaColorRec.Black;
+  FTheme.LightBackgroundColor := TAlphaColorRec.Gray;//$FFE0E0E0;//TAlphaColorRec.Black;//$FFE0E0E0;
   FTheme.DarkBackgroundColor := TAlphaColorRec.Cornflowerblue;
-
-  FTheme.CommonTextProps.Align := TAlignLayout.Client;
-  FTheme.CommonTextProps.HitTest := false;
-  FTheme.CommonTextProps.TextSettings.FontColor :=
-    TAlphaColorRec.Black;
-  FTheme.CommonTextProps.TextSettings.HorzAlign :=
-    TTextAlign.Leading;
-  FTheme.CommonTextProps.TextSettings.VertAlign :=
-    TTextAlign.Center;
-  FTheme.CommonTextProps.Margins.Left := 5;
-  FTheme.CommonTextProps.WordWrap := false;
+  FTheme.TextSettings.FontColor := TAlphaColorRec.White;
 
   { --- Defaults --- }
 
@@ -490,8 +480,8 @@ begin
   if Assigned(FPopupMenuThread) then
   begin
     FPopupMenuThread.Terminate;
+    FPopupMenuThread.HoldEvent.SetEvent;
     FPopupMenuThread.Form := nil;
-//    FPopupMenuThread.HoldEvent.SetEvent;
     FPopupMenuThread.WaitForDone;
   end;
   {$ENDIF}
@@ -690,7 +680,7 @@ begin
     AndroidGoBackButtonText.Parent := AndroidGoBackButtonRectangle;
     AndroidGoBackButtonText.Text := 'Back';
     AndroidGoBackButtonText.HitTest := false;
-    Theme.CommonTextProps.ApplyTo(AndroidGoBackButtonText);
+    Theme.TextSettings.ApplyTo(AndroidGoBackButtonText);
     AndroidGoBackButtonText.TextSettings.HorzAlign := TTextAlign.Center;
     {$ENDIF}
 
@@ -753,8 +743,7 @@ begin
       TextArrow.TextSettings.HorzAlign := TTextAlign.Trailing;
       TextArrow.Margins.Right := 5;
       TextArrow.AutoSize := true;
-      TextArrow.TextSettings.FontColor :=
-        Theme.CommonTextProps.TextSettings.FontColor;
+      TextArrow.TextSettings.FontColor := Theme.TextSettings.FontColor;
 
       ParentArrowWidth := TextArrow.Canvas.TextWidth(TextArrow.Text);
       if Item.Children.Count = 0 then
@@ -769,7 +758,10 @@ begin
       Text := TText.Create(Rectangle);
       Text.Parent := Rectangle;
       Text.Text := Item.Text;
-      Theme.CommonTextProps.ApplyTo(Text);
+      Text.Align := TAlignLayout.Client;
+      Text.HitTest := false;
+      Text.Margins.Left := 5;
+      Theme.TextSettings.ApplyTo(Text);
 
       MaxTextWidth := _GetMaxTextWidth(Text, ItemsByParent);
 
@@ -798,14 +790,12 @@ begin
       RectangleIsCheckedFrame.Fill.Color := TAlphaColorRec.Null;
       RectangleIsCheckedFrame.Stroke.Thickness := 0.5;
       RectangleIsCheckedFrame.Stroke.Kind := TBrushKind.Solid;
-      RectangleIsCheckedFrame.Stroke.Color :=
-        Theme.CommonTextProps.TextSettings.FontColor;
+      RectangleIsCheckedFrame.Stroke.Color := Theme.TextSettings.FontColor;
       RectangleIsCheckedFrame.Visible := not TextArrow.Visible;
 
       RectangleIsCheckedTrue := TRectangle.Create(RectangleIsCheckedFrame);
       RectangleIsCheckedTrue.Parent := RectangleIsCheckedFrame;
-      RectangleIsCheckedTrue.Fill.Color :=
-        Theme.CommonTextProps.TextSettings.FontColor;
+      RectangleIsCheckedTrue.Fill.Color := Theme.TextSettings.FontColor;
       RectangleIsCheckedTrue.Stroke.Thickness := 0;
       RectangleIsCheckedTrue.Stroke.Kind := TBrushKind.None;
       RectangleIsCheckedTrue.HitTest := false;
@@ -885,10 +875,9 @@ begin
   else
   begin
     {$IFDEF MSWINDOWS}
-    if Assigned(ParentForm) then
-      if TControlTools.IsMouseOverForm(ParentForm) and
-         not FImmediatelyToDoClose
-      then
+    if not FImmediatelyToDoClose then
+    begin
+      if TControlTools.IsMouseOverForm(ParentForm) then
       begin
         ParentForm.Show;
         ParentForm.Invalidate;
@@ -897,6 +886,9 @@ begin
       end
       else
         CloseForm(ParentForm, ARecursiveClose);
+    end
+    else
+      CloseForm(ParentForm, ARecursiveClose);
     {$ENDIF}
   end;
 end;

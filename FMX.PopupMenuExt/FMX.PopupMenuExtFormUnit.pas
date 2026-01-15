@@ -17,8 +17,8 @@ type
   strict private
     FOnHardwareBackButtonClick: TNotifyEvent;
 
-    procedure Paint(Sender: TObject; Canvas: TCanvas;
-      const ARect: TRectF);
+//    procedure Paint(Sender: TObject; Canvas: TCanvas;
+//      const ARect: TRectF);
   protected
     procedure OnCloseQueryInternalHandler(
       Sender: TObject; var CanClose: Boolean);
@@ -36,12 +36,6 @@ type
 
 implementation
 
-procedure TPopupMenuExtForm.Paint(Sender: TObject; Canvas: TCanvas;
-  const ARect: TRectF);
-begin
-  BringToFront;
-end;
-
 procedure TPopupMenuExtForm.OnCloseQueryInternalHandler(Sender: TObject; var CanClose: Boolean);
 begin
   CanClose := true;
@@ -50,6 +44,8 @@ end;
 procedure TPopupMenuExtForm.OnCloseInternalHandler(Sender: TObject; var Action: TCloseAction);
 begin
   Action := TCloseAction.caFree;
+  // Заниливаем ссылку на родительский ParentItem
+  TagObject := nil;
 end;
 
 procedure TPopupMenuExtForm.OnKeyUpHandler(Sender: TObject; var Key: Word; var KeyChar: Char;
@@ -65,8 +61,6 @@ end;
 constructor TPopupMenuExtForm.CreateNew(AOwner: TComponent; Dummy: NativeInt = 0);
 begin
   inherited;
-
-  OnPaint := Paint;
 
   OnCloseQuery := OnCloseQueryInternalHandler;
   OnClose := OnCloseInternalHandler;
