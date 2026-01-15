@@ -32,7 +32,9 @@ type
 
     procedure CopyFrom(const ACommonProperties: TCommonProperties); virtual;
   end;
-
+  { TODO : Перейти с TCommonTextProps на хелпер TTextSettingsHelper
+           TCommonProperties - Выделить и работать с ним отдельно,
+           не смешивая с TTextSettings }
   TCommonTextProps = class(TCommonProperties)
   strict private
     FTextSettings: TTextSettings;
@@ -42,11 +44,17 @@ type
 
     property TextSettings: TTextSettings read FTextSettings write FTextSettings;
 
-    procedure ApplyTo(const AText: TText); overload;
-    procedure ApplyTo(const ALabel: TLabel); overload;
-    procedure Assign(const ACommonTextProps: TCommonTextProps);
-    procedure CopyFrom(const ACommonTextProps: TCommonTextProps); reintroduce;
-    procedure CopyFromOrigin(const AControl: TControl);
+    procedure ApplyTo(const AText: TText); overload; deprecated 'Use TextSettings property';
+    procedure ApplyTo(const ALabel: TLabel); overload; deprecated 'Use TextSettings property';
+    procedure Assign(const ACommonTextProps: TCommonTextProps); deprecated 'Use TextSettings property';
+    procedure CopyFrom(const ACommonTextProps: TCommonTextProps); reintroduce; deprecated 'Use TextSettings property';
+    procedure CopyFromOrigin(const AControl: TControl); deprecated 'Use TextSettings property';
+  end;
+
+  TTextSettingsExt = class(TTextSettings)
+  public
+    procedure CopyFrom(const AControl: TControl);
+    procedure ApplyTo(const AControl: TControl);
   end;
 
   TTheme = class
@@ -58,8 +66,9 @@ type
     FNormalBackgroundColor: TAlphaColor;
     FFocusedBackgroundColor: TAlphaColor;
     FMouseOverBackgroundColor: TAlphaColor;
+    FFocusFrameColor: TAlphaColor;
     FMemoColor: TAlphaColor;
-    FCommonTextProps: TCommonTextProps;
+    FTextSettings: TTextSettingsExt;
     FOnApply: TNotifyEvent;
     FOnApplyProcRef: TProc;
   public
@@ -73,23 +82,30 @@ type
     procedure CopyFrom(const ATheme: TTheme);
     procedure Apply;
 
-    property BackgroundColor: TAlphaColor read FBackgroundColor write FBackgroundColor;
-    property DarkBackgroundColor: TAlphaColor read FDarkBackgroundColor write FDarkBackgroundColor;
-    property LightBackgroundColor: TAlphaColor read FLightBackgroundColor write FLightBackgroundColor;
+    property BackgroundColor: TAlphaColor
+      read FBackgroundColor write FBackgroundColor;
+    property DarkBackgroundColor: TAlphaColor
+      read FDarkBackgroundColor write FDarkBackgroundColor;
+    property LightBackgroundColor: TAlphaColor
+      read FLightBackgroundColor write FLightBackgroundColor;
     property NormalBackgroundColor: TAlphaColor
       read FNormalBackgroundColor write FNormalBackgroundColor;
     property FocusedBackgroundColor: TAlphaColor
       read FFocusedBackgroundColor write FFocusedBackgroundColor;
     property MouseOverBackgroundColor: TAlphaColor
       read FMouseOverBackgroundColor write FMouseOverBackgroundColor;
+    property FocusFrameColor: TAlphaColor
+      read FFocusFrameColor write FFocusFrameColor;
     property MemoColor: TAlphaColor read FMemoColor write FMemoColor;
 
-    property CommonTextProps: TCommonTextProps
-      read FCommonTextProps write FCommonTextProps;
+    property TextSettings: TTextSettingsExt
+      read FTextSettings write FTextSettings;
 
     property OnApply: TNotifyEvent read FOnApply write FOnApply;
     property OnApplyProcRef: TProc read FOnApplyProcRef write FOnApplyProcRef;
   end;
+
+
 
 implementation
 
@@ -97,6 +113,49 @@ uses
     FMX.Styles
   , FMX.ControlToolsUnit
   ;
+
+{ TTextSettingsExt }
+
+procedure TTextSettingsExt.CopyFrom(const AControl: TControl);
+var
+  TextControl: TText;
+  LabelControl: TLabel;
+begin
+  if AControl is TText then
+  begin
+    TextControl := AControl as TText;
+    Self.Assign(TextControl.TextSettings);
+  end
+  else
+  if AControl is TLabel then
+  begin
+    LabelControl := AControl as TLabel;
+    Self.Assign(LabelControl.TextSettings);
+  end
+  else
+    raise Exception.Create('Unknown control class');
+end;
+
+procedure TTextSettingsExt.ApplyTo(const AControl: TControl);
+var
+  TextControl: TText;
+  LabelControl: TLabel;
+begin
+  if AControl is TText then
+  begin
+    TextControl := AControl as TText;
+    TextControl.TextSettings.Assign(Self);
+  end
+  else
+  if AControl is TLabel then
+  begin
+    LabelControl := AControl as TLabel;
+    LabelControl.TextSettings.Assign(Self);
+    LabelControl.StyledSettings := [];
+  end
+  else
+    raise Exception.Create('Unknown control class');
+end;
 
 { TCommonProperties }
 
@@ -218,16 +277,16 @@ end;
 
 constructor TTheme.Create;
 begin
-  FCommonTextProps := TCommonTextProps.Create;
-
   FBackgroundColor := TAlphaColorRec.Gray;
   FDarkBackgroundColor := TAlphaColorRec.Gray;
   FLightBackgroundColor := TAlphaColorRec.Gray;
   FNormalBackgroundColor := TAlphaColorRec.Gray;
   FFocusedBackgroundColor := TAlphaColorRec.Gray;
   FMouseOverBackgroundColor := TAlphaColorRec.Gray;
+  FFocusFrameColor := TAlphaColorRec.Limegreen;
   FMemoColor := TAlphaColorRec.Whitesmoke;
-  FCommonTextProps.TextSettings.Font.Size := 12;
+  FTextSettings := TTextSettingsExt.Create(nil);
+  FTextSettings.Font.Size := 12;
 
   FStyleBookMemoryStream := TMemoryStream.Create;
 
@@ -237,7 +296,7 @@ end;
 
 destructor TTheme.Destroy;
 begin
-  FreeAndNil(FCommonTextProps);
+  FreeAndNil(FTextSettings);
 
   FreeAndNil(FStyleBookMemoryStream);
 end;
@@ -296,9 +355,10 @@ begin
     ATheme.NormalBackgroundColor := FNormalBackgroundColor;
     ATheme.FocusedBackgroundColor := FFocusedBackgroundColor;
     ATheme.MouseOverBackgroundColor := FMouseOverBackgroundColor;
+    ATheme.FocusFrameColor := FFocusFrameColor;
     ATheme.MemoColor := FMemoColor;
 
-    ATheme.CommonTextProps.Assign(FCommonTextProps);
+    ATheme.TextSettings.Assign(TextSettings);
   except
     on e: Exception do
       raise Exception.CreateFmt('%s -> %s', [METHOD, e.Message]);
@@ -326,8 +386,11 @@ begin
     FNormalBackgroundColor := ATheme.NormalBackgroundColor;
     FFocusedBackgroundColor := ATheme.FocusedBackgroundColor;
     FMouseOverBackgroundColor := ATheme.MouseOverBackgroundColor;
+    FFocusFrameColor := ATheme.FocusFrameColor;
     FMemoColor := ATheme.MemoColor;
-    FCommonTextProps.Assign(ATheme.CommonTextProps);
+
+    FTextSettings.Assign(ATheme.TextSettings);
+//    FCommonTextProps.Assign(ATheme.CommonTextProps);
   except
     on e: Exception do
       raise Exception.CreateFmt('%s -> %s', [METHOD, e.Message]);
