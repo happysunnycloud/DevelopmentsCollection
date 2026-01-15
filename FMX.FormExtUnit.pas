@@ -143,12 +143,15 @@ type
     property TrayIconMouseLeftButtonDown: TMouseEvent
       read FTrayIconMouseLeftButtonDown write FTrayIconMouseLeftButtonDown;
     {$ENDIF}
+
+    class procedure CloseChildForms;
   end;
 
 implementation
 
 uses
     System.SysUtils
+  , System.SyncObjs
   {$IFDEF MSWINDOWS}
   , Winapi.Windows
   , FMX.Platform.Win
@@ -358,16 +361,42 @@ begin
 end;
 {$ENDIF}
 procedure TFormExt.OnCloseQueryInternalHandler(Sender: TObject; var CanClose: Boolean);
+var
+  ExternalCanClose: Boolean;
 begin
+  // Проверяем есть ли еще открытые формы
+  // Если они есть, то их все нужно закрыть, кроме главной
+  if Self = Application.MainForm then
+  begin
+    if Screen.FormCount > 1 then
+    begin
+      CanClose := false;
+      TFormExt.CloseChildForms;
+
+      Exit;
+    end;
+  end;
+
+  if not FToDoClose then
+  begin
+    ExternalCanClose := true;
+    if Assigned(FOnCloseQueryExternalHandler) then
+      FOnCloseQueryExternalHandler(Sender, ExternalCanClose);
+
+    if not ExternalCanClose then
+    begin
+      CanClose := ExternalCanClose;
+
+      Exit;
+    end;
+  end;
+
   CanClose := FCanClose;
   if not CanClose then
   begin
     if not FToDoClose then
     begin
       FToDoClose := true;
-
-      if Assigned(FOnCloseQueryExternalHandler) then
-        FOnCloseQueryExternalHandler(Sender, CanClose);
 
       FThreadFactoryRegistry.OnAllThreadFactoriesAreDestroyed :=
         OnDestroyedAllFactoriesHandler;
@@ -446,6 +475,75 @@ end;
 procedure TFormExt.SetOnClose(const AOnCloseHandler: TCloseMethod);
 begin
   FOnCloseExternalHandler := AOnCloseHandler;
+end;
+
+class procedure TFormExt.CloseChildForms;
+var
+  i: Integer;
+  FormExt: TFormExt;
+  CheckingThread: TThread;
+begin
+  i := Screen.FormCount;
+  while i > 0 do
+  begin
+    Dec(i);
+
+    if Screen.Forms[i] = Application.MainForm then
+      Continue;
+
+    if Screen.Forms[i] is TFormExt then
+    begin
+      FormExt := Screen.Forms[i] as TFormExt;
+      FormExt.Close;
+    end
+    else
+      Screen.Forms[i].Close;
+  end;
+
+  CheckingThread := TThread.CreateAnonymousThread(
+    procedure
+    var
+      StopWhile: Boolean;
+      CheckEvent: TEvent;
+    begin
+      StopWhile := False;
+      CheckEvent := TEvent.Create(nil, False, False, '');
+      try
+        while True do
+        begin
+          TThread.Queue(nil,
+            procedure
+            begin
+              StopWhile := Screen.FormCount <= 1;
+              CheckEvent.SetEvent;
+            end);
+
+          CheckEvent.WaitFor(INFINITE);
+
+          if StopWhile then
+            Break;
+
+          Sleep(1000);
+        end;
+
+        TThread.ForceQueue(nil,
+          procedure
+          begin
+            if Application.MainForm is TFormExt then
+            begin
+              FormExt := Application.MainForm as TFormExt;
+              FormExt.Close;
+            end
+            else
+              Application.MainForm.Close;
+          end);
+      finally
+        CheckEvent.Free;
+      end;
+    end
+  );
+
+  CheckingThread.Start;
 end;
 
 end.
