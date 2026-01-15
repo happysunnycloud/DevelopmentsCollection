@@ -1,5 +1,8 @@
-﻿{0.5}
+﻿{0.6}
 // Юнит по работе с нитями, если и переезжать, то на него
+ { TODO :
+Стоит перетряхнуть procedure TThreadExt.ExecHold;
+Возможно устоит убрать/переработать событя входа и выхода из Hold }
 unit ThreadFactoryUnit;
 
 interface
@@ -22,6 +25,7 @@ type
   TRegProc = reference to procedure (const AThread: TThreadExt);
   TUnRegProc = reference to procedure (const AThread: TThreadExt);
   TExecProc = reference to procedure (const AThread: TThreadExt);
+//  TExecuteProc = reference to procedure;
   TUnregFromThreadFactoryProc =
     reference to procedure (const ATThreadFactory: TThreadFactory);
 
@@ -62,11 +66,14 @@ type
     FThreadName: String;
     FIsHolded: Boolean;
 
-    // Выполняется только в случае, если холд FEventHold выставлен
-    FOnBeforeHold: TNotifyEvent;
-    // Выполняется только в случае, если был фактический холд
-    FOnAfterHold: TNotifyEvent;
+//    // Выполняется только в случае, если холд FEventHold выставлен
+//    FOnBeforeHold: TNotifyEvent;
+//    // Выполняется только в случае, если был фактический холд
+//    FOnAfterHold: TNotifyEvent;
 
+    // Выполняется при выставлении свойства Terminate потоку
+    FOnSetTerminate: TNotifyEvent;
+    // Выполняется во время вызова OnTerminate в главном потоке
     FOnTerminateExternalHandler: TNotifyEvent;
 
     procedure DoInit(
@@ -92,18 +99,27 @@ type
     procedure SetIsHolded(const AIsHolded: Boolean);
 
     function GetIntentionHoldState: Boolean;
-
+    // !!! Непутать OnTerminate c Terminated !!!
     procedure SetOnTerminate(const AOnTerminate: TNotifyEvent);
     function GetOnTerminate: TNotifyEvent;
+
+    procedure SetOnSetTerminate(const AOnSetTerminate: TNotifyEvent);
+    function GetOnSetTerminate: TNotifyEvent;
   protected
     procedure ExecHold;
-    procedure Execute; override;
+    /// <summary>
+    /// Execute переопределять НЕЛЬЗЯ.
+    /// Для реализации логики потока переопределяйте InnerExecute.
+    /// </summary>
+    procedure Execute; override; final;
+    procedure InnerExecute; virtual; abstract;
     procedure TryExcept(const AProc: TProc);
 
     property ThreadName: String read GetThreadName write SetThreadName;
+    property OnSetTerminate: TNotifyEvent read GetOnSetTerminate write SetOnSetTerminate;
   public
     /// <summary>
-    ///   Создает не именованный поток с исполняемым анонимным методом
+    ///   Создает неименованный поток с исполняемым анонимным методом
     ///   C указанием процедур регистрации и снятия с регистрации
     ///   Suspended = false, FreeOnTerminate = true
     /// </summary>
@@ -126,7 +142,7 @@ type
       const ASuspended: Boolean = false;
       const AFreeOnTerminate: Boolean = true); overload;
     /// <summary>
-    ///   Создает не именованный поток с исполняемым анонимным методом
+    ///   Создает неименованный поток с исполняемым анонимным методом
     ///   C указанием фабрики регистрирующей нить
     ///   Suspended = false, FreeOnTerminate = true, ThreadName = Empty
     /// </summary>
@@ -147,8 +163,15 @@ type
       const ASuspended: Boolean = false;
       const AFreeOnTerminate: Boolean = true); overload;
 
-    destructor Destroy; override;
+    constructor Create(
+      const AThreadFactory: TThreadFactory;
+      const AThreadName: String = '';
+      const ASuspended: Boolean = false;
+      const AFreeOnTerminate: Boolean = true); overload;
 
+    destructor Destroy; override;
+    // Это только намерение, не фактическая остановка
+    // Сама остановка выполняется через ExecHold
     procedure HoldThread;
     procedure UnHoldThread;
 
@@ -166,8 +189,8 @@ type
     // Не означает, что поток в настоящий момент вошел в ExecHold
     property IntentionHoldState: Boolean read GetIntentionHoldState;
 
-    property OnBeforeHold: TNotifyEvent read FOnBeforeHold write FOnBeforeHold;
-    property OnAfterHold: TNotifyEvent read FOnAfterHold write FOnAfterHold;
+//    property OnBeforeHold: TNotifyEvent read FOnBeforeHold write FOnBeforeHold;
+//    property OnAfterHold: TNotifyEvent read FOnAfterHold write FOnAfterHold;
   end;
 
   TThreadExtClass = class of TThreadExt;
@@ -180,7 +203,7 @@ type
     FFreeWhenAllThreadsDone: Boolean;
     FThreadRegistry: TThreadRegistry;
     // Срабатывает при уничтожении фабрики,
-    // проводит сняние с регистарции из геристра фабрик
+    // проводит сняние с регистарции из регистра фабрик
     FUnregFromThreadFactoryProc: TUnregFromThreadFactoryProc;
     // Срабатывает при при разрушении фабрики
     FOnDestroyFactory: TNotifyEvent;
@@ -289,6 +312,7 @@ uses
     FMX.Types
   ;
 
+{ TExceptionMessageThread }
 constructor TExceptionMessageThread.Create(
   const AThreadName: String;
   const AExceptionMessage: String;
@@ -318,6 +342,8 @@ begin
     end);
 end;
 
+{ TThreadExt }
+
 procedure TThreadExt.DoInit(
   const AThreadName: String;
   const AExecProc: TExecProc;
@@ -331,8 +357,8 @@ begin
   if not (Self is TThreadExtClass) then
     raise Exception.Create('TThreadExt.DoInit -> Self is not TThreadExtClass');
 
-  if not Assigned(AExecProc) then
-    raise Exception.Create('TThreadExt.DoInit -> AExecProc is nil');
+//  if not Assigned(AExecProc) then
+//    raise Exception.Create('TThreadExt.DoInit -> AExecProc is nil');
 
   if not Assigned(ARegProc) then
     raise Exception.Create('TThreadExt.DoInit -> ARegProc is nil');
@@ -346,8 +372,11 @@ begin
 
   FExecProc := AExecProc;
 
-  FOnBeforeHold := nil;
-  FOnAfterHold := nil;
+  FOnSetTerminate := nil;
+
+//  FOnBeforeHold := nil;
+//  FOnAfterHold := nil;
+
   FOnTerminateExternalHandler := nil;
 
   FEventHold := TEvent.Create(nil, true, not Suspended, '', false);
@@ -426,6 +455,21 @@ begin
   DoInit(
     AThreadName,
     AExecProc,
+    AThreadFactory.RegThreadProc,
+    AThreadFactory.UnRegThreadProc,
+    ASuspended,
+    AFreeOnTerminate);
+end;
+
+constructor TThreadExt.Create(
+  const AThreadFactory: TThreadFactory;
+  const AThreadName: String = '';
+  const ASuspended: Boolean = false;
+  const AFreeOnTerminate: Boolean = true);
+begin
+  DoInit(
+    AThreadName,
+    nil,
     AThreadFactory.RegThreadProc,
     AThreadFactory.UnRegThreadProc,
     ASuspended,
@@ -526,7 +570,7 @@ begin
   FCriticalSection.Enter;
   try
     Result := false;
-    if TWaitResult.wrTimeout = FEventHold.WaitFor(1) then
+    if TWaitResult.wrTimeout = FEventHold.WaitFor(0) then
       Result := true;
   finally
     FCriticalSection.Leave;
@@ -535,22 +579,22 @@ end;
 
 procedure TThreadExt.HoldThread;
 begin
-  FCriticalSection.Enter;
-  try
+//  FCriticalSection.Enter;
+//  try
     FEventHold.ResetEvent;
-  finally
-    FCriticalSection.Leave;
-  end;
+//  finally
+//    FCriticalSection.Leave;
+//  end;
 end;
 
 procedure TThreadExt.UnHoldThread;
 begin
-  FCriticalSection.Enter;
-  try
+//  FCriticalSection.Enter;
+//  try
     FEventHold.SetEvent;
-  finally
-    FCriticalSection.Leave;
-  end;
+//  finally
+//    FCriticalSection.Leave;
+//  end;
 end;
 
 procedure TThreadExt.Terminate;
@@ -558,6 +602,9 @@ begin
   FCriticalSection.Enter;
   try
     inherited Terminate;
+
+    if Assigned(OnSetTerminate) then
+      OnSetTerminate(Self);
   finally
     FCriticalSection.Leave;
   end;
@@ -585,38 +632,59 @@ begin
   end;
 end;
 
-procedure TThreadExt.ExecHold;
-var
-  EnteredToHold: Boolean;
+procedure TThreadExt.SetOnSetTerminate(const AOnSetTerminate: TNotifyEvent);
 begin
-  EnteredToHold := false;
+  FCriticalSection.Enter;
+  try
+    FOnSetTerminate := AOnSetTerminate;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
+function TThreadExt.GetOnSetTerminate: TNotifyEvent;
+begin
+  FCriticalSection.Enter;
+  try
+    Result := FOnSetTerminate;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
+
+procedure TThreadExt.ExecHold;
+//var
+//  EnteredToHold: Boolean;
+begin
+//  EnteredToHold := false;
 
   IsHolded := True;
 
-  if FEventHold.WaitFor(1) = wrTimeout then
-  begin
-    EnteredToHold := true;
-    if Assigned(FOnBeforeHold) then
-      Queue(nil,
-        procedure
-        begin
-          FOnBeforeHold(Self);
-        end
-      );
-  end;
+//  if FEventHold.WaitFor(0) = wrTimeout then
+//  begin
+//    EnteredToHold := true;
+//    if Assigned(FOnBeforeHold) then
+//      Queue(nil,
+//        procedure
+//        begin
+//          FOnBeforeHold(Self);
+//        end
+//      );
+//  end;
 
   FEventHold.WaitFor(INFINITE);
 
-  if EnteredToHold then
-  begin
-    if Assigned(FOnAfterHold) then
-      Queue(nil,
-        procedure
-        begin
-          FOnAfterHold(Self);
-        end
-      );
-  end;
+//  if EnteredToHold then
+//  begin
+//    if Assigned(FOnAfterHold) then
+//      Queue(nil,
+//        procedure
+//        begin
+//          FOnAfterHold(Self);
+//        end
+//      );
+//  end;
 
   IsHolded := false;
 end;
@@ -639,9 +707,20 @@ begin
   TryExcept(
     procedure
     begin
-      FExecProc(Self);
+      if Assigned(FExecProc) then
+        FExecProc(Self)
+      else
+        InnerExecute;
     end);
 end;
+
+//procedure TThreadExt.InnerExecute;
+//begin
+//  // virtual
+//  raise Exception.Create('TThreadExt.InnerExecute must be overloaded');
+//end;
+
+{ TThreadFactory }
 
 constructor TThreadFactory.Create;
 begin
@@ -895,6 +974,5 @@ begin
       end;
     end);
 end;
-
 
 end.
