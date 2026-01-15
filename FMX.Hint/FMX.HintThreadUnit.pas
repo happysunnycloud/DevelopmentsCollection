@@ -64,6 +64,8 @@ type
 
     property OnToShowHintTimeout: TNotifyEvent write FOnToShowHintTimeout;
     property OnToHideHintTimeout: TNotifyEvent write FOnToHideHintTimeout;
+
+    property HoldEvent: TEvent read FHoldEvent;
   end;
 
 implementation
@@ -193,9 +195,14 @@ begin
   PointF.X := Point.X;
   PointF.Y := Point.Y;
 
-  if not FRectF.IsEmpty then
-    if _Contains(FRectF, PointF) then
-      Result := true;
+  FCriticalSection.Enter;
+  try
+    if not FRectF.IsEmpty then
+      if _Contains(FRectF, PointF) then
+        Result := true;
+  finally
+    FCriticalSection.Leave;
+  end;
 end;
 
 procedure THintThread.SetTimeIsOutFixed(const ATimeIsOutFixed: Boolean);

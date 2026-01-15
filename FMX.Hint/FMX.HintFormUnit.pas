@@ -184,7 +184,7 @@ end;
 procedure THintForm.OnThemeApplyHandler(Sender: TObject);
 begin
   Self.Fill.Color := FTheme.BackgroundColor;
-  FTheme.CommonTextProps.ApplyTo(Self.FLabel);
+  FTheme.TextSettings.ApplyTo(Self.FLabel);
 end;
 
 end.

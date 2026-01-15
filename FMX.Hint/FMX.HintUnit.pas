@@ -162,7 +162,7 @@ begin
 
   FTheme := TTheme.Create;
   FTheme.BackgroundColor := TAlphaColorRec.Black;
-  FTheme.CommonTextProps.TextSettings.FontColor := TAlphaColorRec.White;
+  FTheme.TextSettings.FontColor := TAlphaColorRec.White;
 
   // Отключаем стандартный механизм хинтов
   Application.ShowHint := False;
@@ -189,6 +189,7 @@ begin
   if Assigned(FHintThread) then
   begin
     FHintThread.Terminate;
+    FHintThread.HoldEvent.SetEvent;
     FHintThread.WaitForDone;
     FHintThread := nil;
   end;
