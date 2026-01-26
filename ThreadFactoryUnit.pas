@@ -11,8 +11,8 @@ uses
   System.Classes,
   System.SysUtils,
   System.SyncObjs,
-  ThreadRegistryUnit,
-  ParamsExtUnit;
+  ThreadRegistryUnit
+  ;
 
 type
   TParamsParserProc = procedure of object;
