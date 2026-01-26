@@ -8,27 +8,27 @@ uses
   , System.SysUtils
   , System.Types
   , FMX.Controls
+  , ThreadFactoryUnit
   ;
 
 const
   COUNTDOWN = 1000;
-  TO_SHOW_COUNTDOWN = 1000;
+  TO_SHOW_COUNTDOWN = 600;
   TO_HIDE_COUNTDOWN = 2000;
 
 type
-  THintThread = class(TThread)
+  THintThread = class(TThreadExt)
   strict private
     FCriticalSection: TCriticalSection;
-    FControl: TControl;
     FHoldEvent: TEvent;
     FDoneEvent: TEvent;
+    FShowHideHintEventEvent: TEvent;
     FCountDown: Integer;
-//    FTimeout: Integer;
 
     FTimeIsOutFixed: Boolean;
+    FMouseLeaveFixed: Boolean;
 
     FRectF: TRectF;
-    //FOnTimeIsOut: TNotifyEvent;
 
     FOnToShowHintTimeout: TNotifyEvent;
     FOnToHideHintTimeout: TNotifyEvent;
@@ -36,31 +36,29 @@ type
     procedure SetCountDown(const ACountDown: Integer);
     function GetCountDown: Integer;
 
-    procedure SetControl(const AControl: TControl);
-    function GetControl: TControl;
+//    procedure SetControl(const AControl: TControl);
 
     procedure SetTimeIsOutFixed(const ATimeIsOutFixed: Boolean);
     function GetTimeIsOutFixed: Boolean;
 
-//    procedure SetTimeout(const ATimeout: Integer);
-//    function GetTimeout: Integer;
+    procedure SetMouseLeaveFixed(const AMouseLeaveFixed: Boolean);
+    function GetMouseLeaveFixed: Boolean;
 
-    function IsMouseOverControl: Boolean;
+    procedure OnSetTerminatedHandler(Sender: TObject);
+
+//    function IsMouseOverControl: Boolean;
   protected
-    procedure Execute; override;
+    procedure InnerExecute; override;
   public
-    constructor Create(
-      const ASuspended: Boolean);
+    constructor Create(const AThreadFactory: TThreadFactory);
     destructor Destroy; override;
 
     procedure WaitForDone;
 
     property TimeIsOutFixed: Boolean read GetTimeIsOutFixed write SetTimeIsOutFixed;
-    property Control: TControl read GetControl write SetControl;
+    property MouseLeaveFixed: Boolean read GetMouseLeaveFixed write SetMouseLeaveFixed;
+//    property Control: TControl write SetControl;
     property CountDown: Integer read GetCountDown write SetCountDown;
-//    property Timeout: Integer read GetTimeout write SetTimeout;
-
-//    property OnTimeIsOut: TNotifyEvent write FOnTimeIsOut;
 
     property OnToShowHintTimeout: TNotifyEvent write FOnToShowHintTimeout;
     property OnToHideHintTimeout: TNotifyEvent write FOnToHideHintTimeout;
@@ -74,37 +72,41 @@ uses
       Winapi.Windows
     , FMX.Forms
     , FMX.ControlToolsUnit
+    , DebugUnit
     ;
 
 { THintThread }
 
-constructor THintThread.Create(
-  const ASuspended: Boolean);
+constructor THintThread.Create(const AThreadFactory: TThreadFactory);
 begin
   FCriticalSection := TCriticalSection.Create;
-  FControl := nil;
+//  FControl := nil;
   FDoneEvent := TEvent.Create(nil, true, false, '', false);
   FHoldEvent := TEvent.Create(nil, true, false, '', false);
+  FShowHideHintEventEvent := TEvent.Create(nil, true, false, '', false);
   FTimeIsOutFixed := false;
+  FMouseLeaveFixed := false;
 
   FRectF.Empty;
-//  FOnTimeIsOut := nil;
 
   FOnToShowHintTimeout := nil;
   FOnToHideHintTimeout := nil;
 
   FCountDown := COUNTDOWN;
 
-//  FTimeout := FCountDown;
+  inherited Create(AThreadFactory, 'THintThread', true);
 
-  inherited Create(true);
+  OnSetTerminate := OnSetTerminatedHandler;
 end;
 
 destructor THintThread.Destroy;
 begin
   FreeAndNil(FDoneEvent);
   FreeAndNil(FHoldEvent);
+  FreeAndNil(FShowHideHintEventEvent);
   FreeAndNil(FCriticalSection);
+
+  inherited Destroy;
 end;
 
 procedure THintThread.WaitForDone;
@@ -133,77 +135,65 @@ begin
   end;
 end;
 
-procedure THintThread.SetControl(const AControl: TControl);
-var
-  ParentForm: TForm;
-begin
-  FCriticalSection.Enter;
-  try
-    FControl := AControl;
-    if Assigned(FControl) then
-    begin
-      ParentForm := TControlTools.FindParentForm(FControl);
-      // Для оптимизации, что бы не вводить лишних синхноризаций
-      // Прямоугольник контрола определяем на стадии присвоения контрола
-      FRectF := TRectF.Create(
-        ParentForm.ClientToScreen(FControl.LocalToAbsolute(FControl.ClipRect.TopLeft)),
-        ParentForm.ClientToScreen(FControl.LocalToAbsolute(FControl.ClipRect.BottomRight)));
+//procedure THintThread.SetControl(const AControl: TControl);
+//var
+//  ParentForm: TForm;
+//begin
+//  FCriticalSection.Enter;
+//  try
+//    if Assigned(AControl) then
+//    begin
+//      ParentForm := TControlTools.FindParentForm(AControl);
+//      // Для оптимизации, что бы не вводить лишних синхноризаций
+//      // Прямоугольник контрола определяем на стадии присвоения контрола
+//      FRectF := TRectF.Create(
+//        ParentForm.ClientToScreen(AControl.LocalToAbsolute(AControl.ClipRect.TopLeft)),
+//        ParentForm.ClientToScreen(AControl.LocalToAbsolute(AControl.ClipRect.BottomRight)));
+//
+//      FHoldEvent.SetEvent;
+//    end
+//    else
+//    begin
+//      FRectF.Width := 0;
+//      FRectF.Height := 0;
+//    end;
+//  finally
+//    FCriticalSection.Leave;
+//  end;
+//end;
 
-      //FTimeout := FCountDown;
-      FTimeIsOutFixed := false;
-    end
-    else
-    begin
-      FRectF.Width := 0;
-      FRectF.Height := 0;
-    end;
-
-    FHoldEvent.SetEvent;
-  finally
-    FCriticalSection.Leave;
-  end;
-end;
-
-function THintThread.GetControl: TControl;
-begin
-  FCriticalSection.Enter;
-  try
-    Result := FControl;
-  finally
-    FCriticalSection.Leave;
-  end;
-end;
-
-function THintThread.IsMouseOverControl: Boolean;
-  function _Contains(const ARectF: TRectF; const APointF: TPointF): Boolean;
-  begin
-    Result :=
-      (APointF.X >= ARectF.Left)    and
-      (APointF.X <= ARectF.Right)   and
-      (APointF.Y >= ARectF.Top)     and
-      (APointF.Y <= ARectF.Bottom)
-      ;
-  end;
-var
-  Point: TPoint;
-  PointF: TPointF;
-begin
-  Result := false;
-
-  GetCursorPos(Point);
-
-  PointF.X := Point.X;
-  PointF.Y := Point.Y;
-
-  FCriticalSection.Enter;
-  try
-    if not FRectF.IsEmpty then
-      if _Contains(FRectF, PointF) then
-        Result := true;
-  finally
-    FCriticalSection.Leave;
-  end;
-end;
+//function THintThread.IsMouseOverControl: Boolean;
+//
+//  function _Contains(const ARectF: TRectF; const APointF: TPointF): Boolean;
+//  begin
+//    Result :=
+//      (APointF.X >= ARectF.Left)    and
+//      (APointF.X <= ARectF.Right)   and
+//      (APointF.Y >= ARectF.Top)     and
+//      (APointF.Y <= ARectF.Bottom)
+//      ;
+//  end;
+//
+//var
+//  Point: TPoint;
+//  PointF: TPointF;
+//begin
+//  Result := false;
+//
+//  GetCursorPos(Point);
+//
+//  PointF.X := Point.X;
+//  PointF.Y := Point.Y;
+//
+//  FCriticalSection.Enter;
+//  try
+//    if not FRectF.IsEmpty then
+//      if _Contains(FRectF, PointF) then
+//        Result := true;
+//  finally
+//    FCriticalSection.Leave;
+//  end;
+//end;
 
 procedure THintThread.SetTimeIsOutFixed(const ATimeIsOutFixed: Boolean);
 begin
@@ -228,27 +218,33 @@ begin
   end;
 end;
 
-//procedure THintThread.SetTimeout(const ATimeout: Integer);
-//begin
-//  FCriticalSection.Enter;
-//  try
-//    FTimeout := ATimeout;
-//  finally
-//    FCriticalSection.Leave;
-//  end;
-//end;
-//
-//function THintThread.GetTimeout: Integer;
-//begin
-//  FCriticalSection.Enter;
-//  try
-//    Result := FTimeout;
-//  finally
-//    FCriticalSection.Leave;
-//  end;
-//end;
+procedure THintThread.SetMouseLeaveFixed(const AMouseLeaveFixed: Boolean);
+begin
+  FCriticalSection.Enter;
+  try
+    FMouseLeaveFixed := AMouseLeaveFixed;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
 
-procedure THintThread.Execute;
+function THintThread.GetMouseLeaveFixed: Boolean;
+begin
+  FCriticalSection.Enter;
+  try
+    Result := FMouseLeaveFixed;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
+procedure THintThread.OnSetTerminatedHandler(Sender: TObject);
+begin
+  FShowHideHintEventEvent.SetEvent;
+  FHoldEvent.SetEvent;
+end;
+
+procedure THintThread.InnerExecute;
 var
   i: Integer;
 begin
@@ -258,51 +254,81 @@ begin
   try
     while not Terminated do
     begin
+      if not Terminated then
+        FHoldEvent.ResetEvent;
+
+      MouseLeaveFixed := false;
+
       while not Terminated do
       begin
         i := TO_SHOW_COUNTDOWN;
-        while not Terminated and IsMouseOverControl and (i > 0) do
+        while not Terminated {and IsMouseOverControl} and (i > 0) and not MouseLeaveFixed
+        do
         begin
           Sleep(100);
 
           Dec(i, 100);
         end;
 
-        if not IsMouseOverControl then
+        if Terminated then
+          Break;
+
+        if MouseLeaveFixed then
           Break;
 
         if Assigned(FOnToShowHintTimeout) then
-          TThread.ForceQueue(nil,
+        begin
+          FShowHideHintEventEvent.ResetEvent;
+
+          TThread.Queue(nil,
             procedure
             begin
-              if not Application.Terminated then
-                FOnToShowHintTimeout(nil);
+              FOnToShowHintTimeout(nil);
+
+              FShowHideHintEventEvent.SetEvent;
             end);
 
+          if not Terminated then
+            FShowHideHintEventEvent.WaitFor(INFINITE);
+        end;
+
         i := TO_HIDE_COUNTDOWN;
-        while not Terminated and IsMouseOverControl and (i > 0) do
+        while not Terminated {and IsMouseOverControl} and (i > 0) and not MouseLeaveFixed
+        do
         begin
           Sleep(100);
 
           Dec(i, 100);
         end;
 
+        if MouseLeaveFixed then
+        begin
+          TDebug.ODS('Before hide MouseLeaveFixed');
+          Break;
+        end;
+
+        // Если дошли до этой точки, значит хинт отображается и его нужно скрыть
         if Assigned(FOnToHideHintTimeout) then
-          TThread.ForceQueue(nil,
+        begin
+          FShowHideHintEventEvent.ResetEvent;
+
+          TThread.Queue(nil,
             procedure
             begin
-              if not Application.Terminated then
-                FOnToHideHintTimeout(nil);
+              FOnToHideHintTimeout(nil);
+
+              FShowHideHintEventEvent.SetEvent;
             end);
+
+          if not Terminated then
+            FShowHideHintEventEvent.WaitFor(INFINITE);
+        end;
 
         Break;
       end;
 
       if not Terminated then
-      begin
-        FHoldEvent.ResetEvent;
         FHoldEvent.WaitFor(INFINITE);
-      end;
     end;
   finally
     FDoneEvent.SetEvent;

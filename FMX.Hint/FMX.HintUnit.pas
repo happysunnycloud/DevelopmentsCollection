@@ -13,7 +13,9 @@ uses
   , FMX.Types
   , FMX.HintFormUnit
   , FMX.HintThreadUnit
+  , FMX.FormExtUnit
   , FMX.ThemeUnit
+  , ThreadFactoryUnit
   ;
 
 type
@@ -22,7 +24,7 @@ type
     OnLeaveHandler: TNotifyEvent;
   end;
 
-  TCustomHint = class(TComponent)
+  TCustomHint = class (TComponent)
   strict private
     FHintForm: THintForm;
     FHintThread: THintThread;
@@ -32,9 +34,12 @@ type
 
     FTheme: TTheme;
 
-//    procedure OnTerminateHintThreadHandler(Sender: TObject);
+    procedure OnHintFormDestroyHandler(Sender: TObject);
+
     procedure OnToShowHintTimeoutHandler(Sender: TObject);
     procedure OnToHideHintTimeoutHandler(Sender: TObject);
+
+    procedure OnHintThreadTerminate(Sender: TObject);
 
     procedure StartHintThread(
       const AControl: TControl);
@@ -47,18 +52,19 @@ type
    procedure HookingOnMouseEnterHandler(Sender: TObject);
    procedure HookingOnMouseLeaveHandler(Sender: TObject);
 
+   procedure HookHints(const AParent: TFmxObject);
+
    procedure CreateHintForm;
 
    procedure CloseHintForm;
   private
   public
-    constructor Create(AOwner: TComponent); reintroduce;
+    constructor Create(const AOwner: TFormExt); reintroduce;
     destructor Destroy; override;
 
     procedure Open(
       const AControl: TControl);
 
-    procedure HookHints(const AParent: TFmxObject);
     procedure UnHookHints;
 
     property Theme: TTheme read FTheme write FTheme;
@@ -79,6 +85,7 @@ uses
   , FMX.Objects
   , FMX.StdCtrls
   , FMX.ControlToolsUnit
+  , DebugUnit
   ;
 
 procedure GetCurPos(var APoint: TPoint);
@@ -147,52 +154,64 @@ begin
   FHintForm.ShowOverlayAboveParent(ParentForm);
 
   FHintForm.Theme.Apply;
+
+  FHintForm.OnDestroy := OnHintFormDestroyHandler;
 end;
 
 procedure TCustomHint.CloseHintForm;
 begin
   if Assigned(FHintForm) then
     FHintForm.Close;
-  FHintForm := nil;
 end;
 
-constructor TCustomHint.Create(AOwner: TComponent);
+constructor TCustomHint.Create(const AOwner: TFormExt);
 begin
-  inherited Create(AOwner);
+  if not Assigned(AOwner) then
+    raise Exception.Create(
+      'TCustomHint.Create -> ' +
+      'AOwner cannot be nil');
 
-  FTheme := TTheme.Create;
-  FTheme.BackgroundColor := TAlphaColorRec.Black;
-  FTheme.TextSettings.FontColor := TAlphaColorRec.White;
+  if not (AOwner is TFormExt) then
+    raise Exception.Create(
+      'TCustomHint.Create -> ' +
+      'AOwner must be of class TFormExt');
 
-  // Отключаем стандартный механизм хинтов
-  Application.ShowHint := False;
+  inherited Create(Owner);
 
-  FHintForm := nil;
-  FHintThread := nil;
-  FControl := nil;
+  try
+    FTheme := TTheme.Create;
+    FTheme.BackgroundColor := TAlphaColorRec.Black;
+    FTheme.TextSettings.FontColor := TAlphaColorRec.White;
 
-  FMouseHandlersDict := TDictionary<TControl, THintMouseHandlers>.Create;
+    // Отключаем стандартный механизм хинтов
+    Application.ShowHint := False;
 
-  FHintThread := THintThread.Create(true);
-  FHintThread.OnToShowHintTimeout := OnToShowHintTimeoutHandler;
-  FHintThread.OnToHideHintTimeout := OnToHideHintTimeoutHandler;
-  FHintThread.FreeOnTerminate := true;
-  FHintThread.Start;
+    FHintForm := nil;
+    FHintThread := nil;
+    FControl := nil;
+
+    FMouseHandlersDict := TDictionary<TControl, THintMouseHandlers>.Create;
+
+    FHintThread := THintThread.Create(AOwner.ThreadFactory);
+    FHintThread.OnToShowHintTimeout := OnToShowHintTimeoutHandler;
+    FHintThread.OnToHideHintTimeout := OnToHideHintTimeoutHandler;
+    FHintThread.OnTerminate := OnHintThreadTerminate;
+    FHintThread.Start;
+
+    Self.HookHints(AOwner);
+  except
+    on e: Exception do
+      raise Exception.CreateFmt('TCustomHint.Create -> %s', [e.Message]);
+  end;
 end;
 
 destructor TCustomHint.Destroy;
 begin
   FreeAndNil(FTheme);
 
-  CloseHintForm;
+  FHintThread := nil;
 
-  if Assigned(FHintThread) then
-  begin
-    FHintThread.Terminate;
-    FHintThread.HoldEvent.SetEvent;
-    FHintThread.WaitForDone;
-    FHintThread := nil;
-  end;
+  CloseHintForm;
 
   UnHookHints;
   FreeAndNil(FMouseHandlersDict);
@@ -200,7 +219,12 @@ begin
   // Включаем стандартный механизм хинтов
   Application.ShowHint := True;
 
-  inherited;
+  inherited Destroy;
+end;
+
+procedure TCustomHint.OnHintFormDestroyHandler(Sender: TObject);
+begin
+  FHintForm := nil;
 end;
 
 procedure TCustomHint.OnToShowHintTimeoutHandler(Sender: TObject);
@@ -211,6 +235,11 @@ end;
 procedure TCustomHint.OnToHideHintTimeoutHandler(Sender: TObject);
 begin
   CloseHintForm;
+end;
+
+procedure TCustomHint.OnHintThreadTerminate(Sender: TObject);
+begin
+  FHintThread := nil;
 end;
 
 procedure TCustomHint.Open(const AControl: TControl);
@@ -234,7 +263,8 @@ begin
 
   if Assigned(FHintThread) then
   begin
-    FHintThread.Control := FControl;
+    FHintThread.HoldEvent.SetEvent;
+//    FHintThread.Control := FControl;
   end;
 end;
 
@@ -275,6 +305,16 @@ begin
   if FMouseHandlersDict.TryGetValue(Control, MouseHandlers) then
     if Assigned(MouseHandlers.OnLeaveHandler) then
       MouseHandlers.OnLeaveHandler(Sender);
+
+  if Assigned(FHintThread) then
+    FHintThread.MouseLeaveFixed := true;
+
+//  if Assigned(FHintThread) then
+//    FHintThread.Control := nil;
+
+  TDebug.ODS('Мышь вышла из поля зрения контрола');
+
+  CloseHintForm;
 end;
 
 procedure TCustomHint.HookHints(const AParent: TFmxObject);
