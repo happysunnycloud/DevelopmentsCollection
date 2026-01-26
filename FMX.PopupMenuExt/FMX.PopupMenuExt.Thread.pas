@@ -1,4 +1,4 @@
-﻿unit FMX.PopupMenuExtThreadUnit;
+﻿unit FMX.PopupMenuExt.Thread;
 
 interface
 
@@ -7,16 +7,16 @@ uses
   , System.SyncObjs
   , System.SysUtils
   , System.Types
-  , FMX.PopupMenuExtFormUnit
+  , FMX.PopupMenuExt.Form
+  , ThreadFactoryUnit
   ;
 
 type
-  TStepDirection = (sdForward = 0, sdBackward = 1);
+  TStepDirection = (sdNone = -1, sdForward = 0, sdBackward = 1);
 
-  TPopupMenuExtThread = class(TThread)
+  TPopupMenuExtThread = class(TThreadExt)
   strict private
     FCriticalSection: TCriticalSection;
-    FForm: TPopupMenuExtForm;
     FStepDirection: TStepDirection;
     FHoldEvent: TEvent;
     FDoneEvent: TEvent;
@@ -28,7 +28,7 @@ type
     FGoBackClickFixed: Boolean;
     FClickedItem: TObject;
 
-    FFormOwner: TPopupMenuExtForm;
+    FForm: TPopupMenuExtForm;
     FRectF: TRectF;
     FOnTimeIsOut: TNotifyEvent;
 
@@ -40,6 +40,9 @@ type
 
     procedure SetCountDown(const ACountDown: Integer);
     function GetCountDown: Integer;
+
+    procedure SetStepDirection(const AStepDirection: TStepDirection);
+    function GetStepDirection: TStepDirection;
 
     procedure SetForm(const AForm: TPopupMenuExtForm);
     function GetForm: TPopupMenuExtForm;
@@ -54,23 +57,24 @@ type
     function GetTimeout: Integer;
 
     function IsMouseOverForm: Boolean;
+
+    procedure OnSetTerminatedHandler(Sender: TObject);
   protected
-    procedure Execute; override;
+    procedure InnerExecute; override;
   public
     constructor Create(
+      const AThreadFactory: TThreadFactory;
       const AStepDirection: TStepDirection;
       const ASuspended: Boolean);
     destructor Destroy; override;
-
-    procedure WaitForDone;
 
     property TimeIsOutFixed: Boolean read GetTimeIsOutFixed write SetTimeIsOutFixed;
     property ClickFixed: Boolean read GetClickFixed write SetClickFixed;
     property GoBackClickFixed: Boolean
       read GetGoBackClickeFixed write SetGoBackClickeFixed;
     property Form: TPopupMenuExtForm read GetForm write SetForm;
+    property StepDirection: TStepDirection read GetStepDirection write SetStepDirection;
     property ClickedItem: TObject read GetClickedItem write SetClickedItem;
-    property FormOwner: TPopupMenuExtForm read FFormOwner write FFormOwner;
     property CountDown: Integer read GetCountDown write SetCountDown;
     property Timeout: Integer read GetTimeout write SetTimeout;
 
@@ -88,11 +92,11 @@ uses
 { TPopupMenuExtThread }
 
 constructor TPopupMenuExtThread.Create(
+  const AThreadFactory: TThreadFactory;
   const AStepDirection: TStepDirection;
   const ASuspended: Boolean);
 begin
   FCriticalSection := TCriticalSection.Create;
-  FForm := nil;
   FStepDirection := AStepDirection;
   FDoneEvent := TEvent.Create(nil, true, false, '', false);
   FHoldEvent := TEvent.Create(nil, true, false, '', false);
@@ -100,32 +104,38 @@ begin
   FClickFixed := false;
   FGoBackClickFixed := false;
   FClickedItem := nil;
-  FFormOwner := nil;
 
   FRectF.Empty;
   FOnTimeIsOut := nil;
 
-  if FStepDirection = sdForward then
-    FCountDown := 1000
-  else
-    FCountDown := 1000;
+  FForm := nil;
+
+  StepDirection := sdForward;
 
   FTimeout := FCountDown;
 
-  inherited Create(ASuspended);
+  inherited Create(
+    AThreadFactory,
+    'TPopupMenuExtThread',
+    true);
+
+  OnSetTerminate := OnSetTerminatedHandler;
 end;
 
 destructor TPopupMenuExtThread.Destroy;
 begin
+  Form := nil;
+
   FreeAndNil(FDoneEvent);
   FreeAndNil(FHoldEvent);
   FreeAndNil(FCriticalSection);
+
+  inherited Destroy;
 end;
 
-procedure TPopupMenuExtThread.WaitForDone;
+procedure TPopupMenuExtThread.OnSetTerminatedHandler(Sender: TObject);
 begin
   FHoldEvent.SetEvent;
-  FDoneEvent.WaitFor(INFINITE);
 end;
 
 procedure TPopupMenuExtThread.SetClickedItem(const AClickedItem: TObject);
@@ -192,13 +202,38 @@ begin
   end;
 end;
 
+procedure TPopupMenuExtThread.SetStepDirection(const AStepDirection: TStepDirection);
+begin
+  FCriticalSection.Enter;
+  try
+    FStepDirection := AStepDirection;
+
+    if FStepDirection = sdForward then
+      CountDown := 1000
+    else
+      CountDown := 0;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
+function TPopupMenuExtThread.GetStepDirection: TStepDirection;
+begin
+  FCriticalSection.Enter;
+  try
+    Result := FStepDirection;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
 procedure TPopupMenuExtThread.SetForm(const AForm: TPopupMenuExtForm);
 begin
   FCriticalSection.Enter;
   try
-    FForm := AForm;
-    if Assigned(FForm) then
+    if Assigned(AForm) then
     begin
+      FForm := AForm;
       // Для оптимизации, что бы не вводить лишних синхноризаций
       // Прямоугольник формы определяем на стадии инициализации трида
       FRectF := TRectF.Create(FForm.ClientToScreen(FForm.ClientRect.TopLeft),
@@ -207,14 +242,16 @@ begin
       FTimeout := FCountDown;
       FTimeIsOutFixed := false;
       FClickFixed := false;
+
+      FHoldEvent.SetEvent;
     end
     else
     begin
       FRectF.Width := 0;
       FRectF.Height := 0;
-    end;
 
-    FHoldEvent.SetEvent;
+      FTimeout := 0;
+    end;
   finally
     FCriticalSection.Leave;
   end;
@@ -229,6 +266,7 @@ begin
     FCriticalSection.Leave;
   end;
 end;
+
 
 function TPopupMenuExtThread.IsMouseOverForm: Boolean;
 var
@@ -252,9 +290,6 @@ begin
   FCriticalSection.Enter;
   try
     FTimeIsOutFixed := ATimeIsOutFixed;
-
-    if FTimeIsOutFixed then
-      FHoldEvent.ResetEvent;
   finally
     FCriticalSection.Leave;
   end;
@@ -275,8 +310,6 @@ begin
   FCriticalSection.Enter;
   try
     FClickFixed := AClickFixed;
-    if FClickFixed then
-      FHoldEvent.ResetEvent;
   finally
     FCriticalSection.Leave;
   end;
@@ -312,62 +345,66 @@ begin
   end;
 end;
 
-procedure TPopupMenuExtThread.Execute;
+procedure TPopupMenuExtThread.InnerExecute;
 var
   OnTimeIsOut: TNotifyEvent;
 begin
   FDoneEvent.ResetEvent;
   FHoldEvent.ResetEvent;
   FHoldEvent.WaitFor(INFINITE);
-  try
-    while not Terminated do
+
+  while not Terminated do
+  begin
+    if not Terminated then
+      FHoldEvent.ResetEvent;
+    while not Terminated and not ClickFixed and not TimeIsOutFixed do
     begin
-      while not Terminated and not ClickFixed and not TimeIsOutFixed do
+      if not IsMouseOverForm then
       begin
-        if not IsMouseOverForm then
+        Timeout := CountDown;
+        while
+          not Terminated and
+          not IsMouseOverForm and
+          not ClickFixed and
+          not TimeIsOutFixed
+        do
         begin
-          Timeout := CountDown;
-          while not Terminated and not IsMouseOverForm and not ClickFixed and not TimeIsOutFixed do
-          begin
+          Timeout := Timeout - 100;
+
+          if Timeout <= 0 then
+            TimeIsOutFixed := true
+          else
             Sleep(100);
+        end;
+      end
+      else
+        Sleep(100);
+    end;
 
-            Timeout := Timeout - 100;
-
-            if Timeout < 0 then
-              TimeIsOutFixed := true;
-          end;
-        end
-        else
-          Sleep(100);
-      end;
-
-      if not Terminated then
+    if not Terminated then
+    begin
+      if ClickFixed then
       begin
-        if ClickFixed then
+        // void
+      end
+      else
+      if TimeIsOutFixed then
+      begin
+        if Assigned(FOnTimeIsOut) then
         begin
-          // void
-        end
-        else
-        if TimeIsOutFixed then
-        begin
-          if Assigned(FOnTimeIsOut) then
-          begin
-            OnTimeIsOut := FOnTimeIsOut;
-            TThread.ForceQueue(nil,
-              procedure
-              begin
-                if not Application.Terminated then
-                  OnTimeIsOut(nil);
-              end);
-          end;
+          OnTimeIsOut := FOnTimeIsOut;
+          TThread.Queue(nil,
+            procedure
+            begin
+              if not Application.Terminated then
+                OnTimeIsOut(nil);
+            end);
         end;
       end;
-
-      if not Terminated then
-        FHoldEvent.WaitFor(INFINITE);
     end;
-  finally
-    FDoneEvent.SetEvent;
+
+    if not Terminated then
+      FHoldEvent.WaitFor(INFINITE);
   end;
 end;
 
