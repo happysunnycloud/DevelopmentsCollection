@@ -87,6 +87,16 @@ type
       const AFileNameFrom: String;
       const AFileNameTo: String;
       const ADoIfExists: TCopyFileAction = caNothing): TCopyFileResult;
+
+    /// <summary>
+    /// Генерирует отпечаток файла для выявления дублей
+    /// Делает однопроходный расчёт MD5 + SHA-256
+    /// </summary>
+    class procedure GetFileFootPrint(
+      const AFileName: String;
+      out AMD5: String;
+      out ASHA256: String;
+      out AFileSize: Int64);
   end;
 
   TFileNamesHelper = record helper for TFileNames
@@ -101,10 +111,12 @@ type
 
 implementation
 
-{$IFDEF ANDROID}
 uses
-  Posix.Unistd;
+    System.Hash
+{$IFDEF ANDROID}
+  , Posix.Unistd
 {$ENDIF}
+  ;
 
 { TFileNamesHelper }
 
@@ -525,6 +537,47 @@ begin
     AExt,
     AFileNames,
     true);
+end;
+
+class procedure TFileTools.GetFileFootPrint(
+  const AFileName: String;
+  out AMD5: String;
+  out ASHA256: String;
+  out AFileSize: Int64);
+const
+  BufSize = 1024 * 1024; // 1 MB
+var
+  Stream: TFileStream;
+  Buffer: TBytes;
+  ReadBytes: Integer;
+  MD5: THashMD5;
+  SHA: THashSHA2;
+begin
+  AMD5 := '';
+  ASHA256 := '';
+
+  Stream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyWrite);
+  try
+    MD5 := THashMD5.Create;
+    SHA := THashSHA2.Create(THashSHA2.TSHA2Version.SHA256);
+
+    SetLength(Buffer, BufSize);
+
+    repeat
+      ReadBytes := Stream.Read(Buffer[0], BufSize);
+      if ReadBytes > 0 then
+      begin
+        MD5.Update(Buffer, ReadBytes);
+        SHA.Update(Buffer, ReadBytes);
+      end;
+    until ReadBytes = 0;
+
+    AMD5 := MD5.HashAsString;
+    ASHA256 := SHA.HashAsString;
+    AFileSize := Stream.Size;
+  finally
+    Stream.Free;
+  end;
 end;
 
 end.
