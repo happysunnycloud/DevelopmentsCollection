@@ -18,7 +18,7 @@ type
     ///   Приводит MediaTime к человекочитаемому формату
     /// </summary>
     class function GetHumanTime(
-      const AMediaTime: Int64; const AMediaTimeScale: Int64): String;
+      const AMediaTime: Int64; const AMediaTimeScale: Int64): String; deprecated 'Use TSingleSound.GetHumanTime';
     /// <summary>
     ///  Генерирует уникальный текстовый идентификатор на основе счетчика
     ///  Счетчик перезапускается при перезапуске приложения
