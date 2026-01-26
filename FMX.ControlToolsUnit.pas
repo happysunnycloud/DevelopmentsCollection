@@ -10,7 +10,9 @@ uses
   FMX.Controls,
   FMX.Forms,
   FMX.Types,
-  FMX.Layouts
+  FMX.Layouts,
+  FMX.TextLayout,
+  FMX.Graphics
   ;
 
 type
@@ -148,6 +150,8 @@ type
     class function FindParentForm(const AChildControl: TControl): FMX.Forms.TForm;
     class function FindParentFrame(const AChildControl: TControl): FMX.Forms.TFrame;
     class function FindControl(const AParentControl: TControl; const AControlName: String): TControl;
+
+    class function MeasureTextWidth(const AText: String; const AFont: TFont): Single;
 
     class procedure EnableControls(const AControls: array of TControl; const AState: Boolean);
 {$IFDEF MSWINDOWS}
@@ -617,6 +621,29 @@ begin
     raise Exception.Create(Format('TControlTools.FindControl: Control "%s" not found', [AControlName]));
 end;
 
+class function TControlTools.MeasureTextWidth(
+  const AText: String;
+  const AFont: TFont): Single;
+var
+  LLayout: TTextLayout;
+begin
+  LLayout := TTextLayoutManager.DefaultTextLayout.Create;
+  try
+    LLayout.Font.Assign(AFont);
+    LLayout.Text := AText;
+    // PointF(1E6, 1E6) - точка далеко за пределами измерений,
+    // техническая договоренность для FMX
+    LLayout.MaxSize := PointF(1E6, 1E6);
+    LLayout.WordWrap := False;
+    LLayout.HorizontalAlign := TTextAlign.Leading;
+    LLayout.VerticalAlign := TTextAlign.Leading;
+
+    Result := LLayout.TextRect.Width;
+  finally
+    LLayout.Free;
+  end;
+end;
+
 class procedure TControlTools.EnableControls(const AControls: array of TControl; const AState: Boolean);
 var
   i: Word;
@@ -737,6 +764,9 @@ var
   Point: TPoint;
   RectF: TRectF;
 begin
+  if not Assigned(AForm) then
+    raise Exception.Create('TControlTools.IsMouseOverForm - > AForm is nil');
+
   Result := false;
 
   GetCursorPos(Point);
