@@ -112,6 +112,8 @@ type
 
     procedure Mute;
     procedure UnMute;
+
+    class function GetHumanTime(const AMediaTime: Int64): String;
   end;
 
   TSingleSoundThread = class(TThreadExt)
@@ -152,6 +154,35 @@ type
 implementation
 
 { TSingleSound }
+
+class function TSingleSound.GetHumanTime(const AMediaTime: Int64): String;
+
+  function _GetNormalLength(const ANumber: Integer): String;
+  var
+    sNumber: String;
+  begin
+    Result := '';
+
+    sNumber := IntToStr(ANumber);
+    if Length(sNumber) < 2 then
+      sNumber := '0' + sNumber;
+
+    Result := sNumber;
+  end;
+
+var
+  M, S: Integer;
+  slTime: Single;
+begin
+  Result := '';
+
+  slTime := AMediaTime / MediaTimeScale;
+
+  M := Trunc(slTime / 60);
+  S := Trunc(slTime - (M * 60));
+
+  Result := _GetNormalLength(M) + ':' + _GetNormalLength(S);
+end;
 
 procedure TSingleSound.RaiseMainThreadOnlyException(const AMethod: String);
 begin
@@ -223,6 +254,8 @@ begin
 //    FSingleSoundThread.WaitForDone;
 //    FSingleSoundThread := nil;
 //  end;
+
+  FSingleSoundThread := nil;
 
   FreeAndNil(FMediaPlayer);
 
@@ -567,8 +600,8 @@ end;
 
 procedure TSingleSoundThread.OnSetTerminatedHandler(Sender: TObject);
 begin
-  FOnGetData := nil;
-  FOnFinished := nil;
+  OnGetData := nil;
+  OnFinished := nil;
 
   FGetDataEvent.SetEvent;
   FHoldEvent.SetEvent;
@@ -586,7 +619,8 @@ begin
   try
     while not Terminated do
     begin
-      FGetDataEvent.ResetEvent;
+      if not Terminated then
+        FGetDataEvent.ResetEvent;
 
       TThread.Queue(nil,
         procedure
