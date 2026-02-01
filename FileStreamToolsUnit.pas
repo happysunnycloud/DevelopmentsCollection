@@ -25,7 +25,7 @@ type
     function WriteInt64(
       const AVal: Int64): Int64;
     function WriteUInt32(
-      const AVal: UInt32): UInt32;
+      const AVal: UInt32): Int64;
     function WriteBoolean(
       const AVal: Boolean): Int64;
 
@@ -192,7 +192,7 @@ begin
 end;
 
 function TFileStreamTools.WriteUInt32(
-  const AVal: UInt32): UInt32;
+  const AVal: UInt32): Int64;
 begin
   FFileStream.Write(AVal, SizeOf(UInt32));
 
