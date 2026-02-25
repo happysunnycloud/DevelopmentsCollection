@@ -15,7 +15,7 @@ uses
     System.SysUtils
   , System.Classes
   , BinFileTypes
-  , ParamsExtStreamerUnit
+  , ParamsExtStreamer
   ;
 
 const
@@ -198,20 +198,29 @@ type
     function TryGetParamFromStream(
       var AVal: Variant;
       const AParamIndex: Integer): Boolean; overload;
-
+    // Сохраняет данные в стрим вместе с файловым заголовком
+    // Сохраняет в физический файл на диске
     procedure SaveToStreamAsFile(
       const AContentSignature: TBinFileSign;
       const AContentVersion: TBinFileVer;
       const AFileName: String); overload;
+    // Сохраняет данные в стрим вместе с файловым заголовком
+    // Применяется при работе с упаковщиком файлов
     procedure SaveToStreamAsFile(
       const AContentSignature: TBinFileSign;
       const AContentVersion: TBinFileVer;
       const AStream: TStream); overload;
+    // Сохраняет данные в стрим без файлового заголовка
     procedure SaveToStream(
       const AStream: TStream); overload;
 
-    procedure LoadFromFile(const AFileName: String);
-    procedure LoadFromStreamAsFile(const AStream: TStream);
+    // Читает данные из стрима вместе с файловым заголовком
+    // Читает из физического файла на диске
+    procedure LoadFromStreamAsFile(const AFileName: String); overload;
+    // Читает данные из стрима вместе с файловым заголовком
+    // Применяется при работе с упаковщиком файлов
+    procedure LoadFromStreamAsFile(const AStream: TStream); overload;
+    // Читает данные из стрима, который не содержит файлового заголовка
     procedure LoadFromStream(const AStream: TStream);
   end;
 
@@ -1295,7 +1304,7 @@ begin
   CloseStream;
 end;
 
-procedure TParamsExt.LoadFromFile(const AFileName: String);
+procedure TParamsExt.LoadFromStreamAsFile(const AFileName: String);
 begin
   OpenStreamAsFile(AFileName, fmOpenRead);
   FParamsExtStreamer.LoadFromStream;

@@ -1264,7 +1264,7 @@ begin
 
   Params := TParamsExt.Create;
   try
-    Params.LoadFromFile(AFileName);
+    Params.LoadFromStreamAsFile(AFileName);
     ParamsToSettings(Params);
   finally
     FreeAndNil(Params);

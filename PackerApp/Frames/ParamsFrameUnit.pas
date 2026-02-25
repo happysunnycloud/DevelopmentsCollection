@@ -51,7 +51,7 @@ begin
 
   Params := TParamsExt.Create;
   try
-    Params.LoadFromFile(AFileName);
+    Params.LoadFromStreamAsFile(AFileName);
     for i := 0 to Pred(Params.Length) do
     begin
       Memo.Lines.Add(Params.Params[i].Ident);

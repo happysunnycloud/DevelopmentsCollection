@@ -27,7 +27,7 @@ uses
   FMX.Theme.Types in '..\FMX.Theme\FMX.Theme.Types.pas',
   FMX.ControlToolsUnit in '..\FMX.ControlToolsUnit.pas',
   ParamsExtractorUnit in '..\FilePacker\ParamsExtractorUnit.pas',
-  ParamsExtStreamerUnit in '..\ParamsExt\ParamsExtStreamerUnit.pas';
+  ParamsExtStreamer in '..\ParamsExt\ParamsExtStreamer.pas';
 
 {$R *.res}
 

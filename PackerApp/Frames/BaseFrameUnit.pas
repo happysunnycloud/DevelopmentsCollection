@@ -57,7 +57,7 @@ implementation
 uses
     PackerUnit
   , FMX.ControlToolsUnit
-  , ParamsExtFileStreamUnit
+  , ParamsExtFileStream
   ;
 
 const
