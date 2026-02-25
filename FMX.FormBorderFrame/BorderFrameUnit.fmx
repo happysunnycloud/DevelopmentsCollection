@@ -1,0 +1,277 @@
+object BorderFrame: TBorderFrame
+  Size.Width = 368.000000000000000000
+  Size.Height = 308.000000000000000000
+  Size.PlatformDefault = False
+  object TopLayout: TLayout
+    Align = Top
+    HitTest = True
+    Size.Width = 368.000000000000000000
+    Size.Height = 5.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 0
+    OnMouseMove = TopLayoutMouseMove
+    OnMouseEnter = TopLayoutMouseEnter
+    object RightTopLayout: TLayout
+      Align = Right
+      HitTest = True
+      Position.X = 358.000000000000000000
+      Size.Width = 10.000000000000000000
+      Size.Height = 5.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 1
+      OnMouseMove = RightTopLayoutMouseMove
+      OnMouseEnter = RightTopLayoutMouseEnter
+    end
+    object LeftTopLayout: TLayout
+      Align = Left
+      HitTest = True
+      Size.Width = 10.000000000000000000
+      Size.Height = 5.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 0
+      OnMouseMove = LeftTopLayoutMouseMove
+      OnMouseEnter = LeftTopLayoutMouseEnter
+    end
+    object TopBorderRectangle: TRectangle
+      Align = Contents
+      Fill.Color = claCornflowerblue
+      HitTest = False
+      Size.Width = 368.000000000000000000
+      Size.Height = 5.000000000000000000
+      Size.PlatformDefault = False
+      Stroke.Thickness = 0.000000000000000000
+    end
+  end
+  object BottomLayout: TLayout
+    Align = Bottom
+    HitTest = True
+    Position.Y = 303.000000000000000000
+    Size.Width = 368.000000000000000000
+    Size.Height = 5.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 2
+    OnMouseMove = BottomLayoutMouseMove
+    OnMouseEnter = BottomLayoutMouseEnter
+    object BottomBorderRectangle: TRectangle
+      Align = Contents
+      Fill.Color = claCornflowerblue
+      HitTest = False
+      Size.Width = 368.000000000000000000
+      Size.Height = 5.000000000000000000
+      Size.PlatformDefault = False
+      Stroke.Thickness = 0.000000000000000000
+    end
+    object RightBottomLayout: TLayout
+      Align = Right
+      HitTest = True
+      Position.X = 358.000000000000000000
+      Size.Width = 10.000000000000000000
+      Size.Height = 5.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 1
+      OnMouseMove = RightBottomLayoutMouseMove
+      OnMouseEnter = RightBottomLayoutMouseEnter
+    end
+    object LeftBottomLayout: TLayout
+      Align = Left
+      HitTest = True
+      Size.Width = 10.000000000000000000
+      Size.Height = 5.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 0
+      OnMouseMove = LeftBottomLayoutMouseMove
+      OnMouseEnter = LeftBottomLayoutMouseEnter
+    end
+  end
+  object UnderCaptionLayout: TLayout
+    Align = Top
+    HitTest = True
+    Position.Y = 20.000000000000000000
+    Size.Width = 368.000000000000000000
+    Size.Height = 5.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 4
+    OnMouseMove = CaptionLayoutMouseMove
+    object UnderCaptionRectangle: TRectangle
+      Align = Client
+      Fill.Color = claCornflowerblue
+      HitTest = False
+      Size.Width = 368.000000000000000000
+      Size.Height = 5.000000000000000000
+      Size.PlatformDefault = False
+      Stroke.Thickness = 0.000000000000000000
+    end
+  end
+  object ContentLayout: TLayout
+    Align = Client
+    Size.Width = 358.000000000000000000
+    Size.Height = 278.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 5
+  end
+  object LeftLayout: TLayout
+    Align = Left
+    HitTest = True
+    Position.Y = 25.000000000000000000
+    Size.Width = 5.000000000000000000
+    Size.Height = 278.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 3
+    OnMouseMove = LeftLayoutMouseMove
+    OnMouseEnter = LeftLayoutMouseEnter
+    object LeftBorderRectangle: TRectangle
+      Align = Contents
+      Fill.Color = claCornflowerblue
+      HitTest = False
+      Size.Width = 5.000000000000000000
+      Size.Height = 278.000000000000000000
+      Size.PlatformDefault = False
+      Stroke.Thickness = 0.000000000000000000
+    end
+  end
+  object RightLayout: TLayout
+    Align = Right
+    HitTest = True
+    Position.X = 363.000000000000000000
+    Position.Y = 25.000000000000000000
+    Size.Width = 5.000000000000000000
+    Size.Height = 278.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 1
+    OnMouseMove = RightLayoutMouseMove
+    OnMouseEnter = RightLayoutMouseEnter
+    object RightBorderRectangle: TRectangle
+      Align = Contents
+      Fill.Color = claCornflowerblue
+      HitTest = False
+      Size.Width = 5.000000000000000000
+      Size.Height = 278.000000000000000000
+      Size.PlatformDefault = False
+      Stroke.Thickness = 0.000000000000000000
+    end
+  end
+  object CaptionLayout: TLayout
+    Align = Top
+    HitTest = True
+    Position.Y = 5.000000000000000000
+    Size.Width = 368.000000000000000000
+    Size.Height = 15.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 6
+    OnMouseMove = CaptionLayoutMouseMove
+    object CaptionRectangle: TRectangle
+      Align = Contents
+      Fill.Color = claCornflowerblue
+      HitTest = False
+      Size.Width = 368.000000000000000000
+      Size.Height = 15.000000000000000000
+      Size.PlatformDefault = False
+      Stroke.Thickness = 0.000000000000000000
+      object CaptionText: TText
+        Align = Left
+        Margins.Left = 5.000000000000000000
+        Position.X = 5.000000000000000000
+        Size.Width = 267.000000000000000000
+        Size.Height = 15.000000000000000000
+        Size.PlatformDefault = False
+        Text = 'Caption'
+        TextSettings.Font.StyleExt = {00070000000000000004000000}
+        TextSettings.FontColor = claWhite
+        TextSettings.HorzAlign = Leading
+      end
+    end
+    object CloseButtonLayout: TLayout
+      Align = Right
+      Margins.Right = 5.000000000000000000
+      Position.X = 348.000000000000000000
+      Size.Width = 15.000000000000000000
+      Size.Height = 15.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 1
+      object ForegroundCloseButtonRectangle: TRectangle
+        Align = Contents
+        Fill.Color = claBrown
+        Size.Width = 15.000000000000000000
+        Size.Height = 15.000000000000000000
+        Size.PlatformDefault = False
+        Stroke.Thickness = 0.000000000000000000
+        OnMouseLeave = ForegroundCloseButtonRectangleMouseLeave
+      end
+      object BackgroundCloseButtonRectangle: TRectangle
+        Align = Contents
+        Fill.Color = claCornflowerblue
+        Size.Width = 15.000000000000000000
+        Size.Height = 15.000000000000000000
+        Size.PlatformDefault = False
+        Stroke.Thickness = 0.000000000000000000
+        OnMouseEnter = BackgroundCloseButtonRectangleMouseEnter
+      end
+      object CloseButtonRectangle: TRectangle
+        Align = Center
+        Fill.Bitmap.Bitmap.PNG = {
+          89504E470D0A1A0A0000000D494844520000000F0000000F08060000003BD695
+          4A000000017352474200AECE1CE90000000467414D410000B18F0BFC61050000
+          00C149444154384FA593B10EC2300C44CF5E4A4A0790FA3F4C99FAFF7F022D93
+          8F81063926A990785B4E7796ED24000033CB246966671C606669F72D45C874F4
+          0A94A0F32D4292D1487254D5AD9CCD2C89C85ABB0025798AA288ACA5835E90E4
+          88DD30F8961C7314F86E390180944A663688C8D3156FE247FA84F14381B88B2F
+          485E629B3B73F456C4EB88C46BF43337B71A2139A9EA030014C7C16B1444E45E
+          3A905EB02CA7B74492D3DF2FECE68518040055DD1A2F3103F5AF4AC150E17E55
+          068017D1441B06AE5996360000000049454E44AE426082}
+        Fill.Bitmap.WrapMode = TileOriginal
+        Fill.Kind = Bitmap
+        Size.Width = 15.000000000000000000
+        Size.Height = 15.000000000000000000
+        Size.PlatformDefault = False
+        Stroke.Thickness = 0.000000000000000000
+        OnClick = CloseButtonRectangleClick
+        OnMouseEnter = CloseButtonRectangleMouseEnter
+        OnMouseLeave = CloseButtonRectangleMouseLeave
+      end
+    end
+    object RolldownButtonLayout: TLayout
+      Align = Right
+      Margins.Right = 5.000000000000000000
+      Position.X = 328.000000000000000000
+      Size.Width = 15.000000000000000000
+      Size.Height = 15.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 0
+      object ForegroundRolldownButtonRectangle: TRectangle
+        Align = Contents
+        Fill.Color = claBrown
+        Size.Width = 15.000000000000000000
+        Size.Height = 15.000000000000000000
+        Size.PlatformDefault = False
+        Stroke.Thickness = 0.000000000000000000
+        OnMouseLeave = ForegroundRolldownButtonRectangleMouseLeave
+      end
+      object BackgroundRolldownButtonRectangle: TRectangle
+        Align = Contents
+        Fill.Color = claCornflowerblue
+        Size.Width = 15.000000000000000000
+        Size.Height = 15.000000000000000000
+        Size.PlatformDefault = False
+        Stroke.Thickness = 0.000000000000000000
+        OnMouseEnter = BackgroundRolldownButtonRectangleMouseEnter
+      end
+      object RolldownButtonRectangle: TRectangle
+        Align = Center
+        Fill.Bitmap.Bitmap.PNG = {
+          89504E470D0A1A0A0000000D494844520000000F0000000F08060000003BD695
+          4A000000017352474200AECE1CE90000000467414D410000B18F0BFC61050000
+          002A49444154384F63601805A360D0024606060686FFFFFFFF47972004181919
+          1999D00549011469A6080000BC460406236736190000000049454E44AE426082}
+        Fill.Bitmap.WrapMode = Tile
+        Fill.Kind = Bitmap
+        Size.Width = 15.000000000000000000
+        Size.Height = 15.000000000000000000
+        Size.PlatformDefault = False
+        Stroke.Thickness = 0.000000000000000000
+        OnClick = RolldownButtonRectangleClick
+        OnMouseEnter = RolldownButtonRectangleMouseEnter
+        OnMouseLeave = RolldownButtonRectangleMouseLeave
+      end
+    end
+  end
+end

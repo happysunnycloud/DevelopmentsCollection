@@ -8,8 +8,11 @@ uses
   FMX.Types, FMX.Graphics, FMX.Controls, FMX.Forms, FMX.Dialogs, FMX.StdCtrls,
   FMX.Layouts, FMX.Objects, FMX.Effects,
   FMX.Controls.Presentation
-  , BorderFrameTypesUnit
+//  , BorderFrameTypesUnit
   ;
+
+type
+  TBorderFrameKind = (bfkNone = -1, bfkNormal = 0, bfkNoCaption = 1);
 
 type
   TBorderFrame = class(TFrame)
@@ -200,8 +203,8 @@ type
     /// </summary>
     property ClientHeight: Integer read GetClientHeight write SetClientHeight;
 
-    property BorderFrameKind: TBorderFrameKind read FBorderFrameKind write SetBorderFrameKind;
-    property BorderColor: TAlphaColor read FBorderColor write SetBorderColor;
+    property Kind: TBorderFrameKind read FBorderFrameKind write SetBorderFrameKind;
+    property Color: TAlphaColor read FBorderColor write SetBorderColor;
     property ToolButtonColor: TAlphaColor read FToolButtonColor write SetToolButtonColor;
     property ToolButtonMouseOverColor: TAlphaColor read FToolButtonMouseOverColor write SetToolButtonMouseOverColor;
     property CaptionColor: TAlphaColor read FCaptionColor write SetCaptionColor;
@@ -563,7 +566,7 @@ begin
   FToolButtonMouseOverColor := AToolButtonMouseOverColor;
   FCaption := Form.Caption;
 
-  BorderFrameKind := ABorderFrameKind;
+  Kind := ABorderFrameKind;
 end;
 
 procedure TBorderFrame.ForegroundCloseButtonRectangleMouseLeave(
@@ -1068,14 +1071,14 @@ end;
 
 procedure TBorderFrame.SetBorderFrameKind(const ABorderFrameKind: TBorderFrameKind);
 begin
-  UnMount;
-
   FBorderFrameKind := ABorderFrameKind;
 
-  if ABorderFrameKind = bfkNone then
-    Exit;
-
-  Mount;
+  if FBorderFrameKind = bfkNone then
+  begin
+    UnMount
+  end
+  else
+    Mount;
 end;
 
 procedure TBorderFrame.SetBorderColor(const ABorderColor: TAlphaColor);
