@@ -7,12 +7,15 @@ uses
   System.Classes,
   System.TypInfo,
   System.Types,
+  System.Generics.Collections,
   FMX.Controls,
   FMX.Forms,
   FMX.Types,
   FMX.Layouts,
   FMX.TextLayout,
-  FMX.Graphics
+  FMX.Graphics,
+  FMX.StdCtrls,
+  FMX.ListBox
   ;
 
 type
@@ -131,6 +134,12 @@ type
       const APropertyName: String;
       ASet: String);
 
+    class function GetPropertyAsTextSettings(
+      const ASourceComponent: TComponent): TTextSettings;
+    class function TryGetPropAsTextSettings(
+      const ASourceComponent: TComponent;
+      var ATextSettings: TTextSettings): Boolean;
+
     // Копирование свойства
     class procedure CopyProperty(
       const ASourceComponent: TComponent;
@@ -154,6 +163,13 @@ type
     class function MeasureTextWidth(const AText: String; const AFont: TFont): Single;
 
     class procedure EnableControls(const AControls: array of TControl; const AState: Boolean);
+
+    //  --- Какая-то времянка, надо разобраться и убрать ---
+    class procedure FreeAndNil(var aObject: TObject); overload;
+    class procedure FreeAndNil(var aConrol: TControl); overload;
+    class procedure FreeAndNil(var aComponent: TComponent); overload;
+    //  --- Какая-то времянка, надо разобраться и убрать ---
+
 {$IFDEF MSWINDOWS}
     // Находит положение панели задач
     // ARect - координаты, результат - положение
@@ -171,6 +187,45 @@ type
   public
     procedure ControlsEnumerator(
       const AControlEnumeratorCallbackProc: TControlEnumeratorCallbackProc);
+    procedure Clear;
+  end;
+
+  TComboBoxHelper = class helper for TComboBox
+  public
+    procedure SilentIndexChange(const ANewIndex: Integer);
+  end;
+
+  TCheckBoxHelper = class helper for TCheckBox
+  public
+    procedure SilentIsCheckChange(const ANewIsCheck: Boolean);
+  end;
+
+  TControlsCollection = class
+  type
+    TControlsCollectionEnumerator = class
+    private
+      FList: TList<TControl>;
+      FIndex: Integer;
+    public
+      constructor Create(const AList: TList<TControl>);
+      function MoveNext: Boolean;
+      function GetCurrent: TControl;
+
+      property Current: TControl read GetCurrent;
+    end;
+  private
+    FControls: TList<TControl>;
+  public
+    constructor Create(const AContainer: TFmxObject);
+    destructor Destroy; override;
+
+    function GetEnumerator: TControlsCollectionEnumerator;
+
+    function Count: Integer;
+    function Items(Index: Integer): TControl;
+
+    procedure CollectFrom(const AParent: TFmxObject);
+    procedure Clear;
   end;
 
 implementation
@@ -218,6 +273,51 @@ begin
   _EnumControls(Self);
 end;
 
+procedure TScrollBoxHelper.Clear;
+var
+  i: Integer;
+begin
+  i := Content.ControlsCount;
+  while i > 0 do
+  begin
+    Dec(i);
+
+    Content.Controls[i].Free;
+  end;
+end;
+
+{ TComboBoxHelper }
+
+procedure TComboBoxHelper.SilentIndexChange(const ANewIndex: Integer);
+var
+  StoredEvent: TNotifyEvent;
+begin
+  StoredEvent := Self.OnChange;
+  try
+    Self.OnChange := nil;
+
+    Self.ItemIndex := ANewIndex;
+  finally
+    Self.OnChange := StoredEvent;
+  end;
+end;
+
+{ TCheckBoxHelper }
+
+procedure TCheckBoxHelper.SilentIsCheckChange(const ANewIsCheck: Boolean);
+var
+  StoredEvent: TNotifyEvent;
+begin
+  StoredEvent := Self.OnChange;
+  try
+    Self.OnChange := nil;
+
+    Self.IsChecked := ANewIsCheck;
+  finally
+    Self.OnChange := StoredEvent;
+  end;
+end;
+
 { TControlTools }
 
 class function TControlTools.HasProperty(
@@ -232,7 +332,9 @@ class procedure TControlTools.CheckHasProperty(
   const APropertyName: String);
 begin
   if not HasProperty(AObj, APropertyName) then
-    raise Exception.CreateFmt('Object does not have a "%s" property', [APropertyName]);
+    raise Exception.CreateFmt(
+      'Object "%s" does not have a "%s" property',
+      [AObj.ClassName, APropertyName]);
 end;
 
 class function TControlTools.HasTextProperty(
@@ -482,6 +584,28 @@ begin
   SetSetProp(ASourceComponent, APropertyName, ASet);
 end;
 
+class function TControlTools.GetPropertyAsTextSettings(
+  const ASourceComponent: TComponent): TTextSettings;
+begin
+  CheckHasProperty(ASourceComponent, TProperties.TextSettings);
+
+  Result :=
+    GetObjectProp(ASourceComponent, TProperties.TextSettings) as TTextSettings;
+end;
+
+class function TControlTools.TryGetPropAsTextSettings(
+  const ASourceComponent: TComponent;
+  var ATextSettings: TTextSettings): Boolean;
+begin
+  Result := false;
+  ATextSettings := nil;
+
+  if not HasProperty(ASourceComponent, TProperties.TextSettings) then
+    Exit;
+
+  ATextSettings := GetPropertyAsTextSettings(ASourceComponent);
+end;
+
 class procedure TControlTools.CopyProperty(
   const ASourceComponent: TComponent;
   const ADistanceControl: TComponent;
@@ -656,6 +780,53 @@ begin
   end;
 end;
 
+class procedure TControlTools.FreeAndNil(var aObject: TObject);
+var
+  Obj: TObject;
+begin
+  Obj := aObject;
+  TThread.ForceQueue(nil,
+    procedure begin
+      Obj.Free;
+    end);
+  aObject := nil;
+end;
+
+class procedure TControlTools.FreeAndNil(var aConrol: TControl);
+var
+  Control: TControl;
+begin
+  Control := aConrol;
+  TThread.ForceQueue(nil,
+    procedure begin
+      if Assigned(Control) then
+      begin
+        if Assigned(Control.Owner) then
+          Control.Owner.RemoveComponent(Control);
+        Control.Parent := nil;
+      end;
+      Control.Free;
+    end);
+  aConrol := nil;
+end;
+
+class procedure TControlTools.FreeAndNil(var aComponent: TComponent);
+var
+  Component: TComponent;
+begin
+  Component := aComponent;
+  TThread.ForceQueue(nil,
+    procedure begin
+      if Assigned(Component) then
+      begin
+        if Assigned(Component.Owner) then
+          Component.Owner.RemoveComponent(Component);
+      end;
+      Component.Free;
+    end);
+  aComponent := nil;
+end;
+
 {$IFDEF MSWINDOWS}
 class function TControlTools.FindTaskBarPos(var ARect: TRect; var AAutoHide: Boolean): Integer;
 var
@@ -778,6 +949,82 @@ begin
     Result := true;
 end;
 {$ENDIF}
+
+{ TControlsCollection.TControlsCollectionEnumerator }
+
+constructor TControlsCollection.TControlsCollectionEnumerator.Create(
+  const AList: TList<TControl>);
+begin
+  inherited Create;
+
+  FList := AList;
+  FIndex := -1;
+end;
+
+function TControlsCollection.TControlsCollectionEnumerator.MoveNext: Boolean;
+begin
+  Inc(FIndex);
+  Result := FIndex < FList.Count;
+end;
+
+function TControlsCollection.TControlsCollectionEnumerator.GetCurrent: TControl;
+begin
+  Result := FList[FIndex];
+end;
+
+{ TControlsCollection }
+
+constructor TControlsCollection.Create(const AContainer: TFmxObject);
+begin
+  inherited Create;
+
+  FControls := TList<TControl>.Create;
+
+  if Assigned(AContainer) then
+    CollectFrom(AContainer);
+end;
+
+destructor TControlsCollection.Destroy;
+begin
+  FControls.Free;
+
+  inherited;
+end;
+
+procedure TControlsCollection.CollectFrom(const AParent: TFmxObject);
+var
+  I: Integer;
+  Obj: TFmxObject;
+begin
+  if AParent is TControl then
+    FControls.Add(TControl(AParent));
+
+  for I := 0 to AParent.ChildrenCount - 1 do
+  begin
+    Obj := AParent.Children[I];
+    CollectFrom(Obj);
+  end;
+end;
+
+procedure TControlsCollection.Clear;
+begin
+  FControls.Clear;
+end;
+
+function TControlsCollection.GetEnumerator: TControlsCollectionEnumerator;
+begin
+  Result := TControlsCollectionEnumerator.Create(FControls);
+end;
+
+function TControlsCollection.Count: Integer;
+begin
+  Result := FControls.Count;
+end;
+
+function TControlsCollection.Items(Index: Integer): TControl;
+begin
+  Result := FControls[Index];
+end;
 
 
 end.

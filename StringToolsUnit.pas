@@ -28,6 +28,14 @@ type
       const ARootName: String;
       const ASplitter: String = '_'): String; overload;
     class function ExtractFromBrackets(const ASource: String): String;
+    /// <summary>
+    ///  Добавляет ADigitDepth символа '0' в начало числа, при преобразовании его в строку
+    /// </summary>
+    class function DigitZeroAlignment(const ADigit: Word; const ADigitDepth: Byte = 2): String;
+    /// <summary>
+    ///  Добавляет ADigitDepth символа '0' в начало числа, представленного в виде строки
+    /// </summary>
+    class function StrZeroAlignment(const AStrDigit: String; const ADigitDepth: Byte = 2): String;
   end;
 
 implementation
@@ -189,6 +197,40 @@ begin
     if (i > 1) and (BracketCount = 0) and OpeningBracetFound then
       Exit;
   end;
+end;
+
+class function TStringTools.DigitZeroAlignment(const ADigit: Word; const ADigitDepth: Byte = 2): String;
+var
+  i: Byte;
+begin
+  Result := IntToStr(ADigit);
+  if Length(Result) < ADigitDepth then
+  begin
+    i := ADigitDepth - 1;
+    while i > 0 do
+    begin
+      Dec(i);
+
+      Result := '0' + Result;
+    end;
+  end
+end;
+
+class function TStringTools.StrZeroAlignment(const AStrDigit: String; const ADigitDepth: Byte = 2): String;
+var
+  i: Byte;
+begin
+  Result := AStrDigit;
+  if Length(Result) < ADigitDepth then
+  begin
+    i := ADigitDepth - 1;
+    while i > 0 do
+    begin
+      Dec(i);
+
+      Result := '0' + Result;
+    end;
+  end
 end;
 
 initialization

@@ -158,14 +158,13 @@ uses
   Androidapi.JNI.Os,
 //  Androidapi.JNI.Media,
 //  Androidapi.JNI.Net,
-
   System.IOUtils,
-
   {$ENDIF}
 
   FMX.Dialogs
 
   , FMX.ControlToolsUnit
+  , StringToolsUnit
   , AddLogUnit
   ;
 
@@ -591,7 +590,7 @@ begin
   Intent.SetClassName(TAndroidHelper.Context, StringToJString('com.AlarmBroadcastReceiver.AlarmReceiver'));
 //  Intent.setAction(StringToJString('com.AlarmBroadcastReceiver.AlarmReceiver'));
   Intent.addFlags(TJIntent.JavaClass.FLAG_RECEIVER_FOREGROUND);
-  AlarmTime := StringToJString(TStringFunctions.DateTimeToStandartFormatString(AAlarmTime));
+  AlarmTime := StringToJString(TStringTools.DateTimeToStandartFormatString(AAlarmTime));
   Intent.PutExtra(StringToJString('datetime'), AlarmTime);
 
   // Оборачиваем Интент в PendingIntent

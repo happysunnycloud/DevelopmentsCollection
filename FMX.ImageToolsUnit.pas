@@ -1,4 +1,4 @@
-unit FMX.ImageToolsUnit;
+﻿unit FMX.ImageToolsUnit;
 
 interface
 
@@ -16,6 +16,9 @@ type
     class procedure ReplaceNotNullColor(
       const ABitMap: TBitMap;
       const ADestColor: TAlphaColor);
+
+    class function ColorToHex(const AColor: TAlphaColor): String;
+    class function HexToAlphaColor(const AHex: String): TAlphaColor;
   end;
 
 implementation
@@ -111,6 +114,28 @@ begin
   finally
     ABitMap.Unmap(BitmapData);
   end;
+end;
+
+class function TImageTools.ColorToHex(const AColor: TAlphaColor): String;
+begin
+  Result := Format('%.8x', [AColor]);
+end;
+
+class function TImageTools.HexToAlphaColor(const AHex: String): TAlphaColor;
+var
+  S: String;
+  Value: Cardinal;
+begin
+  S := Trim(AHex);
+
+  if Length(S) = 6 then
+    S := 'FF' + S   // нет альфы → делаем полностью непрозрачным
+  else
+  if Length(S) <> 8 then
+    raise Exception.CreateFmt('Invalid color hex string: "%s"', [AHex]);
+
+  Value := StrToInt('$' + S);
+  Result := TAlphaColor(Value);
 end;
 
 end.

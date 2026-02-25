@@ -1,4 +1,4 @@
-﻿{TODO: Проверить, где используется и размонтировать этот unit}
+﻿{TODO: Со временем размонтируем перекинув функционал в специализированные юниты}
 {0.4}
 // Класс TFMXControlTools - перенести из этого модуля в FMX.ControlToolsUnit, здесь установить deprecated
 // Сам модуль оставляем, складываем сюда все что не входит в другие
@@ -54,9 +54,9 @@ type
   TTools = class
   public
     //добавляет ADigitDepth символа '0' в начало числа, при преобразовании его в строку
-    class function  DigitZeroAlignment(const ADigit: Word; const ADigitDepth: Byte = 2): String;
+    class function  DigitZeroAlignment(const ADigit: Word; const ADigitDepth: Byte = 2): String; deprecated 'Use StringToolsUnit';
     //добавляет ADigitDepth символа '0' в начало числа, представленного в виде строки
-    class function  StrZeroAlignment(const AStrDigit: String; const ADigitDepth: Byte = 2): String;
+    class function  StrZeroAlignment(const AStrDigit: String; const ADigitDepth: Byte = 2): String; deprecated 'Use StringToolsUnit';
 
     class procedure FreeAndNil(var aObject: TObject); overload;
     class procedure FreeAndNil(var aConrol: TControl); overload;

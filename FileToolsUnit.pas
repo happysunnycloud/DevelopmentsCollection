@@ -1,5 +1,4 @@
 ﻿{0.1}
-// Используется в FilePackerUnit
 unit FileToolsUnit;
 
 interface
@@ -32,7 +31,7 @@ type
     /// <summary>
     /// Рекурсивно получает дерево имен файлов
     /// </summary>
-    class procedure RecursionFileSearch(
+    class procedure RecursiveFileSearch(
       const ARootPath: String;
       const AExt: array of String;
       var AFileNames: TFileNames;
@@ -149,7 +148,7 @@ end;
 
 { TFileTools }
 
-class procedure TFileTools.RecursionFileSearch(
+class procedure TFileTools.RecursiveFileSearch(
   const ARootPath: String;
   const AExt: array of String;
   var AFileNames: TFileNames;
@@ -164,7 +163,9 @@ class procedure TFileTools.RecursionFileSearch(
     Result := false;
     for i := 0 to Pred(Length(AExtArr)) do
     begin
-      if ExtractFileExt(AFileName) = '.' + AExtArr[i] then
+      if (ExtractFileExt(AFileName) = '.' + AExtArr[i]) or
+         (AExt[i] = '*')
+      then
         Exit(true);
     end;
   end;
@@ -201,7 +202,7 @@ begin
       if (SearchRec.Attr and faDirectory) = faDirectory then
       begin
         if ARecursionEnabled then
-          RecursionFileSearch(
+          RecursiveFileSearch(
             Concat(RootPath, SearchRec.Name), AExt, AFileNames, ARecursionEnabled);
       end;
     end;
@@ -318,59 +319,6 @@ begin
   if not HasPathSplitter(APath) then
     Result := PATH_SPLITTER;
 end;
-
-//class procedure TFileTools.GetFileNameListByDir(
-//  const ADir: String;
-//  const AFileNameList: TStringList);
-//begin
-//  TFileTools.GetFileNameListByDirAndExt(
-//    ADir,
-//    '',
-//    AFileNameList);
-//end;
-
-//class procedure TFileTools.GetFileNameListByDirAndExt(
-//  const ADir: String;
-//  const AExt: String;
-//  const AFileNameList: TStringList);
-//var
-//  SearchRec: System.SysUtils.TSearchRec;
-//  IsFound: Boolean;
-//  MustAdd: Boolean;
-//begin
-//  if not Assigned(AFileNameList) then
-//    raise Exception.Create('AFileNameList is nil');
-//
-//  aFileNameList.Clear;
-//
-//  if aDir = '' then
-//    Exit;
-//
-//  IsFound := FindFirst(aDir + PATH_SPLITTER + '*.*', faAnyFile, SearchRec) = 0;
-//  while IsFound do
-//  begin
-//    if (SearchRec.Name <> '.') and
-//       (SearchRec.Name <> '..')
-//    then
-//    begin
-//      if (SearchRec.Attr and faDirectory) <> faDirectory then
-//      begin
-//        MustAdd := false;
-//        if AExt.IsEmpty then
-//          MustAdd := true
-//        else
-//        if not AExt.IsEmpty then
-//          if ExtractFileExt(SearchRec.Name) = '.' + AExt then
-//            MustAdd := true;
-//
-//        if MustAdd then
-//          aFileNameList.Add(Concat(aDir, PATH_SPLITTER, SearchRec.Name))
-//      end;
-//    end;
-//    IsFound := FindNext(SearchRec) = 0;
-//  end;
-//  System.SysUtils.FindClose(SearchRec);
-//end;
 
 class procedure TFileTools.GetFileSearchRecList(
   const APath: String;
@@ -532,7 +480,7 @@ class procedure TFileTools.GetTreeOfFileNames(
   const AExt: array of String;
   var AFileNames: TFileNames);
 begin
-  RecursionFileSearch(
+  RecursiveFileSearch(
     ARootPath,
     AExt,
     AFileNames,

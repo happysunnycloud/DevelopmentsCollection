@@ -89,7 +89,7 @@ uses
   FMX.Dialogs,
 
   FMX.ControlToolsUnit,
-  ToolsUnit
+  StringToolsUnit
   ;
 
 procedure TInputScaleControl.StartOnChange;
@@ -226,12 +226,12 @@ begin
   fCurrentValue := ACurrentValue;
   if fCurrentValue < 0 then
   begin
-    SetStrProp(fValueOutputControl, TProperties.Text, TTools.DigitZeroAlignment(0, fDigitDepth));
+    SetStrProp(fValueOutputControl, TProperties.Text, TStringTools.DigitZeroAlignment(0, fDigitDepth));
 //    SetInt64Prop(fValueOutputControl, 'Tag', 0);
   end
   else
   begin
-    SetStrProp(fValueOutputControl, TProperties.Text, TTools.DigitZeroAlignment(fCurrentValue, fDigitDepth));
+    SetStrProp(fValueOutputControl, TProperties.Text, TStringTools.DigitZeroAlignment(fCurrentValue, fDigitDepth));
 //    SetInt64Prop(fValueOutputControl, 'Tag', fCurrentValue);
   end;
   Repaint;

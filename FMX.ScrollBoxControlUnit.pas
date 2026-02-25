@@ -3,7 +3,7 @@
 // то можно добавлять спокойно
 // есть какие-то странности в поведении TLabel
 // (не хотят подтягиваться TNotifyEvent через SetMethodProp),
-//  так что для вывода информации лучше использовать TText
+// так что для вывода информации лучше использовать TText
 unit FMX.ScrollBoxControlUnit;
 
 interface
@@ -162,7 +162,7 @@ uses
 
   , FMX.ControlToolsUnit
   , FMX.SwitchControlUnit
-  , ToolsUnit
+  , StringToolsUnit
   ;
 
 function TScrollBoxContainer.FindInfoControl(const AInfoPanelIndex: Integer; const AControlId: String): TControlContainer;
@@ -492,9 +492,9 @@ var
   Control: TControl;
 begin
   Control := AControlContainer.InfoControl;
-  TTools.FreeAndNil(Control);
+  TControlTools.FreeAndNil(Control);
   AControlContainer.InfoControl := nil;
-  TTools.FreeAndNil(TComponent(AControlContainer));
+  TControlTools.FreeAndNil(TComponent(AControlContainer));
   AControlContainer := nil;
 end;
 
@@ -618,9 +618,9 @@ begin
   end;
 
   Control := AInfoPanel.PanelControl;
-  TTools.FreeAndNil(Control);
+  TControlTools.FreeAndNil(Control);
   AInfoPanel.PanelControl := nil;
-  TTools.FreeAndNil(TComponent(AInfoPanel));
+  TControlTools.FreeAndNil(TComponent(AInfoPanel));
   AInfoPanel := nil;
 end;
 
@@ -777,8 +777,8 @@ begin
     Inc(i);
   end;
 
-  TTools.FreeAndNil(TControl(AScrollBoxControl.fScrollBoxHost));
-  TTools.FreeAndNil(TComponent(AScrollBoxControl));
+  TControlTools.FreeAndNil(TControl(AScrollBoxControl.fScrollBoxHost));
+  TControlTools.FreeAndNil(TComponent(AScrollBoxControl));
 end;
 
 constructor TScrollBoxContainer.Create;
