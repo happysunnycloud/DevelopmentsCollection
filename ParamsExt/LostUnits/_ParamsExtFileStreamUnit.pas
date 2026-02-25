@@ -1,10 +1,10 @@
-﻿unit ParamsExtFileStreamUnit;
+﻿unit ParamsExtFileStream;
 
 interface
 
 uses
   System.Classes, System.Variants, System.Generics.Collections,
-  ParamsExtUnit, BinFileTypes, ParamsExtBaseStreamUnit, StreamHandler;
+  ParamsExtUnit, BinFileTypes, ParamsExtStream, StreamHandler;
 
 const
   PARAMS_FILE_VERSION: TBinFileVer = (
@@ -18,7 +18,7 @@ type
     Offset: Int64;
   end;
 
-  TParamsExtFileStream = class(TParamsExtBaseStream)
+  TParamsExtFileStream = class(TParamsExtStream)
   private
     FIndex: TList<TParamIndexItem>;
 

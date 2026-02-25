@@ -1,9 +1,9 @@
-﻿unit ParamsExtBaseStreamUnit;
+﻿unit ParamsExtStream;
 
 interface
 
 uses
-  System.SysUtils, System.Classes, System.Variants, System.Generics.Collections,
+  System.Classes,
   ParamsExtUnit, StreamHandler;
 
 type
@@ -57,6 +57,7 @@ end;
 procedure TParamsExtBaseStream.WriteDataBlock(
   const AParam: TParamRecord);
 begin
+  // Пишем имя в блок с данными
   FStream.WriteString(AParam.Ident);
 
   FStream.WriteVariant(AParam.v);
