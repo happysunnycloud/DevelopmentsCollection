@@ -9,7 +9,7 @@ uses
   FMX.Layouts,
   FMX.Types,
   PopupMenuExt.Item,
-  FMX.ThemeUnit
+  FMX.Theme
   ;
 
 type
@@ -178,7 +178,8 @@ begin
     BackgroundRectangle.SendToBack;
     BackgroundRectangle.Name := 'BackgroundRectangle';
     BackgroundRectangle.HitTest := false;
-    BackgroundRectangle.Fill.Color := Theme.BackgroundColor;
+    BackgroundRectangle.Fill.Color := Theme.PopUpMenuSettings.FormBackgroundColor;
+    //BackgroundColor;
 
     { TODO : Создать тему для кнопок меню }
 
@@ -202,7 +203,7 @@ begin
     AndroidGoBackButtonRectangle.Margins.Left := 2;
     AndroidGoBackButtonRectangle.Margins.Right := 2;
     AndroidGoBackButtonRectangle.Margins.Bottom := 2;
-    AndroidGoBackButtonRectangle.Fill.Color := Theme.LightBackgroundColor;
+    AndroidGoBackButtonRectangle.Fill.Color := Theme.PopUpMenuSettings.BackgroundColor;
 
     AndroidGoBackButtonText := TText.Create(AndroidGoBackButtonRectangle);
     AndroidGoBackButtonText.Parent := AndroidGoBackButtonRectangle;
@@ -262,7 +263,7 @@ begin
       Rectangle.Margins.Left := RectangleMargin;
       Rectangle.Margins.Right := RectangleMargin;
       Rectangle.Margins.Bottom := 0;
-      Rectangle.Fill.Color := Theme.LightBackgroundColor;
+      Rectangle.Fill.Color := Theme.PopUpMenuSettings.BackgroundColor;
 
       TextArrow := TText.Create(Rectangle);
       TextArrow.Parent := Rectangle;
@@ -358,7 +359,7 @@ var
   Rectangle: TRectangle;
 begin
   Rectangle := TRectangle(TLayout(Sender).Children[0]);
-  Rectangle.Fill.Color := FTheme.DarkBackgroundColor;
+  Rectangle.Fill.Color := FTheme.PopUpMenuSettings.MouseOverColor;
 end;
 
 procedure TPopupMenuLayout.OnItemMouseLeaveInternalHandler(Sender: TObject);
@@ -366,7 +367,7 @@ var
   Rectangle: TRectangle;
 begin
   Rectangle := TRectangle(TLayout(Sender).Children[0]);
-  Rectangle.Fill.Color := FTheme.LightBackgroundColor;
+  Rectangle.Fill.Color := FTheme.PopUpMenuSettings.BackgroundColor;
 end;
 {$IFDEF ANDROID}
 procedure TPopupMenuLayout.OnGoBackButtonClickInternalHandler(Sender: TObject);

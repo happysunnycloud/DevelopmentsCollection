@@ -13,7 +13,7 @@ uses
   , FMX.Layouts
   , FMX.Types
   , FMX.PopupMenuExt.Layout
-  , FMX.ThemeUnit
+  , FMX.Theme
   , FMX.PopupMenuExt.Constants
   , PopupMenuExt.Item
   , FMX.FormExtUnit

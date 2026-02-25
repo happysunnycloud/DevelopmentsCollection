@@ -6,7 +6,7 @@ interface
 
 uses
     System.Classes
-  , FMX.ThemeUnit
+  , FMX.Theme
   , FMX.PopupMenuExt.Constants
   , PopupMenuExt.Item
   ;
@@ -59,7 +59,8 @@ begin
 
   FTheme := TTheme.Create;
 
-  FTheme.BackgroundColor := TAlphaColorRec.Black;//$FFB7B7B7;//$FF2A001A;//TAlphaColorRec.Black;
+  FTheme.FormSettings.BackgroundColor := TAlphaColorRec.Black;
+//  FTheme.BackgroundColor := TAlphaColorRec.Black;//$FFB7B7B7;//$FF2A001A;//TAlphaColorRec.Black;
   FTheme.LightBackgroundColor := TAlphaColorRec.Gray;//$FFE0E0E0;//TAlphaColorRec.Black;//$FFE0E0E0;
   FTheme.DarkBackgroundColor := TAlphaColorRec.Cornflowerblue;
   FTheme.TextSettings.FontColor := TAlphaColorRec.White;

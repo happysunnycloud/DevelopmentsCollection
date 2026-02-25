@@ -11,7 +11,7 @@ uses
   , System.UITypes
   , FMX.PopupMenuExt.BaseClass
   , FMX.PopupMenuExt.Form
-  , FMX.ThemeUnit
+  , FMX.Theme
   , FMX.PopupMenuExt.Constants
   , FMX.PopupMenuExt.Thread
   , FMX.FormExtUnit
