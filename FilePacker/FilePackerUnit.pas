@@ -6,9 +6,16 @@ uses
     System.Classes
   , System.SysUtils
   , System.Generics.Collections
+  , BinFileTypes
+  , StreamHandler
   ;
 
 const
+  PACK_FILE_VERSION: TBinFileVer = (
+    Major: 0;
+    Minor: 0;
+  );
+
   INNER_SPLITTER = '\';
 
 type
@@ -20,89 +27,105 @@ type
 
   TFatDict = TDictionary<String, TFat>;
 
-  TFilePacker = class
+  TStreamHandlerExt = class(TStreamHandler)
   strict private
+    FOwner: TStreamHandlerExt;
+    FChild: TStreamHandlerExt;
     FFatDict: TFatDict;
-    FPackFileStream: TFileStream;
 
-    procedure DoReadFat;
-
-    procedure DoPack(
-      const AVersion: String;
-      const ARootDir: String;
-      const AContentDir: String;
-      const AExt: String);
-
-    class procedure CheckPosition(
-      const AFileStream: TFileStream;
-      const APos: Int64);
-
-    //property FatDict: TFatDict read FFatDict write FFatDict;
-    property PackFileStream: TFileStream read FPackFileStream;
-  private
-    class function WriteString(
-      const AFileStream: TFileStream;
-      const APos: Int64;
-      const AStr: String): Int64;
-    class function ReadString(
-      const AFileStream: TFileStream;
-      const APos: Int64;
-      var AStr: String): Int64;
-
-    class function WriteInt64(
-      const AFileStream: TFileStream;
-      const APos: Int64;
-      const AVal: Int64): Int64;
-    class function ReadInt64(
-      const AFileStream: TFileStream;
-      const APos: Int64;
-      var AVal: Int64): Int64;
-
-    class function WriteVersion(
-      const AFileStream: TFileStream;
-      const AStr: String): Int64;
-    class function ReadVersion(
-      const AFileStream: TFileStream): String;
-
-    class function WriteFileCount(
-      const AFileStream: TFileStream;
-      const AVal: Int64): Int64;
-    class function ReadFileCount(
-      const AFileStream: TFileStream): Int64;
-
-    class function WriteFileName(
-      const AFileStream: TFileStream;
-      const AStr: String): Int64;
-    class function ReadFileName(
-      const AFileStream: TFileStream): String;
-
-    class function WriteFilePos(
-      const AFileStream: TFileStream;
-      const AVal: Int64): Int64;
-    class function ReadFilePos(
-      const AFileStream: TFileStream): Int64;
-
-    class function WriteFileSize(
-      const AFileStream: TFileStream;
-      const AVal: Int64): Int64;
-    class function ReadFileSize(
-      const AFileStream: TFileStream): Int64;
-
-    class function WriteFat(
-      const AFileStream: TFileStream;
-      const AVal: TFat): Int64;
+    property Child: TStreamHandlerExt read FChild write FChild;
   public
     constructor Create(
-      const APackedFileName: String;
-      const AMode: Word = fmOpenRead);
+      const AStream: TStream;
+      const AStartOffset: Int64;
+      const AIsStreamOwner: Boolean;
+      const AOwner: TStreamHandlerExt = nil);
     destructor Destroy; override;
 
-    class procedure Pack(
-      const AVersion: String;
-      const ARootDir: String;
-      const AContentDir: String;
-      const AExt: String;
-      const APackedFileName: String);
+    property Owner: TStreamHandlerExt read FOwner;
+
+//    procedure WriteSignature;
+//    procedure WriteVersion;
+//    procedure WriteContentSignature(const AContentSignature: TBinFileSign);
+//    procedure WriteContentVersion(const AContentVersion: TBinFileVer);
+
+    procedure WriteFileCount(const AVal: Int64);
+    procedure WriteFileName(const AStr: String);
+    procedure WriteFilePos(const AVal: Int64);
+    procedure WriteFileSize(const AVal: Int64);
+    procedure WriteFat(const AVal: TFat);
+
+//    function ReadSignature: TBinFileSign;
+//    function ReadVersion: TBinFileVer;
+//    function ReadContentSignature: TBinFileSign;
+//    function ReadContentVersion: TBinFileVer;
+
+    function ReadFileCount: Int64;
+    function ReadFileName: String;
+    function ReadFilePos: Int64;
+    function ReadFileSize: Int64;
+    procedure ReadFat(var AFatDict: TFatDict);
+
+//    procedure PassHeader;
+    procedure RefreshFat;
+
+    procedure ExtractToMemoryStream(
+      const APosFrom: Int64;
+      const ASize: Int64;
+      const AMemoryStream: TMemoryStream);
+
+    function GetFat(const APackedFileName: String): TFat;
+    procedure GetFileList(const AFileList: TStringList);
+    function GetFileListText: String;
+  end;
+
+  TTransitionStack = class(TList<Int64>)
+  public
+    function GetLast: Int64;
+  end;
+
+  TFilePacker = class
+  strict private
+    FPackFileStream: TStream;
+    // Владелец всех TStreamHandlerExt по цепочке
+    // В процессе не участвует, работает хранителем иерархии
+    // При уничтожении TFilePacker отрабатывает уничтожение всех чилдренов
+//    FPackFileStreamHandler: TStreamHandlerExt;
+    // Текущий TStreamHandlerExt
+    FStreamHandler: TStreamHandlerExt;
+
+    // Сигнатура структуры упаковщика
+    FSignature: TBinFileSign;
+    // Версия упаковщика
+    FVersion: TBinFileVer;
+
+    // Сигнатура содержимого упакованного в файл контента
+    FContentSignature: TBinFileSign;
+    // Версия содержимого упакованного в файл контента
+    FContentVersion: TBinFileVer;
+
+    FTransitionStack: TTransitionStack;
+
+    procedure CreateFilePacker(
+      const APackFileName: String;
+      const AMode: Word = fmOpenRead;
+      const AStartOffset: Int64 = 0);
+
+    function GetPackedFileStartOffset(
+      const APackedFileName: String): Int64;
+
+    function GetSignature: TBinFileSign;
+    function GetVersion: TBinFileVer;
+    function GetContentSignature: TBinFileSign;
+    function GetContentVersion: TBinFileVer;
+  private
+  public
+    constructor Create(
+      const APackFileName: String;
+      const AMode: Word = fmOpenRead;
+      const AStartOffset: Int64 = 0);
+
+    destructor Destroy; override;
 
     procedure ExtractToMemoryStream(
       const AExtractingFileName: String;
@@ -110,6 +133,29 @@ type
 
     procedure GetFileList(const AFileList: TStringList);
     function GetFileListText: String;
+
+    property Signature: TBinFileSign read GetSignature;
+    property Version: TBinFileVer read GetVersion;
+    property ContentSignature: TBinFileSign read GetContentSignature;
+    property ContentVersion: TBinFileVer read GetContentVersion;
+
+    function GetPackedFileSignature(
+      const APackedFileName: String): TBinFileSign;
+
+    procedure RefreshFat;
+
+    procedure GoIn(const APackedFileName: String);
+    procedure GoOut;
+
+    class function GetBinFileHeader(const AFileName: String): TBinFileHeader;
+
+    class procedure Pack(
+      const AContentSignature: TBinFileSign;
+      const AContentVersion: TBinFileVer;
+      const ARootDir: String;
+      const AContentDir: String;
+      const AExt: String;
+      const APackedFileName: String);
   end;
 
 implementation
@@ -118,258 +164,259 @@ uses
     FileToolsUnit
   ;
 
-constructor TFilePacker.Create(
-  const APackedFileName: String;
-  const AMode: Word = fmOpenRead);
+{ TTransitionStack }
+
+function TTransitionStack.GetLast: Int64;
+begin
+  Result := -1;
+
+  if Count = 0 then
+    Exit;
+
+  Result := Last;
+  Delete(Pred(Count));
+end;
+
+{ TFilePacker }
+
+procedure TFilePacker.CreateFilePacker(
+  const APackFileName: String;
+  const AMode: Word;
+  const AStartOffset: Int64);
 var
   FileStream: TFileStream;
 begin
-  if not FileExists(APackedFileName) then
+  if not FileExists(APackFileName) then
   begin
-    FileStream := TFileStream.Create(APackedFileName, fmCreate);
+    FileStream := TFileStream.Create(APackFileName, fmCreate);
     FreeAndNil(FileStream);
   end;
 
-  FFatDict := TFatDict.Create;
+  FPackFileStream := TFileStream.Create(APackFileName, AMode);
 
-  FPackFileStream := TFileStream.Create(APackedFileName, AMode);
+//  FPackFileStreamHandler := TStreamHandlerExt.Create(
+//    FPackFileStream, AStartOffset, true);
 
-  if FPackFileStream.Size = 0 then
+  FStreamHandler := TStreamHandlerExt.Create(
+    FPackFileStream, AStartOffset, true);
+  //FPackFileStreamHandler;
+
+  // В случае если создаем файл, то FPackFileStream.Size = 0
+  if FStreamHandler.Size = 0 then
     Exit;
 
-  DoReadFat;
+  FSignature := FStreamHandler.ReadSignature;
+  FVersion := FStreamHandler.ReadVersion;
+  FContentSignature := FStreamHandler.ReadContentSignature;
+  FContentVersion := FStreamHandler.ReadContentVersion;
+
+  // ===== Заголовок =====
+  if FSignature <> PACK_FILE_SIGNATURE then
+  begin
+    FStreamHandler.Free;
+    raise Exception.Create('Invalid file signature');
+  end;
+
+  if FVersion.Major <> PACK_FILE_VERSION.Major then
+  begin
+    FStreamHandler.Free;
+    raise Exception.CreateFmt(
+      'Unsupported major file version: %d',
+      [Version.Major]);
+  end;
+
+  FStreamHandler.RefreshFat;
+end;
+
+constructor TFilePacker.Create(
+  const APackFileName: String;
+  const AMode: Word = fmOpenRead;
+  const AStartOffset: Int64 = 0);
+begin
+  FPackFileStream := nil;
+  FStreamHandler := nil;
+  FTransitionStack := TTransitionStack.Create;
+
+  CreateFilePacker(
+    APackFileName,
+    AMode,
+    AStartOffset);
 end;
 
 destructor TFilePacker.Destroy;
 begin
-  FreeAndNil(FFatDict);
-  FreeAndNil(FPackFileStream);
+  FreeAndNil(FTransitionStack);
+
+  if Assigned(FStreamHandler) then
+    FreeAndNil(FStreamHandler);
+
+//  if Assigned(FPackFileStreamHandler) then
+//    FreeAndNil(FPackFileStreamHandler);
 end;
 
-class procedure TFilePacker.CheckPosition(
-  const AFileStream: TFileStream;
-  const APos: Int64);
-begin
-  if (APos < 0)
-      or
-     (APos > AFileStream.Size)
-  then
-    raise Exception.Create('Position out of range');
-end;
-
-class function TFilePacker.WriteInt64(
-  const AFileStream: TFileStream;
-  const APos: Int64;
-  const AVal: Int64): Int64;
-begin
-  CheckPosition(AFileStream, APos);
-
-  AFileStream.Position := APos;
-
-  AFileStream.Write(AVal, SizeOf(Int64));
-
-  Result := AFileStream.Position;
-end;
-
-class function TFilePacker.ReadInt64(
-  const AFileStream: TFileStream;
-  const APos: Int64;
-  var AVal: Int64): Int64;
-begin
-  CheckPosition(AFileStream, APos);
-
-  AFileStream.Position := APos;
-
-  AFileStream.Read(AVal, SizeOf(Int64));
-
-  Result := AFileStream.Position;
-end;
-
-class function TFilePacker.WriteString(
-  const AFileStream: TFileStream;
-  const APos: Int64;
-  const AStr: String): Int64;
+procedure TFilePacker.ExtractToMemoryStream(
+  const AExtractingFileName: String;
+  const AMemoryStream: TMemoryStream);
 var
-  Len: Cardinal;
+  Fat: TFat;
 begin
-  CheckPosition(AFileStream, APos);
+  if not Assigned(AMemoryStream) then
+    raise Exception.Create('Memory stream reference is nil');
 
-  AFileStream.Position := APos;
+  Fat := FStreamHandler.GetFat(AExtractingFileName);
 
-  Len := AStr.Length;
-  AFileStream.Write(Len, SizeOf(Cardinal));
-  AFileStream.Write(AStr[1], SizeOf(Char) * Len);
-
-  Result := AFileStream.Position;
-end;
-
-class function TFilePacker.ReadString(
-  const AFileStream: TFileStream;
-  const APos: Int64;
-  var AStr: String): Int64;
-var
-  Len: Cardinal;
-begin
-  CheckPosition(AFileStream, APos);
-
-  AStr := '';
-  AFileStream.Position := APos;
-
-  AFileStream.Read(Len, SizeOf(Cardinal));
-  SetLength(AStr, Len);
-  AFileStream.Read(AStr[1], SizeOf(Char) * Len);
-
-  Result := AFileStream.Position;
-end;
-
-class function TFilePacker.WriteVersion(
-  const AFileStream: TFileStream;
-  const AStr: String): Int64;
-begin
-  Result := WriteString(AFileStream, 0, AStr);
-end;
-
-class function TFilePacker.ReadVersion(
-  const AFileStream: TFileStream): String;
-begin
-  ReadString(AFileStream, 0, Result);
-end;
-
-class function TFilePacker.WriteFileCount(
-  const AFileStream: TFileStream;
-  const AVal: Int64): Int64;
-begin
-  ReadVersion(AFileStream);
-  Result := WriteInt64(AFileStream, AFileStream.Position, AVal);
-end;
-
-class function TFilePacker.ReadFileCount(
-  const AFileStream: TFileStream): Int64;
-begin
-  ReadVersion(AFileStream);
-  ReadInt64(AFileStream, AFileStream.Position, Result);
-end;
-
-class function TFilePacker.WriteFileName(
-  const AFileStream: TFileStream;
-  const AStr: String): Int64;
-begin
-  Result := WriteString(AFileStream, AFileStream.Position, AStr);
-end;
-
-class function TFilePacker.ReadFileName(
-  const AFileStream: TFileStream): String;
-begin
-  ReadString(AFileStream, AFileStream.Position, Result);
-end;
-
-class function TFilePacker.WriteFilePos(
-  const AFileStream: TFileStream;
-  const AVal: Int64): Int64;
-begin
-  Result := WriteInt64(AFileStream, AFileStream.Position, AVal);
-end;
-
-class function TFilePacker.ReadFilePos(
-  const AFileStream: TFileStream): Int64;
-begin
-  ReadInt64(AFileStream, AFileStream.Position, Result);
-end;
-
-class function TFilePacker.WriteFileSize(
-  const AFileStream: TFileStream;
-  const AVal: Int64): Int64;
-begin
-  Result := WriteInt64(AFileStream, AFileStream.Position, AVal);
-end;
-
-class function TFilePacker.ReadFileSize(
-  const AFileStream: TFileStream): Int64;
-begin
-  ReadInt64(AFileStream, AFileStream.Position, Result);
-end;
-
-class function TFilePacker.WriteFat(
-  const AFileStream: TFileStream;
-  const AVal: TFat): Int64;
-begin
-  WriteString(AFileStream, AFileStream.Position, AVal.Name);
-  WriteInt64(AFileStream, AFileStream.Position, AVal.Pos);
-  Result := WriteInt64(AFileStream, AFileStream.Position, AVal.Size);
-end;
-
-class procedure TFilePacker.Pack(
-  const AVersion: String;
-  const ARootDir: String;
-  const AContentDir: String;
-  const AExt: String;
-  const APackedFileName: String);
-var
-  FilePacker: TFilePacker;
-  Mode: Word;
-begin
   try
-    Mode := fmOpenReadWrite;
-    if FileExists(APackedFileName) then
-      Mode := fmCreate;
-
-    FilePacker := TFilePacker.Create(APackedFileName, Mode);
-    try
-      FilePacker.DoPack(AVersion, ARootDir, AContentDir, AExt);
-    finally
-      FreeAndNil(FilePacker);
-    end;
+    FStreamHandler.ExtractToMemoryStream(
+      Fat.Pos,
+      Fat.Size,
+      AMemoryStream);
   except
     raise;
   end;
 end;
 
-procedure TFilePacker.DoReadFat;
-var
-  Version: String;
-  Fat: TFat;
-  FileCount: Int64;
+procedure TFilePacker.GetFileList(const AFileList: TStringList);
 begin
-  FPackFileStream.Position := 0;
-  Version := ReadVersion(FPackFileStream);
-  FileCount := ReadFileCount(FPackFileStream);
-  while FileCount > 0  do
-  begin
-    Dec(FileCount);
+  FStreamHandler.GetFileList(AFileList);
+end;
 
-    Fat.Name := ReadFileName(FPackFileStream);
-    Fat.Pos := ReadFilePos(FPackFileStream);
-    Fat.Size := ReadFileSize (FPackFileStream);
+function TFilePacker.GetFileListText: String;
+begin
+  Result := FStreamHandler.GetFileListText;
+end;
 
-    FFatDict.TryAdd(Fat.Name, Fat);
+function TFilePacker.GetPackedFileStartOffset(
+  const APackedFileName: String): Int64;
+var
+  Fat: TFat;
+begin
+  Fat := FStreamHandler.GetFat(APackedFileName);
+
+  Result := Fat.Pos + FStreamHandler.StartOffset;
+end;
+
+function TFilePacker.GetPackedFileSignature(
+  const APackedFileName: String): TBinFileSign;
+var
+//  Fat: TFat;
+  StreamHandler: TStreamHandlerExt;
+  StartOffset: Int64;
+begin
+  Result := '';
+
+  StartOffset := GetPackedFileStartOffset(APackedFileName);
+  if StartOffset > FPackFileStream.Size then
+    raise Exception.Create('The value of StartOffset is outside the stream size');
+
+  StreamHandler := TStreamHandlerExt.Create(
+    FPackFileStream,
+    StartOffset,
+    false);
+  try
+    {TODO: Сделать проверку на допустимые сигнатуры}
+    StreamHandler.ReadBuffer(Result, SizeOf(TBinFileSign));
+  finally
+    FreeAndNil(StreamHandler);
   end;
 end;
 
-procedure TFilePacker.DoPack(
-  const AVersion: String;
+function TFilePacker.GetSignature: TBinFileSign;
+begin
+  Result := FStreamHandler.ReadSignature;
+end;
+
+function TFilePacker.GetVersion: TBinFileVer;
+begin
+  Result := FStreamHandler.ReadVersion;
+end;
+
+function TFilePacker.GetContentSignature: TBinFileSign;
+begin
+  Result := FStreamHandler.ReadContentSignature;
+end;
+
+function TFilePacker.GetContentVersion: TBinFileVer;
+begin
+  Result := FStreamHandler.ReadContentVersion;
+end;
+
+procedure TFilePacker.RefreshFat;
+begin
+  FStreamHandler.RefreshFat;
+end;
+
+procedure TFilePacker.GoIn(const APackedFileName: String);
+var
+  StartOffset: Int64;
+begin
+  FTransitionStack.Add(FStreamHandler.StartOffset);
+
+  StartOffset := GetPackedFileStartOffset(APackedFileName);
+
+  FStreamHandler.StartOffset := StartOffset;
+
+  RefreshFat;
+end;
+
+procedure TFilePacker.GoOut;
+var
+  LastTransition: Int64;
+begin
+  LastTransition := FTransitionStack.GetLast;
+  if LastTransition < 0 then
+    Exit;
+
+  FStreamHandler.StartOffset := LastTransition;
+  FStreamHandler.RefreshFat;
+end;
+
+class procedure TFilePacker.Pack(
+  const AContentSignature: TBinFileSign;
+  const AContentVersion: TBinFileVer;
   const ARootDir: String;
   const AContentDir: String;
-  const AExt: String);
+  const AExt: String;
+  const APackedFileName: String);
 var
-  Version: String absolute AVersion;
   FileNames: TFileNames;
   FileName: String;
-  DestFileStream: TFileStream;
-  SourceFileStream: TFileStream;
+  DestStreamHandler: TStreamHandlerExt;
+  SourceStreamHandler: TStreamHandlerExt;
   i: Word;
   Fat: TFat;
   FileCount: Int64;
+  FileCountPosition: Int64;
   RootDir: String;
+  Mode: Word;
+  FileStream: TFileStream;
+  FatDict: TFatDict;
 begin
+  Mode := fmOpenReadWrite;
+  if not FileExists(APackedFileName) then
+    Mode := fmCreate;
+
   RootDir := ARootDir;
   if AContentDir.Length > 0 then
     RootDir := RootDir + INNER_SPLITTER + AContentDir;
   TFileTools.GetTreeOfFileNames(RootDir, [AExt], FileNames);
 
-  DestFileStream := PackFileStream;
   try
-    WriteVersion(DestFileStream, Version);
-    WriteFileCount(DestFileStream, -1);
+    FileStream := TFileStream.Create(APackedFileName, Mode);
+  except
+    raise;
+  end;
+
+  FatDict := TFatDict.Create;
+  DestStreamHandler := TStreamHandlerExt.Create(FileStream, 0, true);
+  try
+    DestStreamHandler.WriteSignature(PACK_FILE_SIGNATURE);
+    DestStreamHandler.WriteVersion(PACK_FILE_VERSION);
+    DestStreamHandler.WriteContentSignature(AContentSignature);
+    DestStreamHandler.WriteContentVersion(AContentVersion);
+
+    // Запоминаем позицию FileCount
+    FileCountPosition := DestStreamHandler.Position;
+    DestStreamHandler.WriteFileCount(-1);
 
     i := 0;
     while i < Length(FileNames) do
@@ -384,68 +431,314 @@ begin
 
       FileName := StringReplace(FileName, ARootDir + INNER_SPLITTER, '', [rfReplaceAll, rfIgnoreCase]);
 
-      WriteFileName(DestFileStream, FileName);
-      WriteFilePos(DestFileStream, -1);
-      WriteFileSize(DestFileStream, -1);
+      DestStreamHandler.WriteFileName(FileName);
+      DestStreamHandler.WriteFilePos(-1);
+      DestStreamHandler.WriteFileSize(-1);
 
       Fat.Name := FileName;
       Fat.Pos := -1;
       Fat.Size := -1;
 
-      FFatDict.TryAdd(FileName, Fat);
+      FatDict.TryAdd(FileName, Fat);
 
       Inc(i);
     end;
 
-    for FileName in FFatDict.Keys do
+    for FileName in FatDict.Keys do
     begin
-      SourceFileStream := TFileStream.Create(ARootDir + INNER_SPLITTER + FileName, fmOpenRead);
+      SourceStreamHandler :=
+        TStreamHandlerExt.Create(
+          TFileStream.Create(ARootDir + INNER_SPLITTER + FileName, fmOpenRead),
+          0,
+          true);
       try
-        FFatDict.TryGetValue(FileName, Fat);
+        FatDict.TryGetValue(FileName, Fat);
 
-        Fat.Pos := DestFileStream.Position;
-        Fat.Size := SourceFileStream.Size;
+        Fat.Pos := DestStreamHandler.Position;
+        Fat.Size := SourceStreamHandler.Size;
 
-        SourceFileStream.Position := 0;
-        DestFileStream.Position := DestFileStream.Size;
-        DestFileStream.CopyFrom(SourceFileStream);
+        SourceStreamHandler.Position := 0;
+        DestStreamHandler.Position := DestStreamHandler.Size;
+        DestStreamHandler.CopyFrom(SourceStreamHandler);
 
-        FFatDict.AddOrSetValue(FileName, Fat);
+        FatDict.AddOrSetValue(FileName, Fat);
       finally
-        FreeAndNil(SourceFileStream);
+        FreeAndNil(SourceStreamHandler);
       end;
     end;
 
-    FileCount := FFatDict.Count;
-    WriteFileCount(DestFileStream, FileCount);
-    for Fat in FFatDict.Values do
-      WriteFat(DestFileStream, Fat);
-  except
-    raise;
+    FileCount := FatDict.Count;
+    // Возвращаемся к позиции FileCount
+    DestStreamHandler.Position := FileCountPosition;
+    DestStreamHandler.WriteFileCount(FileCount);
+    for Fat in FatDict.Values do
+      DestStreamHandler.WriteFat(Fat);
+  finally
+    FreeAndNil(FatDict);
+    FreeAndNil(DestStreamHandler);
   end;
 end;
 
-procedure TFilePacker.ExtractToMemoryStream(
-  const AExtractingFileName: String;
-  const AMemoryStream: TMemoryStream);
+//class function TFilePacker.ReadFileSignarute(
+//  const AFileName: String): TBinFileSign;
+//var
+//  FileStream: TFileStream;
+//  Signature: TBinFileSign;
+//begin
+//  if not FileExists(AFileName) then
+//    raise Exception.CreateFmt(
+//      'TFilePacker.ReadFileSignarute -> File "%s" not exists',
+//      [AFileName]);
+//
+//  Signature := '';
+//
+//  FileStream := TFileStream.Create(AFileName, fmOpenRead);
+//  try
+//    FileStream.Position := 0;
+//    FileStream.ReadBuffer(Signature, SizeOf(TBinFileSign));
+//  finally
+//    FreeAndNil(FileStream);
+//  end;
+//
+//  Result := Signature;
+//end;
+
+class function TFilePacker.GetBinFileHeader(
+  const AFileName: String): TBinFileHeader;
+var
+  StremHandler: TStreamHandler;
+begin
+  if not FileExists(AFileName) then
+    raise Exception.CreateFmt(
+      'TFilePacker.ReadFileSignarute -> File "%s" not exists',
+      [AFileName]);
+
+  StremHandler := TStreamHandler.Create(
+    TFileStream.Create(AFileName, fmOpenRead), 0, true);
+  try
+    Result.Signature :=  StremHandler.ReadSignature;
+    Result.Version :=  StremHandler.ReadVersion;
+    Result.ContentSignature :=  StremHandler.ReadContentSignature;
+    Result.ContentVersion :=  StremHandler.ReadContentVersion;
+  finally
+    FreeAndNil(StremHandler);
+  end;
+end;
+
+{ TStreamHandlerExt }
+
+constructor TStreamHandlerExt.Create(
+  const AStream: TStream;
+  const AStartOffset: Int64;
+  const AIsStreamOwner: Boolean;
+  const AOwner: TStreamHandlerExt = nil);
+begin
+  inherited Create(AStream, AStartOffset, AIsStreamOwner);
+
+  FOwner := AOwner;
+  if Assigned(FOwner) then
+    FOwner.Child := Self;
+  FChild := nil;
+
+  FFatDict := TFatDict.Create;
+end;
+
+destructor TStreamHandlerExt.Destroy;
+begin
+  FreeAndNil(FFatDict);
+
+  if Assigned(FOwner) then
+    FOwner.Child := nil;
+
+  if Assigned(FChild) then
+    FreeAndNil(FChild);
+
+  inherited;
+end;
+
+//procedure TStreamHandlerExt.WriteSignature;
+//begin
+//  Position := 0;
+//  WriteBuffer(FILE_SIGNATURE, SizeOf(TBinFileSign));
+//end;
+//
+//procedure TStreamHandlerExt.WriteVersion;
+//begin
+//  Position := 0 + SizeOf(TBinFileSign);
+//  WriteBuffer(FILE_VERSION, SizeOf(TBinFileVer));
+//end;
+
+//procedure TStreamHandlerExt.WriteContentSignature(const AContentSignature: TBinFileSign);
+//begin
+//  Position := 0 + SizeOf(TBinFileSign) + SizeOf(TBinFileVer);
+//  WriteBuffer(AContentSignature, SizeOf(TBinFileSign));
+//end;
+//
+//procedure TStreamHandlerExt.WriteContentVersion(const AContentVersion: TBinFileVer);
+//begin
+//  Position := 0 + SizeOf(TBinFileSign) + SizeOf(TBinFileVer) + SizeOf(TBinFileSign);
+//  WriteBuffer(AContentVersion, SizeOf(TBinFileVer));
+//end;
+
+procedure TStreamHandlerExt.WriteFileCount(const AVal: Int64);
+begin
+  WriteInt64(AVal);
+end;
+
+procedure TStreamHandlerExt.WriteFileName(const AStr: String);
+begin
+  WriteString(AStr);
+end;
+
+procedure TStreamHandlerExt.WriteFilePos(const AVal: Int64);
+begin
+  WriteInt64(AVal);
+end;
+
+procedure TStreamHandlerExt.WriteFileSize(const AVal: Int64);
+begin
+  WriteInt64(AVal);
+end;
+
+procedure TStreamHandlerExt.WriteFat(const AVal: TFat);
+begin
+  WriteString(AVal.Name);
+  WriteInt64(AVal.Pos);
+  WriteInt64(AVal.Size);
+end;
+
+//function TStreamHandlerExt.ReadSignature: TBinFileSign;
+//var
+//  Signature: TBinFileSign;
+//begin
+//  Signature := '';
+//
+//  Position := 0;
+//  ReadBuffer(Signature, SizeOf(TBinFileSign));
+//
+//  Result := Signature;
+//end;
+//
+//function TStreamHandlerExt.ReadVersion: TBinFileVer;
+//var
+//  Version: TBinFileVer;
+//begin
+//  Version.Major := 0;
+//  Version.Minor := 0;
+//
+//  ReadSignature;
+//
+//  ReadBuffer(Version, SizeOf(TBinFileVer));
+//
+//  Result := Version;
+//end;
+
+//function TStreamHandlerExt.ReadContentSignature: TBinFileSign;
+//var
+//  ContentSignature: TBinFileSign;
+//begin
+//  ContentSignature := '';
+//
+//  ReadSignature;
+//  ReadVersion;
+//
+//  ReadBuffer(ContentSignature, SizeOf(TBinFileSign));
+//
+//  Result := ContentSignature;
+//end;
+//
+//function TStreamHandlerExt.ReadContentVersion: TBinFileVer;
+//var
+//  Version: TBinFileVer;
+//begin
+//  Version.Major := 0;
+//  Version.Minor := 0;
+//
+//  ReadSignature;
+//  ReadVersion;
+//  ReadContentSignature;
+//
+//  ReadBuffer(Version, SizeOf(TBinFileVer));
+//
+//  Result := Version;
+//end;
+
+function TStreamHandlerExt.ReadFileCount: Int64;
+begin
+  Result := ReadInt64;
+end;
+
+function TStreamHandlerExt.ReadFileName: String;
+begin
+  Result := ReadString;
+end;
+
+function TStreamHandlerExt.ReadFilePos: Int64;
+begin
+  Result := ReadInt64;
+end;
+
+function TStreamHandlerExt.ReadFileSize: Int64;
+begin
+  Result := ReadInt64;
+end;
+
+procedure TStreamHandlerExt.ReadFat(var AFatDict: TFatDict);
 var
   Fat: TFat;
+  FileCount: Int64;
+begin
+  AFatDict.Clear;
+
+  FileCount := ReadFileCount;
+  while FileCount > 0  do
+  begin
+    Dec(FileCount);
+
+    Fat.Name := ReadFileName;
+    Fat.Pos := ReadFilePos;
+    Fat.Size := ReadFileSize;
+
+    AFatDict.TryAdd(Fat.Name, Fat);
+  end;
+end;
+
+//procedure TStreamHandlerExt.PassHeader;
+//begin
+//  ReadSignature;
+//  ReadVersion;
+//  ReadContentSignature;
+//  ReadContentVersion;
+//end;
+
+procedure TStreamHandlerExt.RefreshFat;
+begin
+  Position := 0;
+
+  PassHeader;
+
+  ReadFat(FFatDict);
+end;
+
+procedure TStreamHandlerExt.ExtractToMemoryStream(
+  const APosFrom: Int64;
+  const ASize: Int64;
+  const AMemoryStream: TMemoryStream);
 begin
   if not Assigned(AMemoryStream) then
     raise Exception.Create('Memory stream reference is nil');
 
-  if not FFatDict.TryGetValue(AExtractingFileName, Fat) then
-    raise Exception.CreateFmt('File "%s" not found', [AExtractingFileName]);
-
-  try
-    FPackFileStream.Position := Fat.Pos;
-    AMemoryStream.CopyFrom(FPackFileStream, Fat.Size);
-  except
-    raise;
-  end;
+  Position := APosFrom;
+  CopyTo(AMemoryStream, ASize);
 end;
 
-procedure TFilePacker.GetFileList(const AFileList: TStringList);
+function TStreamHandlerExt.GetFat(const APackedFileName: String): TFat;
+begin
+  if not FFatDict.TryGetValue(APackedFileName, Result) then
+    raise Exception.CreateFmt('File "%s" not found', [APackedFileName]);
+end;
+
+procedure TStreamHandlerExt.GetFileList(const AFileList: TStringList);
 var
   FileName: String;
 begin
@@ -456,7 +749,7 @@ begin
     AFileList.Add(FileName);
 end;
 
-function TFilePacker.GetFileListText: String;
+function TStreamHandlerExt.GetFileListText: String;
 var
   StringList: TStringList;
 begin
@@ -468,5 +761,6 @@ begin
     FreeAndNil(StringList);
   end;
 end;
+
 
 end.

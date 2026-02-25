@@ -44,6 +44,9 @@ begin
   if not Assigned(ABitmap) then
     raise Exception.Create('Bitmap reference is nil');
 
+  if AExtractingFileName.Length = 0 then
+    raise Exception.Create('Extracting file name is empty');
+
   MemoryStream := TMemoryStream.Create;
   try
     try

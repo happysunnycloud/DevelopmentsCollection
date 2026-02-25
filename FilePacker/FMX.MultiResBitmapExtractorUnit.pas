@@ -1,4 +1,4 @@
-﻿// Класс извлечения битмапов разных разрешений из файла с упакованными изображениями
+﻿// Класс извлечения битмапов различных разрешений из файла с упакованными изображениями
 unit FMX.MultiResBitmapExtractorUnit;
 
 interface
@@ -18,7 +18,11 @@ type
   public
     class procedure Extract(
       const APackFileName: String;
-      const AMultiResBitmaps: TMultiResBitmaps);
+      const AMultiResBitmaps: TMultiResBitmaps); overload;
+    class procedure Extract(
+      const APackFileName: String;
+      const APackedFileName: String;
+      const AMultiResBitmaps: TMultiResBitmaps); overload;
   end;
 
 implementation
@@ -64,10 +68,22 @@ begin
   AHeight := (Copy(AResString, SplitterPos + 1, AResString.Length)).ToSingle;
 end;
 
-
 class procedure TMultiResBitmapExtractor.Extract(
   const APackFileName: String;
   const AMultiResBitmaps: TMultiResBitmaps);
+
+begin
+  Extract(
+    APackFileName,
+    '',
+    AMultiResBitmaps);
+end;
+
+class procedure TMultiResBitmapExtractor.Extract(
+  const APackFileName: String;
+  const APackedFileName: String;
+  const AMultiResBitmaps: TMultiResBitmaps);
+
 type
   TResolutionsDict = TDictionary<String, String>;
 
@@ -109,7 +125,18 @@ begin
   if not FileExists(APackFileName) then
     raise Exception.CreateFmt('File "%s" not exists', [APackFileName]);
 
+  // Может быть APackedFileName.Length = 0 - это нормально
+//  if APackedFileName.Length = 0 then
+//    raise Exception.Create('Packed file name is empty');
+
+  if not Assigned(AMultiResBitmaps) then
+    raise Exception.Create('MultiResBitmaps reference is nil');
+
   ImagesFile := TFilePacker.Create(APackFileName, fmOpenRead);
+
+  if APackedFileName.Length > 0 then
+    ImagesFile.GoIn(APackedFileName);
+
   FileList := TStringList.Create;
   ResolutionsDict := TResolutionsDict.Create;
   MemoryStream := TMemoryStream.Create;

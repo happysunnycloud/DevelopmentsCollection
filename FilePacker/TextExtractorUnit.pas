@@ -36,6 +36,9 @@ begin
   if not Assigned(AFilePacker) then
     raise Exception.Create('File packer reference is nil');
 
+  if AExtractingFileName.Length = 0 then
+    raise Exception.Create('Extracting file name is empty');
+
   StringStream := TStringStream.Create;
   MemoryStream := TMemoryStream.Create;
   try
