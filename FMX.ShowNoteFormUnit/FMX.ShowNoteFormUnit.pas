@@ -9,7 +9,7 @@ uses
   FMX.Layouts, FMX.Controls.Presentation, FMX.ScrollBox, FMX.Memo, FMX.Objects,
   FMX.StdCtrls, System.Generics.Collections
   , FMX.FormExtUnit
-  , FMX.ThemeUnit;
+  , FMX.Theme;
 
 const
   NOTE_IDENTS_STATE_FILE_NAME = 'NoteIdentsState.xml';
@@ -656,9 +656,9 @@ begin
   YesNoButtonsLayout.Visible := false;
   DontShowNextTimeCheckBox.Visible := false;
 
-  BorderFrame.BorderFrameKind := TBorderFrameKind.bfkNormal;
+  BorderFrame.Kind := TBorderFrameKind.bfkNormal;
   BorderFrame.CaptionColor := $FFFFFFFF;
-  BorderFrame.BorderColor := $FF2A001A;
+  BorderFrame.Color := $FF2A001A;
   BorderFrame.ToolButtonColor := BorderFrame.CaptionColor;
   BorderFrame.ToolButtonMouseOverColor := $FF9B0060;
 
@@ -789,7 +789,7 @@ class procedure TNoteForm.Init(
 begin
   FThemeOfClass := TTheme.Create;
   if Assigned(ATheme) then
-    ATheme.CopyTo(FThemeOfClass);
+    FThemeOfClass.CopyFrom(ATheme);
 
   FNoteIdentList := TNoteIdentList.Create;
   try
