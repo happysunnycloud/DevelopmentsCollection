@@ -1,0 +1,58 @@
+inherited AddingFilesFrame: TAddingFilesFrame
+  inherited MenuLayout: TLayout
+    inherited CloseButton: TButton
+      TabOrder = 3
+      OnClick = CloseButtonClick
+    end
+    object BackButton: TButton
+      Align = Left
+      Position.X = 240.000000000000000000
+      Size.Width = 80.000000000000000000
+      Size.Height = 30.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 2
+      Text = 'Back'
+      OnClick = BackButtonClick
+    end
+  end
+  inherited ContentContainerLayout: TLayout
+    inherited ScrollBox: TScrollBox
+      Viewport.Width = 326.000000000000000000
+      Viewport.Height = 465.000000000000000000
+    end
+    inherited ContentLayout: TLayout
+      object ImageBackgroundRectangle: TRectangle
+        Align = Contents
+        Fill.Color = claBlack
+        Size.Width = 599.000000000000000000
+        Size.Height = 465.000000000000000000
+        Size.PlatformDefault = False
+        Stroke.Thickness = 0.000000000000000000
+      end
+      object Memo: TMemo
+        Touch.InteractiveGestures = [Pan, LongTap, DoubleTap]
+        DataDetectorTypes = []
+        Align = Left
+        Size.Width = 275.000000000000000000
+        Size.Height = 465.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 0
+        Viewport.Width = 271.000000000000000000
+        Viewport.Height = 461.000000000000000000
+      end
+      object Image: TImage
+        MultiResBitmap = <
+          item
+          end>
+        Align = Client
+        Margins.Left = 10.000000000000000000
+        Margins.Top = 10.000000000000000000
+        Margins.Right = 10.000000000000000000
+        Margins.Bottom = 10.000000000000000000
+        Size.Width = 304.000000000000000000
+        Size.Height = 445.000000000000000000
+        Size.PlatformDefault = False
+      end
+    end
+  end
+end

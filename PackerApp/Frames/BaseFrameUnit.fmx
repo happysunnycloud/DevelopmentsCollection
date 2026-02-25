@@ -1,0 +1,114 @@
+object BaseFrame: TBaseFrame
+  Margins.Left = 10.000000000000000000
+  Margins.Top = 10.000000000000000000
+  Margins.Right = 10.000000000000000000
+  Margins.Bottom = 10.000000000000000000
+  Size.Width = 965.000000000000000000
+  Size.Height = 579.000000000000000000
+  Size.PlatformDefault = False
+  object BackgroundRectangle: TRectangle
+    Align = Contents
+    Fill.Color = xFF00C466
+    Size.Width = 965.000000000000000000
+    Size.Height = 579.000000000000000000
+    Size.PlatformDefault = False
+    Stroke.Kind = None
+    Stroke.Thickness = 0.000000000000000000
+    Stroke.Dash = Dot
+  end
+  object MenuLayout: TLayout
+    Align = Top
+    Size.Width = 965.000000000000000000
+    Size.Height = 30.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 0
+    object PackButton: TButton
+      Align = Left
+      Size.Width = 80.000000000000000000
+      Size.Height = 30.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 0
+      Text = 'Pack'
+      OnClick = PackButtonClick
+    end
+    object OpenButton: TButton
+      Align = Left
+      Position.X = 80.000000000000000000
+      Size.Width = 80.000000000000000000
+      Size.Height = 30.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 1
+      Text = 'Open'
+      OnClick = OpenButtonClick
+    end
+    object CloseButton: TButton
+      Align = Left
+      Position.X = 160.000000000000000000
+      Size.Width = 80.000000000000000000
+      Size.Height = 30.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 2
+      Text = 'Close'
+    end
+  end
+  object ContentContainerLayout: TLayout
+    Align = Client
+    Size.Width = 965.000000000000000000
+    Size.Height = 512.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 1
+    object ScrollBox: TScrollBox
+      Align = Left
+      Margins.Left = 10.000000000000000000
+      Margins.Top = 10.000000000000000000
+      Margins.Right = 10.000000000000000000
+      Margins.Bottom = 10.000000000000000000
+      Position.X = 10.000000000000000000
+      Position.Y = 37.000000000000000000
+      Size.Width = 326.000000000000000000
+      Size.Height = 465.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 1
+      Viewport.Width = 326.000000000000000000
+      Viewport.Height = 465.000000000000000000
+    end
+    object ContentLayout: TLayout
+      Align = Client
+      Margins.Left = 10.000000000000000000
+      Margins.Top = 10.000000000000000000
+      Margins.Right = 10.000000000000000000
+      Margins.Bottom = 10.000000000000000000
+      Size.Width = 599.000000000000000000
+      Size.Height = 465.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 2
+    end
+    object FileLabel: TLabel
+      Align = Top
+      Margins.Left = 10.000000000000000000
+      Margins.Top = 10.000000000000000000
+      Margins.Right = 10.000000000000000000
+      Position.X = 10.000000000000000000
+      Position.Y = 10.000000000000000000
+      Size.Width = 945.000000000000000000
+      Size.Height = 17.000000000000000000
+      Size.PlatformDefault = False
+      Text = 'File closed'
+      TabOrder = 3
+    end
+  end
+  object FileContentVersionLabel: TLabel
+    Align = Bottom
+    Margins.Left = 10.000000000000000000
+    Margins.Top = 10.000000000000000000
+    Margins.Right = 10.000000000000000000
+    Margins.Bottom = 10.000000000000000000
+    Position.X = 10.000000000000000000
+    Position.Y = 552.000000000000000000
+    Size.Width = 945.000000000000000000
+    Size.Height = 17.000000000000000000
+    Size.PlatformDefault = False
+    Text = 'File content version: 0.0'
+    TabOrder = 4
+  end
+end

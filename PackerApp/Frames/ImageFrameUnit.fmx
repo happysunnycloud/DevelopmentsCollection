@@ -1,0 +1,56 @@
+inherited ImageFrame: TImageFrame
+  Size.Width = 969.000000000000000000
+  Size.Height = 582.000000000000000000
+  inherited BackgroundRectangle: TRectangle
+    Size.Width = 969.000000000000000000
+    Size.Height = 582.000000000000000000
+  end
+  inherited MenuLayout: TLayout
+    Size.Width = 969.000000000000000000
+    inherited CloseButton: TButton
+      OnClick = CloseButtonClick
+    end
+  end
+  inherited ContentContainerLayout: TLayout
+    Size.Width = 969.000000000000000000
+    Size.Height = 515.000000000000000000
+    inherited ScrollBox: TScrollBox
+      Size.Height = 468.000000000000000000
+      Viewport.Width = 326.000000000000000000
+      Viewport.Height = 468.000000000000000000
+    end
+    inherited ContentLayout: TLayout
+      Size.Width = 603.000000000000000000
+      Size.Height = 468.000000000000000000
+      object ImageBackgroundRectangle: TRectangle
+        Align = Contents
+        Fill.Color = claBlack
+        Size.Width = 603.000000000000000000
+        Size.Height = 468.000000000000000000
+        Size.PlatformDefault = False
+        Stroke.Thickness = 0.000000000000000000
+      end
+      object Image: TImage
+        MultiResBitmap = <
+          item
+          end>
+        Align = Client
+        MarginWrapMode = Original
+        Margins.Left = 10.000000000000000000
+        Margins.Top = 10.000000000000000000
+        Margins.Right = 10.000000000000000000
+        Margins.Bottom = 10.000000000000000000
+        Size.Width = 583.000000000000000000
+        Size.Height = 448.000000000000000000
+        Size.PlatformDefault = False
+      end
+    end
+    inherited FileLabel: TLabel
+      Size.Width = 949.000000000000000000
+    end
+  end
+  inherited FileContentVersionLabel: TLabel
+    Position.Y = 555.000000000000000000
+    Size.Width = 949.000000000000000000
+  end
+end

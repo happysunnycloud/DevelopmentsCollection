@@ -1,0 +1,30 @@
+inherited TextFrame: TTextFrame
+  inherited MenuLayout: TLayout
+    inherited CloseButton: TButton
+      OnClick = CloseButtonClick
+    end
+  end
+  inherited ContentContainerLayout: TLayout
+    inherited ScrollBox: TScrollBox
+      Viewport.Width = 326.000000000000000000
+      Viewport.Height = 465.000000000000000000
+    end
+    inherited ContentLayout: TLayout
+      object Memo: TMemo
+        Touch.InteractiveGestures = [Pan, LongTap, DoubleTap]
+        DataDetectorTypes = []
+        Align = Client
+        Margins.Left = 10.000000000000000000
+        Margins.Top = 10.000000000000000000
+        Margins.Right = 10.000000000000000000
+        Margins.Bottom = 10.000000000000000000
+        Size.Width = 579.000000000000000000
+        Size.Height = 445.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 0
+        Viewport.Width = 579.000000000000000000
+        Viewport.Height = 445.000000000000000000
+      end
+    end
+  end
+end
