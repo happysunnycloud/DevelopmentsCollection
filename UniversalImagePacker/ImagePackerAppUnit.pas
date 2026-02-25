@@ -1,4 +1,4 @@
-unit ImagePackerAppUnit;
+﻿unit ImagePackerAppUnit;
 
 interface
 
@@ -9,19 +9,23 @@ uses
   FMX.StdCtrls
   , FilePackerUnit, FMX.Menus;
 
+const
+  FILE_CONTENT_VERSION: TContentVersionStr = 'PNGPACK|0.0';
+
 type
-  TForm1 = class(TForm)
+  TMainForm = class(TForm)
     Image: TImage;
     ScrollBox: TScrollBox;
-    MainMenu1: TMainMenu;
-    DoPackMenuItem: TMenuItem;
+    MainMenu: TMainMenu;
+    PackMenuItem: TMenuItem;
     OpenMenuItem: TMenuItem;
     Rectangle1: TRectangle;
     Layout1: TLayout;
     Button1: TButton;
+    FileContentVersionLabel: TLabel;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
-    procedure DoPackMenuItemClick(Sender: TObject);
+    procedure PackMenuItemClick(Sender: TObject);
     procedure OpenMenuItemClick(Sender: TObject);
     procedure Button1Click(Sender: TObject);
   private
@@ -36,7 +40,7 @@ type
   end;
 
 var
-  Form1: TForm1;
+  MainForm: TMainForm;
 
 implementation
 
@@ -51,14 +55,14 @@ const
   VERSION = '0.0';
   ROOT_PATH = '..\..\..';
 
-procedure TForm1.LabelOnClickHandler(Sender: TObject);
+procedure TMainForm.LabelOnClickHandler(Sender: TObject);
 begin
   FCurrentFileName := TLabel(Sender).Text;
   TImageExtractor.ExtractToBitmap(FFilePacker, FCurrentFileName, Image.Bitmap);
   //TArts.LoadToBitmap(FFilePacker, TLabel(Sender).Text, Image.Bitmap);
 end;
 
-procedure TForm1.DoPackMenuItemClick(Sender: TObject);
+procedure TMainForm.PackMenuItemClick(Sender: TObject);
 var
   RootDir: String;
   SaveDialog: TSaveDialog;
@@ -71,19 +75,22 @@ begin
     Exit;
 
   SaveDialog := TSaveDialog.Create(self);
-  SaveDialog.InitialDir := ParamStr(0);
-  SaveDialog.Filter := 'Packed files|*.pck';
-  SaveDialog.FilterIndex := 2;
+  try
+    SaveDialog.InitialDir := ParamStr(0);
+    SaveDialog.Filter := 'Packed files|*.pck';
+    SaveDialog.FilterIndex := 2;
 
-  SaveFileName := '';
-  if SaveDialog.Execute then
-  begin
-    SaveFileName := SaveDialog.FileName;
-    Ext := ExtractFileExt(SaveFileName);
-    if Ext.Length = 0 then
-      SaveFileName := SaveDialog.FileName + '.pck';
+    SaveFileName := '';
+    if SaveDialog.Execute then
+    begin
+      SaveFileName := SaveDialog.FileName;
+      Ext := ExtractFileExt(SaveFileName);
+      if Ext.Length = 0 then
+        SaveFileName := SaveDialog.FileName + '.pck';
+    end;
+  finally
+    SaveDialog.Free;
   end;
-  SaveDialog.Free;
 
   if SaveFileName.Length = 0 then
     Exit;
@@ -93,7 +100,7 @@ begin
       raise Exception.CreateFmt('Can not delete file "%s"', [SaveFileName]);
 
   TFilePacker.Pack(
-    VERSION,
+    FILE_CONTENT_VERSION,
     RootDir,
     '',
     'png',
@@ -102,7 +109,7 @@ begin
   ShowMessage('Done');
 end;
 
-procedure TForm1.OpenMenuItemClick(Sender: TObject);
+procedure TMainForm.OpenMenuItemClick(Sender: TObject);
 var
   OpenDialog: TOpenDialog;
   OpenFileName: String;
@@ -128,13 +135,13 @@ begin
   OpenPackFile(OpenFileName);
 end;
 
-procedure TForm1.FormDestroy(Sender: TObject);
+procedure TMainForm.FormDestroy(Sender: TObject);
 begin
   if Assigned(FFilePacker) then
     FreeAndNil(FFilePacker);
 end;
 
-procedure TForm1.Button1Click(Sender: TObject);
+procedure TMainForm.Button1Click(Sender: TObject);
 var
   SaveDialog: TSaveDialog;
   SaveFileName: String;
@@ -178,12 +185,12 @@ begin
   end;
 end;
 
-procedure TForm1.FormCreate(Sender: TObject);
+procedure TMainForm.FormCreate(Sender: TObject);
 begin
   ReportMemoryLeaksOnShutdown := true;
 end;
 
-procedure TForm1.GetImagesList;
+procedure TMainForm.GetImagesList;
 var
   FileNameList: TStringList;
   _Label: TLabel;
@@ -215,9 +222,11 @@ begin
   end;
 end;
 
-procedure TForm1.OpenPackFile(const APackFileName: String);
+procedure TMainForm.OpenPackFile(const APackFileName: String);
 begin
   FFilePacker := TFilePacker.Create(APackFileName, fmOpenRead);
+  FileContentVersionLabel.Text :=
+    'File content version: ' + FFilePacker.ContentVersion;
   GetImagesList;
 end;
 

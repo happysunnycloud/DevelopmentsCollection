@@ -3,7 +3,7 @@ program ImagePackerApp;
 uses
   System.StartUpCopy,
   FMX.Forms,
-  ImagePackerAppUnit in 'ImagePackerAppUnit.pas' {Form1},
+  ImagePackerAppUnit in 'ImagePackerAppUnit.pas' {MainForm},
   FileToolsUnit in '..\FileToolsUnit.pas',
   FilePackerUnit in '..\FilePacker\FilePackerUnit.pas',
   FMX.ImageExtractorUnit in '..\FilePacker\FMX.ImageExtractorUnit.pas';
@@ -12,6 +12,6 @@ uses
 
 begin
   Application.Initialize;
-  Application.CreateForm(TForm1, Form1);
+  Application.CreateForm(TMainForm, MainForm);
   Application.Run;
 end.

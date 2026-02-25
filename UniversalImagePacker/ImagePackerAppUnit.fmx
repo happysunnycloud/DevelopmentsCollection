@@ -1,9 +1,9 @@
-object Form1: TForm1
+object MainForm: TMainForm
   Left = 0
   Top = 0
-  Caption = 'Form1'
-  ClientHeight = 513
-  ClientWidth = 828
+  Caption = 'File packer'
+  ClientHeight = 476
+  ClientWidth = 881
   Fill.Color = claLightsteelblue
   Fill.Kind = Solid
   FormFactor.Width = 320
@@ -22,16 +22,16 @@ object Form1: TForm1
     Viewport.Width = 281.000000000000000000
     Viewport.Height = 427.000000000000000000
   end
-  object MainMenu1: TMainMenu
+  object MainMenu: TMainMenu
     Left = 20
     Top = 16
-    object DoPackMenuItem: TMenuItem
-      Text = 'Do pack'
-      OnClick = DoPackMenuItemClick
+    object PackMenuItem: TMenuItem
+      Text = 'Pack'
+      OnClick = PackMenuItemClick
     end
     object OpenMenuItem: TMenuItem
       Locked = True
-      Text = 'Open pack'
+      Text = 'Open'
       OnClick = OpenMenuItemClick
     end
   end
@@ -44,6 +44,7 @@ object Form1: TForm1
     TabOrder = 3
     object Rectangle1: TRectangle
       Align = Contents
+      Fill.Color = claBlack
       Size.Width = 420.000000000000000000
       Size.Height = 307.000000000000000000
       Size.PlatformDefault = False
@@ -59,10 +60,24 @@ object Form1: TForm1
     end
   end
   object Button1: TButton
-    Position.X = 740.000000000000000000
-    Position.Y = 448.000000000000000000
+    Position.X = 666.000000000000000000
+    Position.Y = 410.000000000000000000
     TabOrder = 4
     Text = 'Extract'
     OnClick = Button1Click
+  end
+  object FileContentVersionLabel: TLabel
+    Align = Bottom
+    Margins.Left = 10.000000000000000000
+    Margins.Top = 10.000000000000000000
+    Margins.Right = 10.000000000000000000
+    Margins.Bottom = 10.000000000000000000
+    Position.X = 10.000000000000000000
+    Position.Y = 449.000000000000000000
+    Size.Width = 861.000000000000000000
+    Size.Height = 17.000000000000000000
+    Size.PlatformDefault = False
+    Text = 'File content version: 0.0'
+    TabOrder = 6
   end
 end

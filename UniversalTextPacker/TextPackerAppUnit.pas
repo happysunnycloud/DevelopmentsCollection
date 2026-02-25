@@ -10,20 +10,22 @@ uses
   , FilePackerUnit, FMX.Menus;
 
 const
+  FILE_CONTENT_VERSION: TContentVersionStr = 'SQLPACK|0.0';
   FILTER_FILES = 'Packed files|*.pck|Other files|*.dat|All files|*.*';
 
 type
-  TForm1 = class(TForm)
+  TMainForm = class(TForm)
     ScrollBox: TScrollBox;
     MainMenu1: TMainMenu;
-    DoPackMenuItem: TMenuItem;
+    PackMenuItem: TMenuItem;
     OpenMenuItem: TMenuItem;
     Layout1: TLayout;
     Button1: TButton;
     Memo1: TMemo;
+    FileContentVersionLabel: TLabel;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
-    procedure DoPackMenuItemClick(Sender: TObject);
+    procedure PackMenuItemClick(Sender: TObject);
     procedure OpenMenuItemClick(Sender: TObject);
     procedure Button1Click(Sender: TObject);
   private
@@ -38,7 +40,7 @@ type
   end;
 
 var
-  Form1: TForm1;
+  MainForm: TMainForm;
 
 implementation
 
@@ -50,10 +52,9 @@ uses
   ;
 
 const
-  VERSION = '0.0';
   ROOT_PATH = '..\..\..';
 
-procedure TForm1.LabelOnClickHandler(Sender: TObject);
+procedure TMainForm.LabelOnClickHandler(Sender: TObject);
 var
   Text: String;
 begin
@@ -63,7 +64,7 @@ begin
   Memo1.Text := Text;
 end;
 
-procedure TForm1.DoPackMenuItemClick(Sender: TObject);
+procedure TMainForm.PackMenuItemClick(Sender: TObject);
 var
   RootDir: String;
   SaveDialog: TSaveDialog;
@@ -98,7 +99,7 @@ begin
       raise Exception.CreateFmt('Can not delete file "%s"', [SaveFileName]);
 
   TFilePacker.Pack(
-    VERSION,
+    FILE_CONTENT_VERSION,
     RootDir,
     '',
     'sql',
@@ -107,7 +108,7 @@ begin
   ShowMessage('Done');
 end;
 
-procedure TForm1.OpenMenuItemClick(Sender: TObject);
+procedure TMainForm.OpenMenuItemClick(Sender: TObject);
 var
   OpenDialog: TOpenDialog;
   OpenFileName: String;
@@ -133,13 +134,13 @@ begin
   OpenPackFile(OpenFileName);
 end;
 
-procedure TForm1.FormDestroy(Sender: TObject);
+procedure TMainForm.FormDestroy(Sender: TObject);
 begin
   if Assigned(FFilePacker) then
     FreeAndNil(FFilePacker);
 end;
 
-procedure TForm1.Button1Click(Sender: TObject);
+procedure TMainForm.Button1Click(Sender: TObject);
 var
   SaveDialog: TSaveDialog;
   SaveFileName: String;
@@ -182,12 +183,12 @@ begin
   end;
 end;
 
-procedure TForm1.FormCreate(Sender: TObject);
+procedure TMainForm.FormCreate(Sender: TObject);
 begin
   ReportMemoryLeaksOnShutdown := true;
 end;
 
-procedure TForm1.GetTextsList;
+procedure TMainForm.GetTextsList;
 var
   FileNameList: TStringList;
   _Label: TLabel;
@@ -219,9 +220,11 @@ begin
   end;
 end;
 
-procedure TForm1.OpenPackFile(const APackFileName: String);
+procedure TMainForm.OpenPackFile(const APackFileName: String);
 begin
   FFilePacker := TFilePacker.Create(APackFileName, fmOpenRead);
+  FileContentVersionLabel.Text :=
+    'File content version: ' + FFilePacker.ContentVersion;
   GetTextsList;
 end;
 
