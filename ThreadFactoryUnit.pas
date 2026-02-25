@@ -25,7 +25,7 @@ type
   TRegProc = reference to procedure (const AThread: TThreadExt);
   TUnRegProc = reference to procedure (const AThread: TThreadExt);
   TExecProc = reference to procedure (const AThread: TThreadExt);
-//  TExecuteProc = reference to procedure;
+
   TUnregFromThreadFactoryProc =
     reference to procedure (const ATThreadFactory: TThreadFactory);
 
@@ -75,6 +75,9 @@ type
     FOnSetTerminate: TNotifyEvent;
     // Выполняется во время вызова OnTerminate в главном потоке
     FOnTerminateExternalHandler: TNotifyEvent;
+    // Ссылка на внешний эвент, если не nil,
+    // то выставится при уничтожении потока в OnTerminate
+    FThreadIsDeadEventRef: TEvent;
 
     procedure DoInit(
       const AThreadName: String;
@@ -105,6 +108,8 @@ type
 
     procedure SetOnSetTerminate(const AOnSetTerminate: TNotifyEvent);
     function GetOnSetTerminate: TNotifyEvent;
+
+    procedure SetThreadIsDeadEventRef(const AThreadIsDeadEventRef: TEvent);
   protected
     procedure ExecHold;
     /// <summary>
@@ -189,6 +194,8 @@ type
     // Не означает, что поток в настоящий момент вошел в ExecHold
     property IntentionHoldState: Boolean read GetIntentionHoldState;
 
+    property ThreadIsDeadEventRef: TEvent write SetThreadIsDeadEventRef;
+
 //    property OnBeforeHold: TNotifyEvent read FOnBeforeHold write FOnBeforeHold;
 //    property OnAfterHold: TNotifyEvent read FOnAfterHold write FOnAfterHold;
   end;
@@ -223,6 +230,7 @@ type
     procedure RegThreadProc(const AThread: TThreadExt);
     procedure UnRegThreadProc(const AThread: TThreadExt);
   public
+    procedure Init(const AUnregProc: TUnregFromThreadFactoryProc);
     constructor Create; overload;
     constructor Create(const AUnregProc: TUnregFromThreadFactoryProc); overload;
     destructor Destroy; override;
@@ -288,8 +296,22 @@ type
     procedure TerminateAllThreads;
 
     function GetThreadByName(const AThreadName: String): TThreadExt; deprecated 'Use FindThread()';
+    // FindThread не может применяться для последовательного терминирования потока.
+    // Терминировать поток нужно через TerminateThread
     function FindThread(const AThreadName: String): TThreadExt;
+    // Терминирует поток, если он найден в регистре
     procedure TerminateThread(const AThreadName: String);
+    /// <summary>
+    ///  Активируем внешний TEvent и ловим на него уничтожение потока
+    ///  Поток переведет TEvent в состояние SetEvent
+    ///  Извне проверяется на TEvent.WaitFor(INFINITE)
+    ///  Не проверять в главном потоке, иначе дедлок
+    ///  Целевое назначение - дожидаться завершения потока извне
+    ///  Позволяет дождаться даже FreeOnTerminate = true потока
+    /// </summary>
+    procedure ActivateThreadIsDeadEvent(
+      const AThreadName: String;
+      const AThreadIsDeadEvent: TEvent);
 
     property OnDestroyFactory: TNotifyEvent
       write FOnDestroyFactory;
@@ -353,6 +375,8 @@ procedure TThreadExt.DoInit(
   const AFreeOnTerminate: Boolean = true);
 begin
   FCriticalSection := TCriticalSection.Create;
+
+  FThreadIsDeadEventRef := nil;
 
   if not (Self is TThreadExtClass) then
     raise Exception.Create('TThreadExt.DoInit -> Self is not TThreadExtClass');
@@ -512,6 +536,9 @@ begin
 
   if Assigned(FOnTerminateExternalHandler) then
     FOnTerminateExternalHandler(Self);
+
+  if Assigned(FThreadIsDeadEventRef) then
+    FThreadIsDeadEventRef.SetEvent;
 end;
 
 function TThreadExt.GetTerminated: Boolean;
@@ -577,6 +604,26 @@ begin
   end;
 end;
 
+procedure TThreadExt.SetThreadIsDeadEventRef(const AThreadIsDeadEventRef: TEvent);
+begin
+  FCriticalSection.Enter;
+  try
+    FThreadIsDeadEventRef := AThreadIsDeadEventRef;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
+//function TThreadExt.GetThreadIsDead: TEvent;
+//begin
+//  FCriticalSection.Enter;
+//  try
+//    Result := FThreadIsDeadRef;
+//  finally
+//    FCriticalSection.Leave;
+//  end;
+//end;
+
 procedure TThreadExt.HoldThread;
 begin
 //  FCriticalSection.Enter;
@@ -603,8 +650,8 @@ begin
   try
     inherited Terminate;
 
-    if Assigned(OnSetTerminate) then
-      OnSetTerminate(Self);
+    if Assigned(FOnSetTerminate) then
+      FOnSetTerminate(Self);
   finally
     FCriticalSection.Leave;
   end;
@@ -651,7 +698,6 @@ begin
     FCriticalSection.Leave;
   end;
 end;
-
 
 procedure TThreadExt.ExecHold;
 //var
@@ -714,31 +760,10 @@ begin
     end);
 end;
 
-//procedure TThreadExt.InnerExecute;
-//begin
-//  // virtual
-//  raise Exception.Create('TThreadExt.InnerExecute must be overloaded');
-//end;
-
 { TThreadFactory }
 
-constructor TThreadFactory.Create;
+procedure TThreadFactory.Init(const AUnregProc: TUnregFromThreadFactoryProc);
 begin
-  Log.d('TThreadFactory.Create');
-
-  FCriticalSection := TCriticalSection.Create;
-  FFreeWhenAllThreadsDone := false;
-  FThreadRegistry := TThreadRegistry.Create;
-  FUnregFromThreadFactoryProc := nil;
-  FOnDestroyFactory := nil;
-  FOnAllThreadsAreDestroyed := nil;
-  FThreadFactoryName := 'NamelessThreadFactory';
-end;
-
-constructor TThreadFactory.Create(const AUnregProc: TUnregFromThreadFactoryProc);
-begin
-  Log.d('TThreadFactory.Create');
-
   FCriticalSection := TCriticalSection.Create;
   FFreeWhenAllThreadsDone := false;
   FThreadRegistry := TThreadRegistry.Create;
@@ -746,6 +771,20 @@ begin
   FOnDestroyFactory := nil;
   FOnAllThreadsAreDestroyed := nil;
   FThreadFactoryName := 'NamelessThreadFactory';
+end;
+
+constructor TThreadFactory.Create;
+begin
+  Log.d('TThreadFactory.Create');
+
+  Init(nil);
+end;
+
+constructor TThreadFactory.Create(const AUnregProc: TUnregFromThreadFactoryProc);
+begin
+  Log.d('TThreadFactory.Create');
+
+  Init(AUnregProc);
 end;
 
 destructor TThreadFactory.Destroy;
@@ -881,25 +920,6 @@ begin
   FOnAllThreadsAreDestroyed := ANotifyEvent;
 end;
 
-//procedure TThreadFactory.SetTerminateAllThreads;
-//var
-//  i: Word;
-//  Thread: TThreadExt;
-//begin
-//  i := FThreadRegistry.Count;
-//  while i > 0 do
-//  begin
-//    Dec(i);
-//
-//    Thread := FThreadRegistry.ThreadByIndex(i);
-//
-//    Log.d('TThreadFactory.SetTerminateAllThreads -> Thread.ThreadName = ' + Thread.ThreadName + ' ' +
-//    'Self.ThreadFactoryName = ' + Self.ThreadFactoryName);
-//
-//    Thread.Terminate;
-//  end;
-//end;
-
 procedure TThreadFactory.SetTerminateAllThreads;
 begin
   FThreadRegistry.Enumerator(
@@ -973,6 +993,32 @@ begin
         ABreak := true;
       end;
     end);
+end;
+
+procedure TThreadFactory.ActivateThreadIsDeadEvent(
+  const AThreadName: String;
+  const AThreadIsDeadEvent: TEvent);
+var
+  IsThreadFound: Boolean;
+begin
+  IsThreadFound := false;
+
+  FThreadRegistry.Enumerator(
+    procedure (const AThread: TThreadExt; var ABreak: Boolean)
+    begin
+      if AThread.ThreadName = AThreadName then
+      begin
+        AThreadIsDeadEvent.ResetEvent;
+        AThread.ThreadIsDeadEventRef := AThreadIsDeadEvent;
+
+        IsThreadFound := true;
+
+        ABreak := true;
+      end;
+    end);
+
+  if not IsThreadFound then
+    AThreadIsDeadEvent.SetEvent;
 end;
 
 end.
