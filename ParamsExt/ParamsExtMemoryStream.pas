@@ -1,15 +1,14 @@
-﻿unit ParamsExtMemoryStreamUnit;
+﻿unit ParamsExtMemoryStream;
 
 interface
 
 uses
   System.Classes,
   ParamsExtUnit,
-  ParamsExtBaseStreamUnit,
-  StreamHandler;
+  ParamsExtStream;
 
 type
-  TParamsExtMemoryStream = class(TParamsExtBaseStream)
+  TParamsExtMemoryStream = class(TParamsExtStream)
   strict private
     function OffsetOf(const AParamIdent: String): Int64; overload;
     function OffsetOf(const AParamIndex: Integer): Int64; overload;

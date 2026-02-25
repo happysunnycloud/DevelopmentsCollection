@@ -1,4 +1,4 @@
-﻿unit ParamsExtStreamerUnit;
+﻿unit ParamsExtStreamer;
 
 interface
 
@@ -48,8 +48,8 @@ implementation
 uses
     System.SysUtils
   , ParamsExtUnit
-  , ParamsExtFileStreamUnit
-  , ParamsExtMemoryStreamUnit
+  , ParamsExtFileStream
+  , ParamsExtMemoryStream
   ;
 
 type
