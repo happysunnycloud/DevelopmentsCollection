@@ -193,6 +193,21 @@ type
 //    property OnAfterHold: TNotifyEvent read FOnAfterHold write FOnAfterHold;
   end;
 
+  TInlineThreadExt = class(TThreadExt)
+  strict private
+    FExecProc: TExecProc;
+  protected
+    procedure InnerExecute; override;
+  public
+    constructor Create(
+      const AThreadName: String;
+      const AExecProc: TExecProc;
+      const ARegProc: TRegProc;
+      const AUnregProc: TUnRegProc;
+      const ASuspended: Boolean = false;
+      const AFreeOnTerminate: Boolean = true);
+  end;
+
   TThreadExtClass = class of TThreadExt;
 
   TThreadRegistry = TThreadRegistry<TThreadExt>;
@@ -229,35 +244,21 @@ type
     destructor Destroy; override;
 
     /// <summary>
-    ///   Создает поток с исполняемым анонимным методом
-    ///   FreeOnTerminate = false
-    /// </summary>
-    function CreateThread(
-      const AExecProc: TExecProc;
-      const ASuspended: Boolean = false): TThreadExt; overload;
-    /// <summary>
     ///   Создает именованый поток с исполняемым анонимным методом
-    ///   FreeOnTerminate = false
     /// </summary>
-    function CreateThread(
+    function CreateInlineThread(
       const AThreadName: String;
       const AExecProc: TExecProc;
-      const ASuspended: Boolean = false): TThreadExt; overload;
-    /// <summary>
-    ///   Создает поток с исполняемым анонимным методом
-    ///   FreeOnTerminate = true
-    /// </summary>
-    function CreateFreeOnTerminateThread(
-      const AExecProc: TExecProc;
-      const ASuspended: Boolean = false): TThreadExt; overload;
+      const ASuspended: Boolean = false;
+      const AFreeOnTerminated: Boolean = true): TInlineThreadExt;
     /// <summary>
     ///   Создает именованый поток с исполняемым анонимным методом
     ///   FreeOnTerminate = true
     /// </summary>
-    function CreateFreeOnTerminateThread(
+    function CreateFreeOnTerminateInlineThread(
       const AThreadName: String;
       const AExecProc: TExecProc;
-      const ASuspended: Boolean = false): TThreadExt; overload;
+      const ASuspended: Boolean = false): TInlineThreadExt;
 
     /// <summary>
     ///   Создает поток на основе класса
@@ -328,6 +329,7 @@ uses
   ;
 
 { TExceptionMessageThread }
+
 constructor TExceptionMessageThread.Create(
   const AThreadName: String;
   const AExceptionMessage: String;
@@ -753,6 +755,32 @@ begin
     end);
 end;
 
+{ TInlineThreadExt }
+
+constructor TInlineThreadExt.Create(
+  const AThreadName: String;
+  const AExecProc: TExecProc;
+  const ARegProc: TRegProc;
+  const AUnregProc: TUnRegProc;
+  const ASuspended: Boolean = false;
+  const AFreeOnTerminate: Boolean = true);
+begin
+  FExecProc := AExecProc;
+
+  inherited Create(
+    AThreadName,
+    nil,
+    ARegProc,
+    AUnregProc,
+    ASuspended,
+    AFreeOnTerminate);
+end;
+
+procedure TInlineThreadExt.InnerExecute;
+begin
+  FExecProc(Self);
+end;
+
 { TThreadFactory }
 
 procedure TThreadFactory.Init(const AUnregProc: TUnregFromThreadFactoryProc);
@@ -814,38 +842,33 @@ begin
   CheckThreadZeroCount;
 end;
 
-function TThreadFactory.CreateThread(
-  const AExecProc: TExecProc;
-  const ASuspended: Boolean = false): TThreadExt;
-begin
-  Result := TThreadExt.
-    Create(AExecProc, RegThreadProc, UnRegThreadProc, ASuspended, false);
-end;
-
-function TThreadFactory.CreateThread(
+function TThreadFactory.CreateInlineThread(
   const AThreadName: String;
   const AExecProc: TExecProc;
-  const ASuspended: Boolean = false): TThreadExt;
+  const ASuspended: Boolean = false;
+  const AFreeOnTerminated: Boolean = true): TInlineThreadExt;
 begin
-  Result := TThreadExt.
-    Create(AThreadName, AExecProc, RegThreadProc, UnRegThreadProc, ASuspended, false);
+  Result := TInlineThreadExt.Create(
+    AThreadName,
+    AExecProc,
+    RegThreadProc,
+    UnRegThreadProc,
+    ASuspended,
+    AFreeOnTerminated);
 end;
 
-function TThreadFactory.CreateFreeOnTerminateThread(
-  const AExecProc: TExecProc;
-  const ASuspended: Boolean = false): TThreadExt;
-begin
-  Result := TThreadExt.
-    Create(AExecProc, RegThreadProc, UnRegThreadProc, ASuspended, true);
-end;
-
-function TThreadFactory.CreateFreeOnTerminateThread(
+function TThreadFactory.CreateFreeOnTerminateInlineThread(
   const AThreadName: String;
   const AExecProc: TExecProc;
-  const ASuspended: Boolean = false): TThreadExt;
+  const ASuspended: Boolean = false): TInlineThreadExt;
 begin
-  Result := TThreadExt.
-    Create(AThreadName, AExecProc, RegThreadProc, UnRegThreadProc, ASuspended, true);
+  Result := TInlineThreadExt.Create(
+    AThreadName,
+    AExecProc,
+    RegThreadProc,
+    UnRegThreadProc,
+    ASuspended,
+    true);
 end;
 
 function TThreadFactory.CreateThreadClassOf(
