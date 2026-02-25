@@ -1,8 +1,6 @@
 ﻿{0.6}
 // Юнит по работе с нитями, если и переезжать, то на него
- { TODO :
-Стоит перетряхнуть procedure TThreadExt.ExecHold;
-Возможно устоит убрать/переработать событя входа и выхода из Hold }
+
 unit ThreadFactoryUnit;
 
 interface
@@ -56,7 +54,7 @@ type
   strict private
     FCriticalSection: TCriticalSection;
 
-    FEventHold: TEvent;
+    FHoldEvent: TEvent;
     FRegProc: TRegProc;
     FUnregProc: TUnRegProc;
     FExecProc: TExecProc;
@@ -65,11 +63,6 @@ type
     FOnException: TExceptionProc;
     FThreadName: String;
     FIsHolded: Boolean;
-
-//    // Выполняется только в случае, если холд FEventHold выставлен
-//    FOnBeforeHold: TNotifyEvent;
-//    // Выполняется только в случае, если был фактический холд
-//    FOnAfterHold: TNotifyEvent;
 
     // Выполняется при выставлении свойства Terminate потоку
     FOnSetTerminate: TNotifyEvent;
@@ -403,7 +396,7 @@ begin
 
   FOnTerminateExternalHandler := nil;
 
-  FEventHold := TEvent.Create(nil, true, not Suspended, '', false);
+  FHoldEvent := TEvent.Create(nil, true, not Suspended, '', false);
   FIsHolded := false;
 
   FRegProc := ARegProc;
@@ -502,7 +495,7 @@ end;
 
 destructor TThreadExt.Destroy;
 begin
-  FreeAndNil(FEventHold);
+  FreeAndNil(FHoldEvent);
   FreeAndNil(FCriticalSection);
 
   if FExceptionMessage.Length > 0 then
@@ -597,7 +590,7 @@ begin
   FCriticalSection.Enter;
   try
     Result := false;
-    if TWaitResult.wrTimeout = FEventHold.WaitFor(0) then
+    if TWaitResult.wrTimeout = FHoldEvent.WaitFor(0) then
       Result := true;
   finally
     FCriticalSection.Leave;
@@ -628,7 +621,7 @@ procedure TThreadExt.HoldThread;
 begin
 //  FCriticalSection.Enter;
 //  try
-    FEventHold.ResetEvent;
+    FHoldEvent.ResetEvent;
 //  finally
 //    FCriticalSection.Leave;
 //  end;
@@ -638,7 +631,7 @@ procedure TThreadExt.UnHoldThread;
 begin
 //  FCriticalSection.Enter;
 //  try
-    FEventHold.SetEvent;
+    FHoldEvent.SetEvent;
 //  finally
 //    FCriticalSection.Leave;
 //  end;
@@ -652,11 +645,11 @@ begin
 
     if Assigned(FOnSetTerminate) then
       FOnSetTerminate(Self);
+
+    UnHoldThread;
   finally
     FCriticalSection.Leave;
   end;
-
-  UnHoldThread;
 end;
 
 procedure TThreadExt.SetOnTerminate(const AOnTerminate: TNotifyEvent);
@@ -719,7 +712,7 @@ begin
 //      );
 //  end;
 
-  FEventHold.WaitFor(INFINITE);
+  FHoldEvent.WaitFor(INFINITE);
 
 //  if EnteredToHold then
 //  begin
