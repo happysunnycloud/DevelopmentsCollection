@@ -4,44 +4,25 @@
 // Класс для упаковки/распаковки параметров
 // Упрощает передачу параметров, которые передаются как массив констант
 
+// Несохраняем и не читаем типа Pointer,
+// Нет смысла хранить указатели, так как они имеют динамические значения
+
 unit ParamsExtUnit;
 
 interface
 
 uses
-  System.SysUtils,
-  System.Classes
+    System.SysUtils
+  , System.Classes
+  , BinFileTypes
   ;
 
 const
   CLASS_NAME = 'TParamsExt';
 
 type
-//  TParamsExceptionCode = (pecValueNotFound = 0);
-//
-//  TParamsExceptionCodeHelper = record helper for TParamsExceptionCode
-//  public
-//    function ToString: String;
-//  end;
-//
-//  ParamsException = class (Exception)
-//  strict private
-//    FCode: TParamsExceptionCode;
-//    FValueIdent: String;
-//  public
-//    property Code: TParamsExceptionCode read FCode;
-//    property ValueIdent: String read FValueIdent;
-//
-//    constructor Create(
-//      const Msg: string;
-//      const Code: TParamsExceptionCode;
-//      const ValueIdent: String); reintroduce;
-//    constructor CreateFmt(
-//      const Msg: string;
-//      const Args: array of const;
-//      const Code: TParamsExceptionCode;
-//      const ValueIdent: String); reintroduce;
-//  end;
+  TBinFileSign = BinFileTypes.TBinFileSign;
+  TBinFileVer = BinFileTypes.TBinFileVer;
 
   TParamRecord = record
     v: Variant;
@@ -57,6 +38,9 @@ type
     function GetIndexByIdent(const AIdent: String; const AOffset: Integer = 0): Integer;
     // В случае ненахождения значения будет возвращено значение = -1
     function IfGetIndexByIdent(const AIdent: String; const AOffset: Integer = 0): Integer;
+
+//    procedure WriteString(const AStream: TStream; const S: String);
+//    procedure ReadString(const AStream: TStream; out S: String);
   private
     function GetAsInt64    (const AIndex: Word): Int64;         overload;
     function GetAsBoolean  (const AIndex: Word): Boolean;       overload;
@@ -68,6 +52,10 @@ type
     function GetAsTime     (const AIndex: Word): TTime;         overload;
     function GetAsDate     (const AIndex: Word): TDate;         overload;
     function GetAsDateTime (const AIndex: Word): TDateTime;     overload;
+
+    function GetAsSingle   (const AIndex: Word): Single;        overload;
+    function GetAsCardinal (const AIndex: Word): Cardinal;      overload;
+
     function GetAsVariant  (const AIndex: Word): Variant;       overload;
     function GetTypeOfVar  (const AIndex: Word): TVarType;      overload;
 
@@ -81,6 +69,10 @@ type
     function GetAsTime     (const AIdent: String): TTime;       overload;
     function GetAsDate     (const AIdent: String): TDate;       overload;
     function GetAsDateTime (const AIdent: String): TDateTime;   overload;
+
+    function GetAsSingle   (const AIdent: String): Single;      overload;
+    function GetAsCardinal (const AIdent: String): Cardinal;    overload;
+
     function GetAsVariant  (const AIdent: String): Variant;     overload;
     function GetTypeOfVar  (const AIdent: String): TVarType;    overload;
 
@@ -91,6 +83,10 @@ type
       const AMethodName: String;
       const AIndex: Integer;
       const AVarType: TVarType); overload;
+
+    // Проверяем на дубли, в случае, если Ident не пустой
+    // Важно для TryGetParam
+    procedure CheckDuplicateIdent(const AIdent: String);
   public
     constructor Create(const AVars: array of Variant); overload;
 
@@ -112,6 +108,10 @@ type
     property  AsWord     [const AIndex: Word]: Word       read GetAsWord;
     property  AsByte     [const AIndex: Word]: Byte       read GetAsByte;
     property  AsPointer  [const AIndex: Word]: Pointer    read GetAsPointer;
+
+    property  AsSingle   [const AIndex: Word]: Single     read GetAsSingle;
+    property  AsCardinal [const AIndex: Word]: Cardinal   read GetAsCardinal;
+
     property  AsVariant  [const AIndex: Word]: Variant    read GetAsVariant;
     property  TypeOfVar  [const AIndex: Word]: TVarType   read GetTypeOfVar;
 
@@ -125,6 +125,10 @@ type
     property  AsWordByIdent     [const AIdent: String]: Word      read GetAsWord;
     property  AsByteByIdent     [const AIdent: String]: Byte      read GetAsByte;
     property  AsPointerByIdent  [const AIdent: String]: Pointer   read GetAsPointer;
+
+    property  AsSingleByIdent   [const AIdent: String]: Single    read GetAsSingle;
+    property  AsCardinalByIdent [const AIdent: String]: Cardinal  read GetAsCardinal;
+
     property  AsVariantByIdent  [const AIdent: String]: Variant   read GetAsVariant;
     property  TypeOfVarByIdent  [const AIdent: String]: TVarType  read GetTypeOfVar;
 
@@ -138,6 +142,10 @@ type
     function  IfAsWordByIdent      (const AIdent: String; const ADefVal: Word):      Word;
     function  IfAsByteByIdent      (const AIdent: String; const ADefVal: Byte):      Byte;
     function  IfAsPointerByIdent   (const AIdent: String; const ADefVal: Pointer):   Pointer;
+
+    function  IfAsSingleByIdent    (const AIdent: String; const ADefVal: Single):    Single;
+    function  IfAsCardinalByIdent  (const AIdent: String; const ADefVal: Cardinal):  Cardinal;
+
     function  IfAsVariantByIdent   (const AIdent: String; const ADefVal: Variant):   Variant;
     function  IfAsTVarTypeByIdent  (const AIdent: String; const ADefVal: TVarType):  TVarType;
 
@@ -149,13 +157,57 @@ type
 
     procedure CopyFrom(const AParamsObj: TParamsExt); virtual;
     procedure AddFrom(const AParamsObj: TParamsExt); virtual;
+
+    procedure OpenParamFile(const AFileName: String; const AMode: Word);
+    procedure CloseParamFile;
+
+    procedure ConnectToFileStream(
+      const AFileStream: TFileStream;
+      const AStartOffset: Int64);
+    procedure DisconnectFromFileStream;
+
+    procedure SaveToFile(
+      const AContentSignature: TBinFileSign;
+      const AContentVersion: TBinFileVer;
+      const AFileName: String);
+    procedure LoadFromFile(const AFileName: String);
+
+    function TryGetParamFromFile(var AVal: Variant; const AParamIdent: String): Boolean; overload;
+    function TryGetParamFromFile(var AVal: Variant; const AParamIndex: Integer): Boolean; overload;
+
+    function TryGetParam(var AVal: Variant; const AParamIdent: String): Boolean; overload;
+    {TODO: ??? убираем отсюда, переносим в FMX.Theme ??? думаю оставить, полезная штука}
+    //asd debug убираем отсюда, перенесли в FMX.Theme
+    procedure ObjectToParams(
+      const AObject: TObject;
+      const AAncestor: String = ''); overload;
+    procedure ObjectToParams(
+      const AObjectIdent: String;
+      const AObject: TObject;
+      const AAncestor: String = ''); overload;
+    procedure ParamsToObject(
+      const AObject: TObject;
+      const AAncestor: String = ''); overload;
+    procedure ParamsToObject(
+      const AObjectIdent: String;
+      const AObject: TObject;
+      const AAncestor: String = ''); overload;
+    //asd debug убираем отсюда, перенесли в FMX.Theme
+    procedure ChangeValue(const AValue: Variant; const AIdent: String); overload;
+    procedure ChangeValue(const AValue: Pointer; const AIdent: String); overload;
   end;
 
 implementation
 
 uses
-  System.Variants
+    System.Variants
+  , System.Rtti
+  , System.TypInfo
+  , ParamsExtFileUnit
   ;
+
+var
+  ParamsExtFile: TParamsExtFile;
 
 //{ TParamsExceptionCodeHelper }
 //
@@ -207,7 +259,9 @@ begin
       Exit(i);
   end;
 
-  raise Exception.CreateFmt('Var of ident "%s" not found', [AIdent]);
+  raise Exception.CreateFmt(
+    '%s.%s: Var of ident "%s" not found',
+    [CLASS_NAME, 'GetIndexByIdent', AIdent]);
 end;
 
 function TParamsExt.IfGetIndexByIdent(const AIdent: String; const AOffset: Integer = 0): Integer;
@@ -308,6 +362,20 @@ begin
   CheckCorrect('GetAsDateTime', AIndex, varDate);
 
   Result := TVarData(FParams[AIndex].v).VDate;
+end;
+
+function TParamsExt.GetAsSingle(const AIndex: Word): Single;
+begin
+  CheckCorrect('GetAsSingle', AIndex, varSingle);
+
+  Result := TVarData(FParams[AIndex].v).VSingle;
+end;
+
+function TParamsExt.GetAsCardinal(const AIndex: Word): Cardinal;
+begin
+  CheckCorrect('GetAsCardinal', AIndex, varLongWord);
+
+  Result := TVarData(FParams[AIndex].v).VLongWord;
 end;
 
 function TParamsExt.GetAsVariant(const AIndex: Word): Variant;
@@ -432,6 +500,28 @@ begin
   CheckCorrect('GetAsDateTime', i, varDate);
 
   Result := TVarData(FParams[i].v).VDate;
+end;
+
+function TParamsExt.GetAsSingle(const AIdent: String): Single;
+var
+  i: Integer;
+begin
+  i := GetIndexByIdent(AIdent);
+
+  CheckCorrect('GetAsSingle', i);
+
+  Result := FParams[i].v;
+end;
+
+function TParamsExt.GetAsCardinal(const AIdent: String): Cardinal;
+var
+  i: Integer;
+begin
+  i := GetIndexByIdent(AIdent);
+
+  CheckCorrect('GetAsCardinal', i);
+
+  Result := FParams[i].v;
 end;
 
 function TParamsExt.GetAsVariant(const AIdent: String): Variant;
@@ -596,6 +686,34 @@ begin
   Result := TVarData(FParams[i].v).VPointer;
 end;
 
+function TParamsExt.IfAsSingleByIdent(const AIdent: String; const ADefVal: Single): Single;
+var
+  i: Integer;
+begin
+  i := IfGetIndexByIdent(AIdent);
+
+  if i < 0 then
+    Exit(ADefVal);
+
+  CheckCorrect('IfAsSingleByIdent', i, varSingle);
+
+  Result := TVarData(FParams[i].v).VSingle;
+end;
+
+function TParamsExt.IfAsCardinalByIdent(const AIdent: String; const ADefVal: Cardinal): Cardinal;
+var
+  i: Integer;
+begin
+  i := IfGetIndexByIdent(AIdent);
+
+  if i < 0 then
+    Exit(ADefVal);
+
+  CheckCorrect('IfAsCardinalByIdent', i, varLongWord);
+
+  Result := TVarData(FParams[i].v).VLongWord;
+end;
+
 function TParamsExt.IfAsVariantByIdent(const AIdent: String; const ADefVal: Variant): Variant;
 var
   i: Integer;
@@ -630,7 +748,7 @@ procedure TParamsExt.CheckCorrect(
 var
   _Length: Word;
 begin
-  _Length := System.Length(fParams);
+  _Length := System.Length(FParams);
   if _Length = 0 then
     raise Exception.Create(Format('%s.%s: Params property is empty', [CLASS_NAME, AMethodName]));
 
@@ -650,7 +768,24 @@ begin
 
   if VarType(FParams[AIndex].v) <> AVarType then
     raise Exception.Create(
-      Format('%s.%s: Type mismatch', [CLASS_NAME, AMethodName]));
+      Format('%s.%s: Type mismatch for ident "%s"',
+      [CLASS_NAME, AMethodName, FParams[AIndex].Ident]));
+end;
+
+procedure TParamsExt.CheckDuplicateIdent(const AIdent: String);
+var
+  i: Integer;
+begin
+  if  AIdent.Length = 0 then
+    Exit;
+
+  for i := 0 to Pred(Length) do
+  begin
+    if AIdent = FParams[i].Ident then
+      raise Exception.CreateFmt(
+        'TParamsExt.CheckDuplicateIdent -> Duplicate names "%s" are not allowed',
+        [AIdent]);
+  end;
 end;
 
 function TParamsExt.Length: Word;
@@ -670,37 +805,86 @@ end;
 
 procedure TParamsExt.Add(const AValue: Variant; const AIdent: String = '');
 begin
+  CheckDuplicateIdent(AIdent);
+
   SetLength(FParams, System.Length(FParams) + 1);
-  FParams[System.Length(FParams) - 1].v := AValue;
-  FParams[System.Length(FParams) - 1].Ident := AIdent;
+  FParams[High(FParams)].v := AValue;
+  FParams[High(FParams)].Ident := AIdent;
 end;
+
+//procedure TParamsExt.Add(const AValue: Variant; const AIdent: String = '');
+//begin
+//  SetLength(FParams, System.Length(FParams) + 1);
+//  FParams[System.Length(FParams) - 1].v := AValue;
+//  FParams[System.Length(FParams) - 1].Ident := AIdent;
+//end;
 
 procedure TParamsExt.Add(const AValue: Pointer; const AIdent: String = '');
 var
   Value: Variant;
 begin
-  // Раньше был VarByRef or VarUnknown.
-  // В: Почему? О: История умалчивает
-  // TVarData(Value).VType := VarByRef or VarUnknown;
+  CheckDuplicateIdent(AIdent);
 
-  TVarData(Value).VType := VarByRef;
+  // Полностью обнуляем все поля TVarData, чтобы не было мусора
+  FillChar(TVarData(Value), SizeOf(TVarData), 0);
+
+  // Устанавливаем тип и указатель
+  TVarData(Value).VType := varByRef;
   TVarData(Value).VPointer := AValue;
 
-  SetLength(fParams, System.Length(FParams) + 1);
-  FParams[System.Length(FParams) - 1].v := Value;
-  FParams[System.Length(FParams) - 1].Ident := AIdent;
+  // Добавляем в массив параметров
+  SetLength(FParams, System.Length(FParams) + 1);
+  FParams[High(FParams)].v := Value;
+  FParams[High(FParams)].Ident := AIdent;
 end;
 
 procedure TParamsExt.AddAsPointer(AValue: Pointer);
 var
   Value: Variant;
 begin
-  TVarData(Value).VType := VarByRef or VarUnknown;
+  // Обнуляем полностью
+  FillChar(TVarData(Value), SizeOf(TVarData), 0);
+
+  // Тип точно такой же, как в Add
+  TVarData(Value).VType := varByRef;
   TVarData(Value).VPointer := AValue;
 
+  // Добавляем в массив
   SetLength(FParams, System.Length(FParams) + 1);
-  FParams[System.Length(FParams) - 1].v := Value;
+  FParams[High(FParams)].v := Value;
 end;
+
+//procedure TParamsExt.Add(const AValue: Pointer; const AIdent: String = '');
+//var
+//  Value: Variant;
+//begin
+//  // Раньше был VarByRef or VarUnknown.
+//  // В: Почему? О: История умалчивает
+//  // TVarData(Value).VType := VarByRef or VarUnknown;
+//
+//  FillChar(TVarData(Value), SizeOf(TVarData), 0);
+//
+//  TVarData(Value).VType := VarByRef;
+//  TVarData(Value).VPointer := AValue;
+//
+//  SetLength(fParams, System.Length(FParams) + 1);
+//  FParams[System.Length(FParams) - 1].v := Value;
+//  FParams[System.Length(FParams) - 1].Ident := AIdent;
+//end;
+//
+//procedure TParamsExt.AddAsPointer(AValue: Pointer);
+//var
+//  Value: Variant;
+//begin
+//  FillChar(TVarData(Value), SizeOf(TVarData), 0);
+//
+//  TVarData(Value).VType := VarByRef;
+////  TVarData(Value).VType := VarByRef or VarUnknown;
+//  TVarData(Value).VPointer := AValue;
+//
+//  SetLength(FParams, System.Length(FParams) + 1);
+//  FParams[System.Length(FParams) - 1].v := Value;
+//end;
 
 function TParamsExt.Exists(const AIdent: String): Boolean;
 begin
@@ -758,5 +942,322 @@ begin
     Inc(j);
   end;
 end;
+
+procedure TParamsExt.OpenParamFile(const AFileName: String; const AMode: Word);
+begin
+  if Assigned(ParamsExtFile) then
+    raise Exception.CreateFmt('ParamsFile "%s" are open', [AFileName]);
+
+  ParamsExtFile := TParamsExtFile.Create(AFileName, AMode);
+end;
+
+procedure TParamsExt.CloseParamFile;
+begin
+  if Assigned(ParamsExtFile) then
+    FreeAndNil(ParamsExtFile);
+end;
+
+procedure TParamsExt.ConnectToFileStream(
+  const AFileStream: TFileStream;
+  const AStartOffset: Int64);
+begin
+  if Assigned(ParamsExtFile) then
+    raise Exception.CreateFmt(
+      'ParamsFileStream "%s" are open',
+      [AFileStream.FileName]);
+
+  ParamsExtFile := TParamsExtFile.Create(AFileStream, AStartOffset);
+end;
+
+procedure TParamsExt.DisconnectFromFileStream;
+begin
+  CloseParamFile;
+end;
+
+procedure TParamsExt.SaveToFile(
+  const AContentSignature: TBinFileSign;
+  const AContentVersion: TBinFileVer;
+  const AFileName: String);
+begin
+  OpenParamFile(AFileName, fmCreate);
+  ParamsExtFile.SaveToFile(
+    AContentSignature,
+    AContentVersion,
+    Self);
+  CloseParamFile;
+end;
+
+procedure TParamsExt.LoadFromFile(const AFileName: String);
+begin
+  Self.Clear;
+
+  OpenParamFile(AFileName, fmOpenRead);
+  ParamsExtFile.LoadFromFile(Self);
+  CloseParamFile;
+end;
+
+function TParamsExt.TryGetParamFromFile(
+  var AVal: Variant;
+  const AParamIdent: String): Boolean;
+begin
+  if not Assigned(ParamsExtFile) then
+    raise Exception.Create('ParamsFile are closed');
+
+  Result := ParamsExtFile.TryGetParam(AParamIdent, AVal);
+end;
+
+function TParamsExt.TryGetParamFromFile(
+  var AVal: Variant;
+  const AParamIndex: Integer): Boolean;
+begin
+  if not Assigned(ParamsExtFile) then
+    raise Exception.Create('ParamsFile are closed');
+
+  Result := ParamsExtFile.TryGetParam(AParamIndex, AVal);
+end;
+
+function TParamsExt.TryGetParam(
+  var AVal: Variant;
+  const AParamIdent: String): Boolean;
+var
+  i: Integer;
+begin
+  Result := false;
+  AVal := null;
+
+  try
+    i := IndexOf(AParamIdent);
+    AVal := Params[i].v;
+
+    Result := true;
+  except
+  end;
+end;
+
+procedure TParamsExt.ObjectToParams(
+  const AObject: TObject;
+  const AAncestor: String = '');
+var
+  RttiContext: TRttiContext;
+  RttiType: TRttiType;
+  RttiProp: TRttiProperty;
+  ClassName: String;
+  Value: TValue;
+  RootName: String;
+  FullPropName: String;
+  Ancestor: String;
+  TypeKind: TTypeKind;
+begin
+  RttiContext := TRttiContext.Create;
+  try
+    Ancestor := '';
+    if AAncestor.Length > 0 then
+      Ancestor := AAncestor + '.';
+
+    RttiType := RttiContext.GetType(AObject.ClassType);
+    ClassName := AObject.ClassName;
+    RootName := Ancestor + ClassName + '.';
+//    Add(ClassName, RootName + 'ClassName');
+
+    for RttiProp in RttiType.GetProperties do
+    begin
+      TypeKind := RttiProp.PropertyType.TypeKind;
+      if TypeKind in [tkMethod, tkInterface] then
+        Continue;
+
+      Value := RttiProp.GetValue(AObject);
+      FullPropName := RootName + RttiProp.Name;
+      Add(Value.AsVariant, FullPropName);
+
+      if Value.IsObject then
+        ObjectToParams(Value.AsObject, ClassName);
+    end;
+  finally
+    RttiContext.Free;
+  end;
+end;
+
+procedure TParamsExt.ObjectToParams(
+  const AObjectIdent: String;
+  const AObject: TObject;
+  const AAncestor: String = '');
+var
+  RttiContext: TRttiContext;
+  RttiType: TRttiType;
+  RttiProp: TRttiProperty;
+  ClassName: String;
+  Value: TValue;
+  RootName: String;
+  FullPropName: String;
+  Ancestor: String;
+  TypeKind: TTypeKind;
+begin
+  RttiContext := TRttiContext.Create;
+  try
+    Ancestor := '';
+    if AAncestor.Length > 0 then
+      Ancestor := AAncestor + '.';
+
+    RttiType := RttiContext.GetType(AObject.ClassType);
+    ClassName := AObject.ClassName;
+    RootName := AObjectIdent + '.' + Ancestor + ClassName + '.';
+
+    for RttiProp in RttiType.GetProperties do
+    begin
+      TypeKind := RttiProp.PropertyType.TypeKind;
+      if TypeKind in [tkMethod, tkInterface] then
+        Continue;
+
+      Value := RttiProp.GetValue(AObject);
+      FullPropName := RootName + RttiProp.Name;
+      Add(Value.AsVariant, FullPropName);
+
+      if Value.IsObject then
+        ObjectToParams(AObjectIdent, Value.AsObject, ClassName);
+    end;
+  finally
+    RttiContext.Free;
+  end;
+end;
+
+procedure TParamsExt.ParamsToObject(
+  const AObject: TObject;
+  const AAncestor: String = '');
+var
+  RttiContext: TRttiContext;
+  RttiType: TRttiType;
+  RttiProp: TRttiProperty;
+  PropName: String;
+  ClassName: String;
+  Value: TValue;
+  ValueTmp: TValue;
+  V: Variant;
+  RootName: String;
+  FullPropName: String;
+  Ancestor: String;
+  TypeKind: TTypeKind;
+begin
+  RttiContext := TRttiContext.Create;
+  try
+    Ancestor := '';
+    if AAncestor.Length > 0 then
+      Ancestor := AAncestor + '.';
+
+    RttiType := RttiContext.GetType(AObject.ClassType);
+    ClassName := AObject.ClassName;
+    RootName := Ancestor + ClassName + '.';
+
+    for RttiProp in RttiType.GetProperties do
+    begin
+      TypeKind := RttiProp.PropertyType.TypeKind;
+      if TypeKind in [tkMethod, tkInterface] then
+        Continue;
+
+      ValueTmp := RttiProp.GetValue(AObject);
+      if ValueTmp.IsObject then
+      begin
+        ParamsToObject(ValueTmp.AsObject, ClassName);
+
+        Continue;
+      end;
+
+      PropName := RttiProp.Name;
+      V := null;
+      FullPropName := RootName + PropName;
+      TryGetParam(V, FullPropName);
+
+      if V = null then
+        Continue;
+
+      Value := TValue.FromVariant(V);
+      RttiProp.SetValue(AObject, Value);
+    end;
+  finally
+    RttiContext.Free;
+  end;
+end;
+
+procedure TParamsExt.ParamsToObject(
+  const AObjectIdent: String;
+  const AObject: TObject;
+  const AAncestor: String = '');
+var
+  RttiContext: TRttiContext;
+  RttiType: TRttiType;
+  RttiProp: TRttiProperty;
+  PropName: String;
+  ClassName: String;
+  Value: TValue;
+  ValueTmp: TValue;
+  V: Variant;
+  RootName: String;
+  FullPropName: String;
+  Ancestor: String;
+  TypeKind: TTypeKind;
+begin
+  RttiContext := TRttiContext.Create;
+  try
+    Ancestor := '';
+    if AAncestor.Length > 0 then
+      Ancestor := AAncestor + '.';
+
+    RttiType := RttiContext.GetType(AObject.ClassType);
+    ClassName := AObject.ClassName;
+    RootName := AObjectIdent + '.' + Ancestor + ClassName + '.';
+
+    for RttiProp in RttiType.GetProperties do
+    begin
+      TypeKind := RttiProp.PropertyType.TypeKind;
+      if TypeKind in [tkMethod, tkInterface] then
+        Continue;
+
+      ValueTmp := RttiProp.GetValue(AObject);
+      if ValueTmp.IsObject then
+      begin
+        ParamsToObject(ValueTmp.AsObject, ClassName);
+
+        Continue;
+      end;
+
+      PropName := RttiProp.Name;
+      V := null;
+      FullPropName := RootName + PropName;
+      TryGetParam(V, FullPropName);
+
+      if V = null then
+        Continue;
+
+      Value := TValue.FromVariant(V);
+      RttiProp.SetValue(AObject, Value);
+    end;
+  finally
+    RttiContext.Free;
+  end;
+end;
+
+procedure TParamsExt.ChangeValue(const AValue: Variant; const AIdent: String);
+var
+  i: Integer;
+begin
+  i := IndexOf(AIdent);
+
+  CheckCorrect('ChangeValue', i, VarType(AValue));
+
+  Params[i].v := AValue;
+end;
+
+procedure TParamsExt.ChangeValue(const AValue: Pointer; const AIdent: String);
+var
+  i: Integer;
+begin
+  // Здесь может принять только Pointer по этому проверку на тип не делаем
+  i := IndexOf(AIdent);
+
+  TVarData(Params[i].v).VPointer := AValue;
+end;
+
+initialization
+  ParamsExtFile := nil;
+
 
 end.

@@ -8,22 +8,18 @@ interface
 uses
     System.Classes
   , System.UITypes
+  , FMX.Graphics
   , FMX.Forms
-  , FMX.ThemeUnit
+  , FMX.FormExt.Types
   , ThreadFactoryRegistryUnit
   , ThreadFactoryUnit
   {$IFDEF MSWINDOWS}
   , FMX.Types
   , FMX.TrayIcon.Win
-  , BorderFrameTypesUnit
-  , BorderFrameUnit
   {$ENDIF}
   ;
 
 type
-  {$IFDEF MSWINDOWS}
-  TBorderFrameKind = BorderFrameTypesUnit.TBorderFrameKind;
-  {$ENDIF}
   PCloseQueryMethod = ^TCloseQueryMethod;
   TCloseQueryMethod = procedure(Sender: TObject; var CanClose: Boolean) of object;
 
@@ -45,7 +41,6 @@ type
     ///   Базовая фабрика нитей
     /// </summary>
     FThreadFactory: TThreadFactory;
-    //FCanClose: Boolean;
     FOnCloseQueryExternalHandler: TCloseQueryMethod;
     FOnCloseExternalHandler: TCloseMethod;
     FOnKeyUpExternalHandler: TKeyUpMethod;
@@ -57,7 +52,6 @@ type
     FCanClose: Boolean;
     FTheme: TTheme;
     {$IFDEF MSWINDOWS}
-//    FCustomBorder: TCustomBorder;
     FBorderFrame: TBorderFrame;
     FBorderFrameKind: TBorderFrameKind;
 
@@ -85,15 +79,12 @@ type
     procedure OnCloseInternalHandler(Sender: TObject; var Action: TCloseAction); virtual;
     procedure OnKeyUpInternalHandler(Sender: TObject; var Key: Word; var KeyChar: Char;
       Shift: TShiftState); virtual;
-
     {$IFDEF MSWINDOWS}
     function GetClientWidth: Integer;
     function GetClientHeight: Integer;
 
     procedure SetClientWidth(const AClientWidth: Integer);
     procedure SetClientHeight(const AClientHeight: Integer);
-
-//    procedure SetBorderFrameKind(const ABorderFrameKind: TBorderFrameKind);
 
     function GetMinClientWidth: Integer;
     function GetMinClientHeight: Integer;
@@ -109,11 +100,6 @@ type
     procedure InnerTrayIconMouseDown(
       Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Single);
     {$ENDIF}
-  protected
-    {$IFDEF MSWINDOWS}
-//    property BorderFrameKind: TBorderFrameKind write SetBorderFrameKind;
-    property BorderFrame: TBorderFrame read FBorderFrame;
-    {$ENDIF}
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -127,6 +113,8 @@ type
     property ToDoClose: Boolean read FToDoClose write FToDoClose;
     property Theme: TTheme read FTheme;
     {$IFDEF MSWINDOWS}
+    property BorderFrame: TBorderFrame read FBorderFrame;
+
     property ClientWidth: Integer read GetClientWidth write SetClientWidth;
     property ClientHeight: Integer read GetClientHeight write SetClientHeight;
 
@@ -144,6 +132,8 @@ type
       read FTrayIconMouseLeftButtonDown write FTrayIconMouseLeftButtonDown;
     {$ENDIF}
 
+    procedure ApplyFormTheme;
+
     class procedure CloseChildForms;
   end;
 
@@ -157,14 +147,6 @@ uses
   , FMX.Platform.Win
   {$ENDIF}
   ;
-
-//{ TCustomBorder }
-//
-//constructor TCustomBorder.Create;
-//begin
-//  FBorderFrame := TBorderFrame.Cre
-//
-//end;
 
 { TFormExt }
 
@@ -235,16 +217,11 @@ begin
   inherited;
 end;
 {$IFDEF MSWINDOWS}
-//procedure TFormExt.SetBorderFrameKind(const ABorderFrameKind: TBorderFrameKind);
-//begin
-//  FBorderFrame.BorderFrameKind := ABorderFrameKind;
-//end;
-
 function TFormExt.GetClientWidth: Integer;
 begin
   Result := inherited ClientWidth;
 
-  if FBorderFrameKind > bfkNone then
+  if FBorderFrameKind > TBorderFrameKind.bfkNone then
     Result := FBorderFrame.ClientWidth;
 end;
 
@@ -252,7 +229,7 @@ function TFormExt.GetClientHeight: Integer;
 begin
   Result := inherited ClientHeight;
 
-  if FBorderFrameKind > bfkNone then
+  if FBorderFrameKind > TBorderFrameKind.bfkNone then
     Result := FBorderFrame.ClientHeight;
 end;
 
@@ -260,7 +237,7 @@ procedure TFormExt.SetClientWidth(const AClientWidth: Integer);
 begin
   inherited ClientWidth := AClientWidth;
 
-  if FBorderFrameKind > bfkNone then
+  if FBorderFrameKind > TBorderFrameKind.bfkNone then
     FBorderFrame.ClientWidth := AClientWidth;
 end;
 
@@ -268,7 +245,7 @@ procedure TFormExt.SetClientHeight(const AClientHeight: Integer);
 begin
   inherited ClientHeight := AClientHeight;
 
-  if FBorderFrameKind > bfkNone then
+  if FBorderFrameKind > TBorderFrameKind.bfkNone then
     FBorderFrame.ClientHeight := AClientHeight;
 end;
 
@@ -276,7 +253,7 @@ function TFormExt.GetMinClientWidth: Integer;
 begin
   Result := 0;
 
-  if FBorderFrameKind > bfkNone then
+  if FBorderFrameKind > TBorderFrameKind.bfkNone then
     Result := FBorderFrame.MinClientWidth;
 end;
 
@@ -284,19 +261,19 @@ function TFormExt.GetMinClientHeight: Integer;
 begin
   Result := 0;
 
-  if FBorderFrameKind > bfkNone then
+  if FBorderFrameKind > TBorderFrameKind.bfkNone then
     Result := FBorderFrame.MinClientHeight;
 end;
 
 procedure TFormExt.SetMinClientWidth(const AMinClientWidth: Integer);
 begin
-  if FBorderFrameKind > bfkNone then
+  if FBorderFrameKind > TBorderFrameKind.bfkNone then
     FBorderFrame.MinClientWidth := AMinClientWidth;
 end;
 
 procedure TFormExt.SetMinClientHeight(const AMinClientHeight: Integer);
 begin
-  if FBorderFrameKind > bfkNone then
+  if FBorderFrameKind > TBorderFrameKind.bfkNone then
     FBorderFrame.MinClientHeight := AMinClientHeight;
 end;
 
@@ -304,7 +281,7 @@ function TFormExt.GetMaxClientWidth: Integer;
 begin
   Result := 0;
 
-  if FBorderFrameKind > bfkNone then
+  if FBorderFrameKind > TBorderFrameKind.bfkNone then
     Result := FBorderFrame.MaxClientWidth;
 end;
 
@@ -312,19 +289,19 @@ function TFormExt.GetMaxClientHeight: Integer;
 begin
   Result := 0;
 
-  if FBorderFrameKind > bfkNone then
+  if FBorderFrameKind > TBorderFrameKind.bfkNone then
     Result := FBorderFrame.MinClientHeight;
 end;
 
 procedure TFormExt.SetMaxClientWidth(const AMaxClientWidth: Integer);
 begin
-  if FBorderFrameKind > bfkNone then
+  if FBorderFrameKind > TBorderFrameKind.bfkNone then
     FBorderFrame.MaxClientWidth := AMaxClientWidth;
 end;
 
 procedure TFormExt.SetMaxClientHeight(const AMaxClientHeight: Integer);
 begin
-  if FBorderFrameKind > bfkNone then
+  if FBorderFrameKind > TBorderFrameKind.bfkNone then
     FBorderFrame.MaxClientHeight := AMaxClientHeight;
 end;
 
@@ -475,6 +452,16 @@ end;
 procedure TFormExt.SetOnClose(const AOnCloseHandler: TCloseMethod);
 begin
   FOnCloseExternalHandler := AOnCloseHandler;
+end;
+
+procedure TFormExt.ApplyFormTheme;
+begin
+  {$IFDEF MSWINDOWS}
+  BorderFrame.BorderFrameKind := FTheme.FormSettings.BorderFrameKind;
+  BorderFrame.BorderColor := FTheme.FormSettings.BorderFrameColor;
+  {$ENDIF}
+  Fill.Kind := TBrushKind.Solid;
+  Fill.Color := FTheme.FormSettings.BackgroundColor;
 end;
 
 class procedure TFormExt.CloseChildForms;
