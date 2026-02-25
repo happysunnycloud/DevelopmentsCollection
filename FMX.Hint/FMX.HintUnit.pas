@@ -14,7 +14,7 @@ uses
   , FMX.HintFormUnit
   , FMX.HintThreadUnit
   , FMX.FormExtUnit
-  , FMX.ThemeUnit
+  , FMX.Theme
   , ThreadFactoryUnit
   ;
 
@@ -141,7 +141,10 @@ begin
   Y := Point.Y;
 
   FHintForm := THintForm.CreateNew(nil);
-  FHintForm.Theme.CopyFrom(FTheme);
+
+  FHintForm.Theme.HintSettings.CopyFrom(FTheme.HintSettings);
+  FHintForm.Theme.HintSettings.Apply;
+
   FHintForm.Hint := FControl.Hint;
   FHintForm.Left := X - FHintForm.Width div 2;
   FHintForm.Top := Y - FHintForm.Height - 6;
@@ -152,8 +155,6 @@ begin
 
   FHintForm.PrepareOverlayForm;
   FHintForm.ShowOverlayAboveParent(ParentForm);
-
-  FHintForm.Theme.Apply;
 
   FHintForm.OnDestroy := OnHintFormDestroyHandler;
 end;
@@ -180,8 +181,8 @@ begin
 
   try
     FTheme := TTheme.Create;
-    FTheme.BackgroundColor := TAlphaColorRec.Black;
-    FTheme.TextSettings.FontColor := TAlphaColorRec.White;
+    FTheme.HintSettings.BackgroundColor := TAlphaColorRec.Black;
+    FTheme.HintSettings.CustomTextSettings.FontColor := TAlphaColorRec.White;
 
     // Отключаем стандартный механизм хинтов
     Application.ShowHint := False;

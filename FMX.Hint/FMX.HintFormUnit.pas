@@ -1,4 +1,4 @@
-unit FMX.HintFormUnit;
+п»їunit FMX.HintFormUnit;
 
 interface
 
@@ -9,7 +9,7 @@ uses
   , FMX.Forms
   , FMX.Graphics
   , FMX.StdCtrls
-  , FMX.ThemeUnit
+  , FMX.Theme
   ;
 
 const
@@ -27,8 +27,6 @@ type
       const ARect: TRectF);
 
     procedure SetHint(const AHint: String);
-
-    procedure OnThemeApplyHandler(Sender: TObject);
   protected
     procedure OnCloseQueryInternalHandler(
       Sender: TObject; var CanClose: Boolean);
@@ -101,7 +99,12 @@ begin
   inherited CreateNew(AOwner, Dummy);
 
   FTheme := TTheme.Create;
-  FTheme.OnApply := OnThemeApplyHandler;
+  FTheme.HintSettings.OnApplyProcRef :=
+    procedure (const AHintSettings: THintSettings)
+    begin
+      Self.Fill.Color := AHintSettings.BackgroundColor;
+      Self.FLabel.TextSettings.FontColor := AHintSettings.CustomTextSettings.FontColor;
+    end;
 
   OnPaint := Paint;
 
@@ -129,13 +132,13 @@ begin
   Overlay := Self;
   Overlay.BorderStyle := TFmxFormBorderStyle.None;
   Overlay.Visible := False;
-  // Создаём HWND, но не показываем
+  // РЎРѕР·РґР°С‘Рј HWND, РЅРѕ РЅРµ РїРѕРєР°Р·С‹РІР°РµРј
   Overlay.HandleNeeded;
   H := WindowHandleToPlatform(Overlay.Handle).Wnd;
   ExStyle := GetWindowLong(H, GWL_EXSTYLE);
   ExStyle := ExStyle or WS_EX_NOACTIVATE or WS_EX_TOOLWINDOW;
   SetWindowLong(H, GWL_EXSTYLE, ExStyle);
-  // Обновляем стиль без активации
+  // РћР±РЅРѕРІР»СЏРµРј СЃС‚РёР»СЊ Р±РµР· Р°РєС‚РёРІР°С†РёРё
   SetWindowPos(
     H,
     0,
@@ -153,9 +156,9 @@ begin
   Overlay := Self;
   HOverlay := WindowHandleToPlatform(Overlay.Handle).Wnd;
   HParent  := WindowHandleToPlatform(Parent.Handle).Wnd;
-  // Показываем без активации
+  // РџРѕРєР°Р·С‹РІР°РµРј Р±РµР· Р°РєС‚РёРІР°С†РёРё
   ShowWindow(HOverlay, SW_SHOWNOACTIVATE);
-  // Вставляем СТРОГО над родителем (ключ к отсутствию мигания)
+  // Р’СЃС‚Р°РІР»СЏРµРј РЎРўР РћР“Рћ РЅР°Рґ СЂРѕРґРёС‚РµР»РµРј (РєР»СЋС‡ Рє РѕС‚СЃСѓС‚СЃС‚РІРёСЋ РјРёРіР°РЅРёСЏ)
   SetWindowPos(
     HOverlay,
     HParent,
@@ -179,12 +182,6 @@ begin
   FreeAndNil(FTheme);
 
   inherited;
-end;
-
-procedure THintForm.OnThemeApplyHandler(Sender: TObject);
-begin
-  Self.Fill.Color := FTheme.BackgroundColor;
-  FTheme.TextSettings.ApplyTo(Self.FLabel);
 end;
 
 end.
