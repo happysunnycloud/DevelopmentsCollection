@@ -97,7 +97,7 @@ type
     procedure Add(const AValue: Variant; const AIdent: String = ''); overload; virtual;
     procedure Add(const AValue: Pointer; const AIdent: String = ''); overload; virtual;
 
-    procedure AddAsPointer(AValue: Pointer); deprecated 'Use Add(AValue: Pointer)';
+//    procedure AddAsPointer(AValue: Pointer); deprecated 'Use Add(AValue: Pointer)';
 
     property  AsInt64    [const AIndex: Word]: Int64      read GetAsInt64;
     property  AsString   [const AIndex: Word]: String     read GetAsString;
@@ -280,6 +280,8 @@ var
   i: Word;
   _Length: Word;
 begin
+  System.SetLength(FParams, 0);
+
   _Length := System.Length(AVars);
   if _Length = 0 then
     raise Exception.Create(Format('%s.%s: AVars is empty', [CLASS_NAME, 'Create']));
@@ -296,6 +298,8 @@ end;
 
 constructor TParamsExt.Create;
 begin
+  System.SetLength(FParams, 0);
+
   FParamsExtStreamer := nil;
 
   inherited Create;
@@ -303,6 +307,10 @@ end;
 
 destructor TParamsExt.Destroy;
 begin
+//  FillChar(FParams[0], SizeOf(FParams[0]), 0);
+
+  SetLength(FParams, 0);
+
   if Assigned(FParamsExtStreamer) then
     CloseStream;
 
@@ -346,6 +354,8 @@ end;
 
 function TParamsExt.GetAsPointer(const AIndex: Word): Pointer;
 begin
+  // Если используется кастомный тип, то прилетит как VarUnknown
+  // Надо быть осмотрительнее
   CheckCorrect('GetAsPointer', AIndex, varByRef);
 
   Result := TVarData(FParams[AIndex].v).VPointer;
@@ -467,7 +477,8 @@ var
   i: Integer;
 begin
   i := GetIndexByIdent(AIdent);
-
+  // Если используется кастомный тип, то прилетит как VarUnknown
+  // Надо быть осмотрительнее
   CheckCorrect('GetAsPointer', i, varByRef);
 
   Result := TVarData(FParams[i].v).VPointer;
@@ -778,10 +789,13 @@ procedure TParamsExt.CheckCorrect(
   const AMethodName: String;
   const AIndex: Integer;
   const AVarType: TVarType);
+var
+  TypeOfVar: TVarType;
 begin
   CheckCorrect(AMethodName, AIndex);
 
-  if VarType(FParams[AIndex].v) <> AVarType then
+  TypeOfVar := VarType(FParams[AIndex].v);
+  if TypeOfVar <> AVarType then
     raise Exception.Create(
       Format('%s.%s: Type mismatch for ident "%s"',
       [CLASS_NAME, AMethodName, FParams[AIndex].Ident]));
@@ -791,7 +805,7 @@ procedure TParamsExt.CheckDuplicateIdent(const AIdent: String);
 var
   i: Integer;
 begin
-  if  AIdent.Length = 0 then
+  if AIdent.Length = 0 then
     Exit;
 
   for i := 0 to Pred(Length) do
@@ -852,6 +866,8 @@ begin
   FillChar(TVarData(Value), SizeOf(TVarData), 0);
 
   // Устанавливаем тип и указатель
+  // Если используется кастомный тип, то прилетит как VarUnknown
+  // Надо быть осмотрительнее
   TVarData(Value).VType := varByRef;
   TVarData(Value).VPointer := AValue;
 
@@ -864,54 +880,6 @@ begin
 //  FParams[High(FParams)].v := Value;
 //  FParams[High(FParams)].Ident := AIdent;
 end;
-
-procedure TParamsExt.AddAsPointer(AValue: Pointer);
-var
-  Value: Variant;
-begin
-  // Обнуляем полностью
-  FillChar(TVarData(Value), SizeOf(TVarData), 0);
-
-  // Тип точно такой же, как в Add
-  TVarData(Value).VType := varByRef;
-  TVarData(Value).VPointer := AValue;
-
-  // Добавляем в массив
-  SetLength(FParams, System.Length(FParams) + 1);
-  FParams[High(FParams)].v := Value;
-end;
-
-//procedure TParamsExt.Add(const AValue: Pointer; const AIdent: String = '');
-//var
-//  Value: Variant;
-//begin
-//  // Раньше был VarByRef or VarUnknown.
-//  // В: Почему? О: История умалчивает
-//  // TVarData(Value).VType := VarByRef or VarUnknown;
-//
-//  FillChar(TVarData(Value), SizeOf(TVarData), 0);
-//
-//  TVarData(Value).VType := VarByRef;
-//  TVarData(Value).VPointer := AValue;
-//
-//  SetLength(fParams, System.Length(FParams) + 1);
-//  FParams[System.Length(FParams) - 1].v := Value;
-//  FParams[System.Length(FParams) - 1].Ident := AIdent;
-//end;
-//
-//procedure TParamsExt.AddAsPointer(AValue: Pointer);
-//var
-//  Value: Variant;
-//begin
-//  FillChar(TVarData(Value), SizeOf(TVarData), 0);
-//
-//  TVarData(Value).VType := VarByRef;
-////  TVarData(Value).VType := VarByRef or VarUnknown;
-//  TVarData(Value).VPointer := AValue;
-//
-//  SetLength(FParams, System.Length(FParams) + 1);
-//  FParams[System.Length(FParams) - 1].v := Value;
-//end;
 
 function TParamsExt.Exists(const AIdent: String): Boolean;
 begin
@@ -965,6 +933,8 @@ begin
   j := 0;
   for i := StartIndex to  Pred(System.Length(FParams)) do
   begin
+    CheckDuplicateIdent(ParamsObj.Params[j].Ident);
+
     FParams[i] := ParamsObj.Params[j];
     Inc(j);
   end;
