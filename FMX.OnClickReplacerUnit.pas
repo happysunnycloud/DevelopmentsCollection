@@ -31,6 +31,10 @@ type
     class function IsArrayContainsControl(
       const AControlsArray: array of TControl;
       const AControl: TControl): Boolean;
+
+    class procedure DoReplace(
+      const AOwner: TFmxObject;
+      const AExcludedControls: array of TControl);
   public
     class procedure Init;
     class procedure UnInit;
@@ -39,10 +43,11 @@ type
       const AOwner: TFmxObject;
       const AExcludedControls: array of TControl;
       const AExternalProc: TProc);
-//    class procedure ReplaceFor(
-//      const AOwner: TComponent;
-//      const AIncludingControls: array of TControl;
-//      const AExternalProc: TProc);
+
+//    class procedure AdditionalReplace(
+//      const AOwner: TFmxObject;
+//      const AExcludedControls: array of TControl);
+
     class procedure Restore;
 
     class function HasReplaced: Boolean;
@@ -101,17 +106,14 @@ begin
   InnerOnClickHandler(Sender);
 end;
 
-class procedure TOnClickReplacer.Replace(
+class procedure TOnClickReplacer.DoReplace(
   const AOwner: TFmxObject;
-  const AExcludedControls: array of TControl;
-  const AExternalProc: TProc);
+  const AExcludedControls: array of TControl);
 var
   _Sender: TSenderRec;
   ExcludedControls: array of TControl;
   i: Word;
 begin
-  FExternalProc := AExternalProc;
-
   i := 0;
   while i < Length(AExcludedControls) do
   begin
@@ -137,34 +139,28 @@ begin
     end);
 end;
 
-//class procedure TOnClickReplacer.ReplaceFor(
-//  const AOwner: TComponent;
-//  const AIncludingControls: array of TControl;
-//  const AExternalProc: TProc);
-//var
-//  _Sender: TSenderRec;
-//  _Control: TControl;
-//  i: Word;
+class procedure TOnClickReplacer.Replace(
+  const AOwner: TFmxObject;
+  const AExcludedControls: array of TControl;
+  const AExternalProc: TProc);
+begin
+  FExternalProc := AExternalProc;
+
+  DoReplace(AOwner, AExcludedControls);
+end;
+
+//class procedure TOnClickReplacer.AdditionalReplace(
+//  const AOwner: TFmxObject;
+//  const AExcludedControls: array of TControl);
 //begin
-//  FExternalProc := AExternalProc;
+//  if FSenderList.Count = 0 then
+//    Exit;
 //
-//  i := 0;
-//  while i < Length(AIncludingControls) do
-//  begin
-//    _Control := AIncludingControls[i];
-//    if IsArrayContainsControl(AIncludingControls, _Control) then
-//      Continue;
+////    raise Exception.Create(
+////      'There is nowhere to add, you need to initialize ' +
+////      'the list through a call Replace method');
 //
-//      if Assigned(_Control.OnClick) then
-//      begin
-//        _Sender.Sender := _Control;
-//        _Sender.NotifyEvent := _Control.OnClick;
-//        _Control.OnClick := InnerOnClickHandler;
-//        FSenderList.Add(_Sender);
-//      end;
-//
-//    Inc(i);
-//  end;
+//  DoReplace(AOwner, AExcludedControls);
 //end;
 
 class function TOnClickReplacer.HasReplaced: Boolean;
