@@ -116,29 +116,29 @@ type
     property ThreadName: String read GetThreadName write SetThreadName;
     property OnSetTerminate: TNotifyEvent read GetOnSetTerminate write SetOnSetTerminate;
   public
-    /// <summary>
-    ///   Создает неименованный поток с исполняемым анонимным методом
-    ///   C указанием процедур регистрации и снятия с регистрации
-    ///   Suspended = false, FreeOnTerminate = true
-    /// </summary>
-    constructor Create(
-      const AExecProc: TExecProc;
-      const ARegProc: TRegProc;
-      const AUnregProc: TUnRegProc;
-      const ASuspended: Boolean = false;
-      const AFreeOnTerminate: Boolean = true); overload;
-    /// <summary>
-    ///   Создает именованный поток с исполняемым анонимным методом
-    ///   C указанием процедур регистрации и снятия с регистрации
-    ///   Suspended = false, FreeOnTerminate = true
-    /// </summary>
-    constructor Create(
-      const AThreadName: String;
-      const AExecProc: TExecProc;
-      const ARegProc: TRegProc;
-      const AUnregProc: TUnRegProc;
-      const ASuspended: Boolean = false;
-      const AFreeOnTerminate: Boolean = true); overload;
+//    /// <summary>
+//    ///   Создает неименованный поток с исполняемым анонимным методом
+//    ///   C указанием процедур регистрации и снятия с регистрации
+//    ///   Suspended = false, FreeOnTerminate = true
+//    /// </summary>
+//    constructor Create(
+//      const AExecProc: TExecProc;
+//      const ARegProc: TRegProc;
+//      const AUnregProc: TUnRegProc;
+//      const ASuspended: Boolean = false;
+//      const AFreeOnTerminate: Boolean = true); overload;
+//    /// <summary>
+//    ///   Создает именованный поток с исполняемым анонимным методом
+//    ///   C указанием процедур регистрации и снятия с регистрации
+//    ///   Suspended = false, FreeOnTerminate = true
+//    /// </summary>
+//    constructor Create(
+//      const AThreadName: String;
+//      const AExecProc: TExecProc;
+//      const ARegProc: TRegProc;
+//      const AUnregProc: TUnRegProc;
+//      const ASuspended: Boolean = false;
+//      const AFreeOnTerminate: Boolean = true); overload;
     /// <summary>
     ///   Создает неименованный поток с исполняемым анонимным методом
     ///   C указанием фабрики регистрирующей нить
@@ -200,10 +200,9 @@ type
     procedure InnerExecute; override;
   public
     constructor Create(
+      const AThreadFactory: TThreadFactory;
       const AThreadName: String;
       const AExecProc: TExecProc;
-      const ARegProc: TRegProc;
-      const AUnregProc: TUnRegProc;
       const ASuspended: Boolean = false;
       const AFreeOnTerminate: Boolean = true);
   end;
@@ -260,20 +259,20 @@ type
       const AExecProc: TExecProc;
       const ASuspended: Boolean = false): TInlineThreadExt;
 
-    /// <summary>
-    ///   Создает поток на основе класса
-    ///   FreeOnTerminate = false
-    /// </summary>
-    function CreateThreadClassOf(
-      const AClassThread: TThreadExtClass;
-      const ASuspended: Boolean = false): Pointer;
-    /// <summary>
-    ///   Создает поток на основе класса
-    ///   FreeOnTerminate = true
-    /// </summary>
-    function CreateFreeOnTerminateThreadClassOf(
-      const AClassThread: TThreadExtClass;
-      const ASuspended: Boolean = false): Pointer;
+//    /// <summary>
+//    ///   Создает поток на основе класса
+//    ///   FreeOnTerminate = false
+//    /// </summary>
+//    function CreateThreadClassOf(
+//      const AClassThread: TThreadExtClass;
+//      const ASuspended: Boolean = false): Pointer;
+//    /// <summary>
+//    ///   Создает поток на основе класса
+//    ///   FreeOnTerminate = true
+//    /// </summary>
+//    function CreateFreeOnTerminateThreadClassOf(
+//      const AClassThread: TThreadExtClass;
+//      const ASuspended: Boolean = false): Pointer;
 
     /// <summary>
     ///   Создает независимый поток с обязательной регистрацией в фабрике потоков
@@ -293,8 +292,16 @@ type
     // FindThread не может применяться для последовательного терминирования потока.
     // Терминировать поток нужно через TerminateThread
     function FindThread(const AThreadName: String): TThreadExt;
+    // Проверяет регистрацию потока в реестре
+    function ThreadExists(const AThread: TThreadExt): Boolean;
+    {TODO: Реализоавть FinedAndDo - находит трид и тут же его обрабатываем,
+           это гарантия, что ссылка на трид действительна
+           Варианты вызова FinedAndDo(Name: String, procedure (AThread: TThreadExt))
+           Варианты вызова FinedAndDo(AThread: TThreadExt, procedure (AThread: TThreadExt))
+    }
     // Терминирует поток, если он найден в регистре
-    procedure TerminateThread(const AThreadName: String);
+    procedure TerminateThread(const ATerminatingThreadName: String); overload;
+    procedure TerminateThread(const ATerminatingThread: TThreadExt); overload;
     /// <summary>
     ///  Активируем внешний TEvent и ловим на него уничтожение потока
     ///  Поток переведет TEvent в состояние SetEvent
@@ -304,8 +311,11 @@ type
     ///  Позволяет дождаться даже FreeOnTerminate = true потока
     /// </summary>
     procedure ActivateThreadIsDeadEvent(
-      const AThreadName: String;
-      const AThreadIsDeadEvent: TEvent);
+      const AActivatingThreadName: String;
+      const AThreadIsDeadEvent: TEvent); overload;
+    procedure ActivateThreadIsDeadEvent(
+      const AActivatingThread: TThreadExt;
+      const AThreadIsDeadEvent: TEvent); overload;
 
     property OnDestroyFactory: TNotifyEvent
       write FOnDestroyFactory;
@@ -371,6 +381,10 @@ procedure TThreadExt.DoInit(
 begin
   FCriticalSection := TCriticalSection.Create;
 
+  ThreadName := ClassName;
+  if AThreadName.Length > 0 then
+    ThreadName := AThreadName;
+
   FThreadIsDeadEventRef := nil;
 
   if not (Self is TThreadExtClass) then
@@ -384,10 +398,6 @@ begin
 
   if not Assigned(AUnRegProc) then
     raise Exception.Create('TThreadExt.DoInit -> AUnRegProc is nil');
-
-  ThreadName := 'Nameless thread';
-  if AThreadName.Length > 0 then
-    ThreadName := AThreadName;
 
   FExecProc := AExecProc;
 
@@ -416,38 +426,38 @@ begin
   inherited Create(ASuspended);
 end;
 
-constructor TThreadExt.Create(
-  const AExecProc: TExecProc;
-  const ARegProc: TRegProc;
-  const AUnregProc: TUnRegProc;
-  const ASuspended: Boolean = false;
-  const AFreeOnTerminate: Boolean = true);
-begin
-  DoInit(
-    '',
-    AExecProc,
-    ARegProc,
-    AUnregProc,
-    ASuspended,
-    AFreeOnTerminate);
-end;
-
-constructor TThreadExt.Create(
-  const AThreadName: String;
-  const AExecProc: TExecProc;
-  const ARegProc: TRegProc;
-  const AUnregProc: TUnRegProc;
-  const ASuspended: Boolean = false;
-  const AFreeOnTerminate: Boolean = true);
-begin
-  DoInit(
-    AThreadName,
-    AExecProc,
-    ARegProc,
-    AUnregProc,
-    ASuspended,
-    AFreeOnTerminate);
-end;
+//constructor TThreadExt.Create(
+//  const AExecProc: TExecProc;
+//  const ARegProc: TRegProc;
+//  const AUnregProc: TUnRegProc;
+//  const ASuspended: Boolean = false;
+//  const AFreeOnTerminate: Boolean = true);
+//begin
+//  DoInit(
+//    '',
+//    AExecProc,
+//    ARegProc,
+//    AUnregProc,
+//    ASuspended,
+//    AFreeOnTerminate);
+//end;
+//
+//constructor TThreadExt.Create(
+//  const AThreadName: String;
+//  const AExecProc: TExecProc;
+//  const ARegProc: TRegProc;
+//  const AUnregProc: TUnRegProc;
+//  const ASuspended: Boolean = false;
+//  const AFreeOnTerminate: Boolean = true);
+//begin
+//  DoInit(
+//    AThreadName,
+//    AExecProc,
+//    ARegProc,
+//    AUnregProc,
+//    ASuspended,
+//    AFreeOnTerminate);
+//end;
 
 constructor TThreadExt.Create(
   const AThreadFactory: TThreadFactory;
@@ -758,20 +768,18 @@ end;
 { TInlineThreadExt }
 
 constructor TInlineThreadExt.Create(
+  const AThreadFactory: TThreadFactory;
   const AThreadName: String;
   const AExecProc: TExecProc;
-  const ARegProc: TRegProc;
-  const AUnregProc: TUnRegProc;
   const ASuspended: Boolean = false;
   const AFreeOnTerminate: Boolean = true);
 begin
   FExecProc := AExecProc;
 
   inherited Create(
+    AThreadFactory,
     AThreadName,
     nil,
-    ARegProc,
-    AUnregProc,
     ASuspended,
     AFreeOnTerminate);
 end;
@@ -849,10 +857,9 @@ function TThreadFactory.CreateInlineThread(
   const AFreeOnTerminated: Boolean = true): TInlineThreadExt;
 begin
   Result := TInlineThreadExt.Create(
+    Self,
     AThreadName,
     AExecProc,
-    RegThreadProc,
-    UnRegThreadProc,
     ASuspended,
     AFreeOnTerminated);
 end;
@@ -863,29 +870,28 @@ function TThreadFactory.CreateFreeOnTerminateInlineThread(
   const ASuspended: Boolean = false): TInlineThreadExt;
 begin
   Result := TInlineThreadExt.Create(
+    Self,
     AThreadName,
     AExecProc,
-    RegThreadProc,
-    UnRegThreadProc,
     ASuspended,
     true);
 end;
 
-function TThreadFactory.CreateThreadClassOf(
-  const AClassThread: TThreadExtClass;
-  const ASuspended: Boolean = false): Pointer;
-begin
-  Result := AClassThread.
-    Create(nil, RegThreadProc, UnRegThreadProc, ASuspended, false);
-end;
+//function TThreadFactory.CreateThreadClassOf(
+//  const AClassThread: TThreadExtClass;
+//  const ASuspended: Boolean = false): Pointer;
+//begin
+//  Result := AClassThread.
+//    Create(nil, RegThreadProc, UnRegThreadProc, ASuspended, false);
+//end;
 
-function TThreadFactory.CreateFreeOnTerminateThreadClassOf(
-  const AClassThread: TThreadExtClass;
-  const ASuspended: Boolean = false): Pointer;
-begin
-  Result := AClassThread.
-    Create(nil, RegThreadProc, UnRegThreadProc, ASuspended, true);
-end;
+//function TThreadFactory.CreateFreeOnTerminateThreadClassOf(
+//  const AClassThread: TThreadExtClass;
+//  const ASuspended: Boolean = false): Pointer;
+//begin
+//  Result := AClassThread.
+//    Create(nil, RegThreadProc, UnRegThreadProc, ASuspended, true);
+//end;
 
 procedure TThreadFactory.CreateRegistredThread(
   const AThreadFactoryRegistringConstructor: TThreadFactoryRegistringConstructor);
@@ -997,12 +1003,55 @@ begin
   Result := Thread;
 end;
 
-procedure TThreadFactory.TerminateThread(const AThreadName: String);
+function TThreadFactory.ThreadExists(const AThread: TThreadExt): Boolean;
+var
+  IsExists: Boolean;
+begin
+  IsExists := false;
+
+  FThreadRegistry.Enumerator(
+    procedure (const AThread: TThreadExt; var ABreak: Boolean)
+    begin
+      if AThread = AThread then
+      begin
+        IsExists := true;
+
+        ABreak := true;
+      end;
+    end);
+
+  Result := IsExists;
+end;
+
+procedure TThreadFactory.TerminateThread(const ATerminatingThreadName: String);
+var
+  Thread: TThreadExt;
+begin
+  Thread := nil;
+
+  FThreadRegistry.Enumerator(
+    procedure (const AThread: TThreadExt; var ABreak: Boolean)
+    begin
+      if AThread.ThreadName = ATerminatingThreadName then
+      begin
+        Thread := AThread;
+
+        ABreak := true;
+      end;
+    end);
+
+  if not Assigned(Thread) then
+    Exit;
+
+  TerminateThread(Thread);
+end;
+
+procedure TThreadFactory.TerminateThread(const ATerminatingThread: TThreadExt);
 begin
   FThreadRegistry.Enumerator(
     procedure (const AThread: TThreadExt; var ABreak: Boolean)
     begin
-      if AThread.ThreadName = AThreadName then
+      if AThread = ATerminatingThread then
       begin
         AThread.Terminate;
 
@@ -1012,28 +1061,57 @@ begin
 end;
 
 procedure TThreadFactory.ActivateThreadIsDeadEvent(
-  const AThreadName: String;
+  const AActivatingThreadName: String;
   const AThreadIsDeadEvent: TEvent);
 var
-  IsThreadFound: Boolean;
+  Thread: TThreadExt;
 begin
-  IsThreadFound := false;
+  Thread := nil;
 
+  // Обращение через Enumerator гаратнирует, что ссылка поток не смотрит на мусор
+  // Поток все еще существует
   FThreadRegistry.Enumerator(
     procedure (const AThread: TThreadExt; var ABreak: Boolean)
     begin
-      if AThread.ThreadName = AThreadName then
+      if AThread.ThreadName = AActivatingThreadName then
       begin
-        AThreadIsDeadEvent.ResetEvent;
-        AThread.ThreadIsDeadEventRef := AThreadIsDeadEvent;
-
-        IsThreadFound := true;
+        Thread := AThread;
 
         ABreak := true;
       end;
     end);
 
-  if not IsThreadFound then
+  if Assigned(Thread) then
+    ActivateThreadIsDeadEvent(Thread, AThreadIsDeadEvent)
+  else
+    AThreadIsDeadEvent.SetEvent;
+end;
+
+procedure TThreadFactory.ActivateThreadIsDeadEvent(
+  const AActivatingThread: TThreadExt;
+  const AThreadIsDeadEvent: TEvent);
+var
+  ThreadExist: Boolean;
+begin
+  ThreadExist := false;
+
+  // Обращение через Enumerator гаратнирует, что ссылка поток не смотрит на мусор
+  // Поток все еще существует
+  FThreadRegistry.Enumerator(
+    procedure (const AThread: TThreadExt; var ABreak: Boolean)
+    begin
+      if AActivatingThread = AThread then
+      begin
+        AThreadIsDeadEvent.ResetEvent;
+        AThread.ThreadIsDeadEventRef := AThreadIsDeadEvent;
+
+        ThreadExist := true;
+
+        ABreak := true;
+      end;
+    end);
+
+  if not ThreadExist then
     AThreadIsDeadEvent.SetEvent;
 end;
 
