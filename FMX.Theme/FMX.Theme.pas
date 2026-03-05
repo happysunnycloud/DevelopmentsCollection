@@ -37,7 +37,7 @@ type
   THintSettingsApplyProcRef = reference to
     procedure (const AHintSettings: THintSettings);
 
-  TRegUnregProcref = reference to
+  TRegUnregProcRef = reference to
     procedure (const AObject: TObject);
 
   TObjectDict = TDictionary<String, TObject>;
@@ -98,13 +98,13 @@ type
     FBackgroundColor: TAlphaColor;
     FCustomTextSettings: TCustomTextSettings;
 
-    FRegProcRef: TRegUnregProcref;
-    FUnregProcRef: TRegUnregProcref;
+    FRegProcRef: TRegUnregProcRef;
+    FUnregProcRef: TRegUnregProcRef;
   public
     constructor Create(
       const AIdent: String;
-      const ARegProcRef: TRegUnregProcref;
-      const AUnregProcRef: TRegUnregProcref);
+      const ARegProcRef: TRegUnregProcRef;
+      const AUnregProcRef: TRegUnregProcRef);
     destructor Destroy; override;
 
     procedure CopyFrom(const ABaseSettings: TBaseSettings); virtual;
@@ -136,8 +136,8 @@ type
   public
     constructor Create(
       const AIdent: String;
-      const ARegProcRef: TRegUnregProcref;
-      const AUnregProcRef: TRegUnregProcref);
+      const ARegProcRef: TRegUnregProcRef;
+      const AUnregProcRef: TRegUnregProcRef);
     destructor Destroy; override;
 
     property Container: TFmxObject
@@ -161,8 +161,8 @@ type
   public
     constructor Create(
       const AIdent: String;
-      const ARegProcRef: TRegUnregProcref;
-      const AUnregProcRef: TRegUnregProcref);
+      const ARegProcRef: TRegUnregProcRef;
+      const AUnregProcRef: TRegUnregProcRef);
     destructor Destroy; override;
 
     procedure CopyFrom(const AFormSettings: TFormSettings); reintroduce;
@@ -179,8 +179,6 @@ type
     {$ENDIF}
 
     procedure Apply; override;
-
-//    procedure ToParams(const AParams: TParamsExt);
   end;
 
   THintSettings = class(TBaseControlSettings)
@@ -189,8 +187,9 @@ type
   public
     constructor Create(
       const AIdent: String;
-      const ARegProcRef: TRegUnregProcref;
-      const AUnregProcRef: TRegUnregProcref);
+      const ARegProcRef: TRegUnregProcRef;
+      const AUnregProcRef: TRegUnregProcRef); overload;
+    constructor Create; overload;
 
     property OnApplyProcRef: THintSettingsApplyProcRef
       read FOnApplyProcRef write FOnApplyProcRef;
@@ -208,8 +207,8 @@ type
   public
     constructor Create(
       const AIdent: String;
-      const ARegProcRef: TRegUnregProcref;
-      const AUnregProcRef: TRegUnregProcref);
+      const ARegProcRef: TRegUnregProcRef;
+      const AUnregProcRef: TRegUnregProcRef);
     destructor Destroy; override;
 
     property OnApplyProcRef: TCommonSettingsApplyProcRef
@@ -235,8 +234,8 @@ type
   public
     constructor Create(
       const AIdent: String;
-      const ARegProcRef: TRegUnregProcref;
-      const AUnregProcRef: TRegUnregProcref);
+      const ARegProcRef: TRegUnregProcRef;
+      const AUnregProcRef: TRegUnregProcRef);
 
     property OnApplyProcRef: TItemSettingsApplyProcRef
       read FOnApplyProcRef write FOnApplyProcRef;
@@ -246,21 +245,17 @@ type
 
   TPopUpMenuSettings = class(TCommonSettings)
   strict private
-    FFormBackgroundColor: TAlphaColor;
     FOnApplyProcRef: TPopUpMenuSettingsApplyProcRef;
   public
     constructor Create(
       const AIdent: String;
-      const ARegProcRef: TRegUnregProcref;
-      const AUnregProcRef: TRegUnregProcref);
+      const ARegProcRef: TRegUnregProcRef;
+      const AUnregProcRef: TRegUnregProcRef);
 
     procedure CopyFrom(const APopUpMenuSettings: TPopUpMenuSettings); reintroduce;
 
     property OnApplyProcRef: TPopUpMenuSettingsApplyProcRef
       read FOnApplyProcRef write FOnApplyProcRef;
-
-    property FormBackgroundColor: TAlphaColor
-      read FFormBackgroundColor write FFormBackgroundColor;
 
     procedure Apply; override;
   end;
@@ -312,12 +307,9 @@ type
 
     property MemoColor: TAlphaColor read FMemoColor write FMemoColor;
 
-    property TextSettings: TTextSettingsExt
-      read FTextSettings write FTextSettings;
-
     property FormSettings: TFormSettings read FFormSettings;
     property CommonSettings: TCommonSettings read FCommonSettings;
-    property HintSettings: THintSettings read FHintSettings;
+    property HintTheme: THintSettings read FHintSettings;
     property ItemSettings: TItemSettings read FItemSettings;
     property PopUpMenuSettings: TPopUpMenuSettings read FPopUpMenuSettings;
 
@@ -393,14 +385,6 @@ begin
     FItalic := TFontStyle.fsItalic in DefaultTextSettings.Font.Style;
     FUnderline := TFontStyle.fsUnderline in DefaultTextSettings.Font.Style;
     FStrikeOut := TFontStyle.fsStrikeOut in DefaultTextSettings.Font.Style;
-
-//    FFontSize := 12;
-//    FFontColor := TAlphaColorRec.White;
-//    FFontFamily := DEFAUL_FONT_FAMILY;
-//    FBold := false;
-//    FItalic := false;
-//    FUnderline := false;
-//    FStrikeOut := false;
   finally
     FreeAndNil(DefaultTextSettings);
   end;
@@ -448,11 +432,10 @@ begin
   // Например, TLabel имеет свойство StyledSettings
   // TText не имеет свойства StyledSettings
   if TControlTools.HasProperty(Control, TProperties.StyledSettings) then
-    TControlTools.SetPropertyAsSet(Control, TProperties.StyledSettings, '')
-  else
-    Exit;
+    TControlTools.SetPropertyAsSet(Control, TProperties.StyledSettings, '');
 
-//  TControlTools.CheckHasProperty(Control, TProperties.TextSettings);
+  if not TControlTools.HasProperty(Control, TProperties.TextSettings) then
+    Exit;
 
   TextSettings := TControlTools.
     GetPropertyAsObject(Control, TProperties.TextSettings) as TTextSettings;
@@ -513,8 +496,8 @@ end;
 
 constructor TBaseSettings.Create(
   const AIdent: String;
-  const ARegProcRef: TRegUnregProcref;
-  const AUnregProcRef: TRegUnregProcref);
+  const ARegProcRef: TRegUnregProcRef;
+  const AUnregProcRef: TRegUnregProcRef);
 begin
   FIdent := AIdent;
 
@@ -629,7 +612,6 @@ procedure TBaseSettings.FromParams(
     FullPropName: String;
     Ancestor: String;
     TypeKind: TTypeKind;
-//    n: String;
   begin
     RttiContext := TRttiContext.Create;
     try
@@ -648,13 +630,12 @@ procedure TBaseSettings.FromParams(
           Continue;
 
         PropName := RttiProp.Name;
-        if PropName = 'Container' then
+        if PropName = PROP_NAME_CONTAINER then
           Continue;
 
         ValueTmp := RttiProp.GetValue(AObject);
         if ValueTmp.IsObject then
         begin
-//          n := ValueTmp.AsObject.ClassName;
           ParamsToObject(AIdent, ValueTmp.AsObject, AParams, ClassName);
 
           Continue;
@@ -682,9 +663,9 @@ end;
 { TFormSettings }
 
 constructor TFormSettings.Create(
-      const AIdent: String;
-      const ARegProcRef: TRegUnregProcref;
-      const AUnregProcRef: TRegUnregProcref);
+  const AIdent: String;
+  const ARegProcRef: TRegUnregProcRef;
+  const AUnregProcRef: TRegUnregProcRef);
 begin
   inherited Create(
       AIdent,
@@ -730,61 +711,6 @@ begin
   {$ENDIF}
 end;
 
-//procedure TFormSettings.ToParams(const AParams: TParamsExt);
-//
-//  procedure ObjectToParams(
-//    const AObject: TObject;
-//    const AAncestor: String = '');
-//  var
-//    RttiContext: TRttiContext;
-//    RttiType: TRttiType;
-//    RttiProp: TRttiProperty;
-//    PropName: String;
-//    ClassName: String;
-//    Value: TValue;
-//    RootName: String;
-//    FullPropName: String;
-//    Ancestor: String;
-//    TypeKind: TTypeKind;
-//  begin
-//    RttiContext := TRttiContext.Create;
-//    try
-//      Ancestor := '';
-//      if AAncestor.Length > 0 then
-//        Ancestor := AAncestor + '.';
-//
-//      RttiType := RttiContext.GetType(AObject.ClassType);
-//      ClassName := AObject.ClassName;
-//      RootName := Ancestor + ClassName + '.';
-//
-//      for RttiProp in RttiType.GetProperties do
-//      begin
-//        TypeKind := RttiProp.PropertyType.TypeKind;
-//        if TypeKind in [tkMethod, tkInterface] then
-//          Continue;
-//
-//        Value := RttiProp.GetValue(AObject);
-//        PropName := RttiProp.Name;
-//        FullPropName := RootName + PropName;
-//        if PropName = 'Container' then
-//          Continue;
-//
-//        AParams.Add(Value.AsVariant, FullPropName);
-//
-//        if Value.IsObject then
-//          ObjectToParams(Value.AsObject, ClassName);
-//      end;
-//    finally
-//      RttiContext.Free;
-//    end;
-//  end;
-//
-//begin
-//  AParams.Clear;
-//
-//  ObjectToParams(Self, '');
-//end;
-
 procedure TFormSettings.Apply;
 var
   Form: TFormExt;
@@ -814,13 +740,26 @@ end;
 
 constructor THintSettings.Create(
   const AIdent: String;
-  const ARegProcRef: TRegUnregProcref;
-  const AUnregProcRef: TRegUnregProcref);
+  const ARegProcRef: TRegUnregProcRef;
+  const AUnregProcRef: TRegUnregProcRef);
 begin
   inherited Create(
     AIdent,
     ARegProcRef,
     AUnregProcRef);
+
+  BackgroundColor := TAlphaColorRec.Lightgray;
+  CustomTextSettings.FontColor := TAlphaColorRec.Black;
+
+  FOnApplyProcRef := nil;
+end;
+
+constructor THintSettings.Create;
+begin
+  inherited Create(
+    '',
+    nil,
+    nil);
 
   BackgroundColor := TAlphaColorRec.Lightgray;
   CustomTextSettings.FontColor := TAlphaColorRec.Black;
@@ -840,8 +779,8 @@ end;
 
 constructor TBaseControlSettings.Create(
   const AIdent: String;
-  const ARegProcRef: TRegUnregProcref;
-  const AUnregProcRef: TRegUnregProcref);
+  const ARegProcRef: TRegUnregProcRef;
+  const AUnregProcRef: TRegUnregProcRef);
 begin
   inherited Create(
     AIdent,
@@ -878,8 +817,8 @@ end;
 
 constructor TCommonSettings.Create(
   const AIdent: String;
-  const ARegProcRef: TRegUnregProcref;
-  const AUnregProcRef: TRegUnregProcref);
+  const ARegProcRef: TRegUnregProcRef;
+  const AUnregProcRef: TRegUnregProcRef);
 begin
   inherited Create(
     AIdent,
@@ -933,8 +872,8 @@ end;
 
 constructor TItemSettings.Create(
   const AIdent: String;
-  const ARegProcRef: TRegUnregProcref;
-  const AUnregProcRef: TRegUnregProcref);
+  const ARegProcRef: TRegUnregProcRef;
+  const AUnregProcRef: TRegUnregProcRef);
 begin
   inherited Create(
     AIdent,
@@ -969,15 +908,14 @@ end;
 
 constructor TPopUpMenuSettings.Create(
   const AIdent: String;
-  const ARegProcRef: TRegUnregProcref;
-  const AUnregProcRef: TRegUnregProcref);
+  const ARegProcRef: TRegUnregProcRef;
+  const AUnregProcRef: TRegUnregProcRef);
 begin
   inherited Create(
     AIdent,
     ARegProcRef,
     AUnregProcRef);
 
-  FFormBackgroundColor := TAlphaColorRec.Black;
   FOnApplyProcRef := nil;
 end;
 
@@ -985,8 +923,6 @@ procedure TPopUpMenuSettings.CopyFrom(
   const APopUpMenuSettings: TPopUpMenuSettings);
 begin
   inherited CopyFrom(APopUpMenuSettings);
-
-  FFormBackgroundColor := APopUpMenuSettings.FormBackgroundColor;
 end;
 
 procedure TPopUpMenuSettings.Apply;
@@ -1030,13 +966,11 @@ end;
 
 procedure TTheme.ParamsToSettings(const AParams: TParamsExt);
 begin
-  TextSettings.FontColor := AParams.AsCardinalByIdent['TextSettingsFontColor'];
-
-  FormSettings.FromParams('FormSettings', AParams);
-  CommonSettings.FromParams('CommonSettings', AParams);
-  ItemSettings.FromParams('ItemSettings', AParams);
-  PopUpMenuSettings.FromParams('PopUpMenuSettings', AParams);
-  HintSettings.FromParams('HintSettings', AParams);
+  FormSettings.FromParams(TFormSettings.ClassName, AParams);
+  CommonSettings.FromParams(TCommonSettings.ClassName, AParams);
+  ItemSettings.FromParams(TItemSettings.ClassName, AParams);
+  PopUpMenuSettings.FromParams(TPopUpMenuSettings.ClassName, AParams);
+  HintTheme.FromParams(THintSettings.ClassName, AParams);
 end;
 
 procedure TTheme.SettingsToParams(const AParams: TParamsExt);
@@ -1045,21 +979,19 @@ var
 begin
   ParamsTmp := TParamsExt.Create;
   try
-    AParams.Add(TextSettings.FontColor, 'TextSettingsFontColor');
-
-    FormSettings.ToParams('FormSettings', ParamsTmp);
+    FormSettings.ToParams(TFormSettings.ClassName, ParamsTmp);
     AParams.AddFrom(ParamsTmp);
 
-    CommonSettings.ToParams('CommonSettings', ParamsTmp);
+    CommonSettings.ToParams(TCommonSettings.ClassName, ParamsTmp);
     AParams.AddFrom(ParamsTmp);
 
-    ItemSettings.ToParams('ItemSettings', ParamsTmp);
+    ItemSettings.ToParams(TItemSettings.ClassName, ParamsTmp);
     AParams.AddFrom(ParamsTmp);
 
-    PopUpMenuSettings.ToParams('PopUpMenuSettings', ParamsTmp);
+    PopUpMenuSettings.ToParams(TPopUpMenuSettings.ClassName, ParamsTmp);
     AParams.AddFrom(ParamsTmp);
 
-    HintSettings.ToParams('HintSettings', ParamsTmp);
+    HintTheme.ToParams(THintSettings.ClassName, ParamsTmp);
     AParams.AddFrom(ParamsTmp);
   finally
     FreeAndNil(ParamsTmp);
@@ -1078,15 +1010,15 @@ begin
   FTextSettings.Font.Size := 12;
 
   FFormSettings := TFormSettings.Create(
-    'FormSettings', AddToDict, RemoveFromDict);
+    TFormSettings.ClassName, AddToDict, RemoveFromDict);
   FCommonSettings := TCommonSettings.Create(
-    'CommonSettings', AddToDict, RemoveFromDict);
+    TCommonSettings.ClassName, AddToDict, RemoveFromDict);
   FItemSettings := TItemSettings.Create(
-    'ItemSettings', AddToDict, RemoveFromDict);
+    TItemSettings.ClassName, AddToDict, RemoveFromDict);
   FPopUpMenuSettings := TPopUpMenuSettings.Create(
-    'PopUpMenuSettings', AddToDict, RemoveFromDict);
+    TPopUpMenuSettings.ClassName, AddToDict, RemoveFromDict);
   FHintSettings := THintSettings.Create(
-    'HintSettings', AddToDict, RemoveFromDict);
+    THintSettings.ClassName, AddToDict, RemoveFromDict);
 
   FStyleBookMemoryStream := TMemoryStream.Create;
 
@@ -1121,13 +1053,6 @@ begin
   finally
     FreeAndNil(Keys);
   end;
-
-//  for Key in FObjectDict.Keys do
-//  begin
-//    FObjectDict.TryGetValue(Key, Obj);
-//    if Assigned(Obj) then
-//      FreeAndNil(Obj);
-//  end;
 
   FreeAndNil(FObjectDict);
 end;
@@ -1187,11 +1112,11 @@ begin
     FLightBackgroundColor := ATheme.LightBackgroundColor;
     FMemoColor := ATheme.MemoColor;
 
-    FTextSettings.Assign(ATheme.TextSettings);
+//    FTextSettings.Assign(ATheme.TextSettings);
 
     FFormSettings.CopyFrom(ATheme.FormSettings);
     FCommonSettings.CopyFrom(ATheme.CommonSettings);
-    FHintSettings.CopyFrom(ATheme.HintSettings);
+    FHintSettings.CopyFrom(ATheme.HintTheme);
     FItemSettings.CopyFrom(ATheme.ItemSettings);
     FPopUpMenuSettings.CopyFrom(ATheme.PopUpMenuSettings);
 
