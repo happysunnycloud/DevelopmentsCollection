@@ -17,7 +17,7 @@ type
   strict private
     FItems: TItems;
     FOwnerItem: TItem;
-    FTheme: TTheme;
+    FTheme: TPopUpMenuSettings;
     FOnItemClickHandler: TNotifyEvent;
     FOnGoBackButtonClickHandler: TNotifyEvent;
 
@@ -33,7 +33,7 @@ type
       const AItems: TItems;
       const AOnItemClickHandler: TNotifyEvent;
       const AOnGoBackButtonClickHandler: TNotifyEvent;
-      const ATheme: TTheme); reintroduce;
+      const ATheme: TPopUpMenuSettings); reintroduce;
     property OwnerItem: TItem read FOwnerItem write FOwnerItem;
 
     procedure BuildItemsLayout(
@@ -66,7 +66,7 @@ constructor TPopupMenuLayout.Create(
   const AItems: TItems;
   const AOnItemClickHandler: TNotifyEvent;
   const AOnGoBackButtonClickHandler: TNotifyEvent;
-  const ATheme: TTheme);
+  const ATheme: TPopUpMenuSettings);
 begin
   inherited Create(AOwner);
 
@@ -111,7 +111,7 @@ procedure TPopupMenuLayout.BuildItemsLayout(
 var
   Item: TItem;
   Items: TItems;
-  Theme: TTheme;
+  Theme: TPopUpMenuSettings;
 
   ItemsByParent: TItems;
 
@@ -178,7 +178,7 @@ begin
     BackgroundRectangle.SendToBack;
     BackgroundRectangle.Name := 'BackgroundRectangle';
     BackgroundRectangle.HitTest := false;
-    BackgroundRectangle.Fill.Color := Theme.PopUpMenuSettings.BackgroundColor;
+    BackgroundRectangle.Fill.Color := Theme.BackgroundColor;
 
     {$IFDEF ANDROID}
     AndroidGoBackButtonLayout := TLayout.Create(BackgroundRectangle);
@@ -260,7 +260,7 @@ begin
       Rectangle.Margins.Left := RectangleMargin;
       Rectangle.Margins.Right := RectangleMargin;
       Rectangle.Margins.Bottom := 0;
-      Rectangle.Fill.Color := Theme.PopUpMenuSettings.NormalBackgroundColor;
+      Rectangle.Fill.Color := Theme.NormalBackgroundColor;
 
       TextArrow := TText.Create(Rectangle);
       TextArrow.Parent := Rectangle;
@@ -270,7 +270,7 @@ begin
       TextArrow.TextSettings.HorzAlign := TTextAlign.Trailing;
       TextArrow.Margins.Right := TextArrowMargin;
       TextArrow.AutoSize := true;
-      Theme.PopUpMenuSettings.CustomTextSettings.ApplyTo(TextArrow);
+      Theme.CustomTextSettings.ApplyTo(TextArrow);
 //      ParentArrowWidth :=
 //        TControlTools.MeasureTextWidth(TextArrow.Text, TextArrow.Font);
       if Item.Children.Count = 0 then
@@ -289,7 +289,7 @@ begin
       Text.HitTest := false;
       Text.Margins.Left := TextMargin;
       Text.TextSettings.HorzAlign := TTextAlign.Leading;
-      Theme.PopUpMenuSettings.CustomTextSettings.ApplyTo(Text);
+      Theme.CustomTextSettings.ApplyTo(Text);
 
       RectangleIsCheckedLayout := TRectangle.Create(Rectangle);
       RectangleIsCheckedLayout.Parent := Rectangle;
@@ -303,13 +303,13 @@ begin
       RectangleIsCheckedLayout.Stroke.Thickness := 0.5;
       RectangleIsCheckedLayout.Stroke.Kind := TBrushKind.Solid;
       RectangleIsCheckedLayout.Stroke.Color :=
-        Theme.PopUpMenuSettings.CustomTextSettings.FontColor;
+        Theme.CustomTextSettings.FontColor;
       RectangleIsCheckedLayout.Visible := not TextArrow.Visible;
 
       RectangleIsCheckedTrue := TRectangle.Create(RectangleIsCheckedLayout);
       RectangleIsCheckedTrue.Parent := RectangleIsCheckedLayout;
       RectangleIsCheckedTrue.Fill.Color :=
-        Theme.PopUpMenuSettings.CustomTextSettings.FontColor;
+        Theme.CustomTextSettings.FontColor;
       RectangleIsCheckedTrue.Stroke.Thickness := 0;
       RectangleIsCheckedTrue.Stroke.Kind := TBrushKind.None;
       RectangleIsCheckedTrue.HitTest := false;
@@ -358,7 +358,7 @@ var
   Rectangle: TRectangle;
 begin
   Rectangle := TRectangle(TLayout(Sender).Children[0]);
-  Rectangle.Fill.Color := FTheme.PopUpMenuSettings.MouseOverColor;
+  Rectangle.Fill.Color := FTheme.MouseOverColor;
 end;
 
 procedure TPopupMenuLayout.OnItemMouseLeaveInternalHandler(Sender: TObject);
@@ -366,7 +366,7 @@ var
   Rectangle: TRectangle;
 begin
   Rectangle := TRectangle(TLayout(Sender).Children[0]);
-  Rectangle.Fill.Color := FTheme.PopUpMenuSettings.NormalBackgroundColor;
+  Rectangle.Fill.Color := FTheme.NormalBackgroundColor;
 end;
 {$IFDEF ANDROID}
 procedure TPopupMenuLayout.OnGoBackButtonClickInternalHandler(Sender: TObject);

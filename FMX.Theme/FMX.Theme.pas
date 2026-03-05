@@ -268,9 +268,9 @@ type
 
     property FormSettings: TFormSettings read FFormSettings;
     property CommonSettings: TCommonSettings read FCommonSettings;
-    property HintTheme: THintSettings read FHintSettings;
     property ItemSettings: TItemSettings read FItemSettings;
-    property PopUpMenuSettings: TPopUpMenuSettings read FPopUpMenuSettings;
+    property HintTheme: THintSettings read FHintSettings;
+    property PopUpMenuTheme: TPopUpMenuSettings read FPopUpMenuSettings;
 
     property OnApply: TNotifyEvent read FOnApply write FOnApply;
     property OnApplyProcRef: TProc read FOnApplyProcRef write FOnApplyProcRef;
@@ -856,7 +856,7 @@ begin
   FormSettings.FromParams(AParams);
   CommonSettings.FromParams(AParams);
   ItemSettings.FromParams(AParams);
-  PopUpMenuSettings.FromParams(AParams);
+  PopUpMenuTheme.FromParams(AParams);
   HintTheme.FromParams(AParams);
 end;
 
@@ -875,7 +875,7 @@ begin
     ItemSettings.ToParams(ParamsTmp);
     AParams.AddFrom(ParamsTmp);
 
-    PopUpMenuSettings.ToParams(ParamsTmp);
+    PopUpMenuTheme.ToParams(ParamsTmp);
     AParams.AddFrom(ParamsTmp);
 
     HintTheme.ToParams(ParamsTmp);
@@ -971,9 +971,9 @@ begin
 
     FFormSettings.CopyFrom(ATheme.FormSettings);
     FCommonSettings.CopyFrom(ATheme.CommonSettings);
-    FHintSettings.CopyFrom(ATheme.HintTheme);
     FItemSettings.CopyFrom(ATheme.ItemSettings);
-    FPopUpMenuSettings.CopyFrom(ATheme.PopUpMenuSettings);
+    FHintSettings.CopyFrom(ATheme.HintTheme);
+    FPopUpMenuSettings.CopyFrom(ATheme.PopUpMenuTheme);
   except
     on e: Exception do
       raise Exception.CreateFmt('%s -> %s', [METHOD, e.Message]);

@@ -17,7 +17,7 @@ type
   protected
     FItems: TItems;
     FCallingObject: TObject;
-    FTheme: TTheme;
+    FTheme: TPopUpMenuSettings;
   public
     constructor Create(Owner: TComponent); reintroduce; overload;
     destructor Destroy; override;
@@ -28,7 +28,7 @@ type
 
     property Items: TItems read FItems;
 
-    property Theme: TTheme read FTheme write FTheme;
+    property Theme: TPopUpMenuSettings read FTheme write FTheme;
     property CallingObject: TObject read FCallingObject;
 
     procedure Close; virtual; abstract;
@@ -57,12 +57,12 @@ begin
   FItems := TItems.Create;
   FCallingObject := nil;
 
-  FTheme := TTheme.Create;
+  FTheme := TPopUpMenuSettings.Create;
 
-  FTheme.FormSettings.BackgroundColor := TAlphaColorRec.Black;
+  FTheme.BackgroundColor := TAlphaColorRec.Black;
 //  FTheme.BackgroundColor := TAlphaColorRec.Black;//$FFB7B7B7;//$FF2A001A;//TAlphaColorRec.Black;
-  FTheme.LightBackgroundColor := TAlphaColorRec.Gray;//$FFE0E0E0;//TAlphaColorRec.Black;//$FFE0E0E0;
-  FTheme.DarkBackgroundColor := TAlphaColorRec.Cornflowerblue;
+//  FTheme.LightBackgroundColor := TAlphaColorRec.Gray;//$FFE0E0E0;//TAlphaColorRec.Black;//$FFE0E0E0;
+//  FTheme.DarkBackgroundColor := TAlphaColorRec.Cornflowerblue;
 //  FTheme.TextSettings.FontColor := TAlphaColorRec.White;
 end;
 
