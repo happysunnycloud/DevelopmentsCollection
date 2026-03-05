@@ -99,7 +99,7 @@ begin
   inherited CreateNew(AOwner, Dummy);
 
   FTheme := TTheme.Create;
-  FTheme.HintSettings.OnApplyProcRef :=
+  FTheme.HintTheme.OnApplyProcRef :=
     procedure (const AHintSettings: THintSettings)
     begin
       Self.Fill.Color := AHintSettings.BackgroundColor;

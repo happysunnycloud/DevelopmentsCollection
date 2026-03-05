@@ -1,5 +1,5 @@
-﻿{0.1}
-// 220325 Базовая форма с фабрикой нитей
+﻿{0.2}
+// Базовая форма с фабрикой нитей
 // Так же добавлен реестр фабрик
 unit FMX.FormExtUnit;
 
@@ -414,7 +414,10 @@ begin
     FOnCloseExternalHandler(Sender, Action);
 end;
 
-procedure TFormExt.OnKeyUpInternalHandler(Sender: TObject; var Key: Word; var KeyChar: Char;
+procedure TFormExt.OnKeyUpInternalHandler(
+  Sender: TObject;
+  var Key: Word;
+  var KeyChar: Char;
   Shift: TShiftState);
 begin
   // vkHardwareBack - Андроидная кнопка назад

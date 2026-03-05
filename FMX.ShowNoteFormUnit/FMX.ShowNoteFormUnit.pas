@@ -668,8 +668,11 @@ begin
   Self.ControlButtonsBackgroundRectangle.Fill.Kind := TBrushKind.Solid;
   Self.ControlButtonsBackgroundRectangle.Fill.Color := FTheme.DarkBackgroundColor;
 
-  Self.NoteMemo.TextSettings.FontColor := FTheme.TextSettings.FontColor;
-  Self.NoteMemo.TextSettings.Font.Size := FTheme.TextSettings.Font.Size;
+  FTheme.CommonSettings.CustomTextSettings.ApplyTo(Self.NoteMemo);
+
+//  Self.NoteMemo.TextSettings.FontColor := FTheme.CommonSettings.CustomTextSettings.co
+//  TextSettings.FontColor;
+//  Self.NoteMemo.TextSettings.Font.Size := FTheme.TextSettings.Font.Size;
   //FTheme.TextFontSize;
 //  Self.NoteMemo.TextSettings.Font.Family := 'MS Reference Sans Serif';
   Self.NoteMemo.StyledSettings := [];

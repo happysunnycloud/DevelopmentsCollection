@@ -63,7 +63,7 @@ begin
 //  FTheme.BackgroundColor := TAlphaColorRec.Black;//$FFB7B7B7;//$FF2A001A;//TAlphaColorRec.Black;
   FTheme.LightBackgroundColor := TAlphaColorRec.Gray;//$FFE0E0E0;//TAlphaColorRec.Black;//$FFE0E0E0;
   FTheme.DarkBackgroundColor := TAlphaColorRec.Cornflowerblue;
-  FTheme.TextSettings.FontColor := TAlphaColorRec.White;
+//  FTheme.TextSettings.FontColor := TAlphaColorRec.White;
 end;
 
 destructor TPopupMenuExtBaseClass.Destroy;

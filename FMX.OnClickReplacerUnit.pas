@@ -186,37 +186,49 @@ begin
 end;
 
 class procedure TOnClickReplacer.InnerOnClickHandler(Sender: TObject);
-var
-  _Sender: TControl;
-  _OnClick: TNotifyEvent;
-  i: Integer;
 begin
-  _Sender := nil;
-  _OnClick := nil;
-
-  i := FSenderList.Count;
-  while i > 0 do
-  begin
-    Dec(i);
-
-    if FSenderList[i].Sender = Sender then
-    begin
-      _Sender := FSenderList[i].Sender;
-      _OnClick := FSenderList[i].NotifyEvent;
-
-      Break;
-    end;
-  end;
+  Restore;
 
   if Assigned(FExternalProc) then
     FExternalProc;
 
-  if not Assigned(_Sender) or not Assigned(_OnClick) then
-    raise Exception.
-      Create('TOnClickReplacer.InnerOnClickHandler: can`t execute OnClick event');
+  if not (Sender is TControl) then
+    raise Exception.Create('Sender is not TControl class');
 
-  _OnClick(_Sender);
+  TControl(Sender).OnClick(Sender);
 end;
+
+//var
+//  _Sender: TControl;
+//  _OnClick: TNotifyEvent;
+//  i: Integer;
+//begin
+//  _Sender := nil;
+//  _OnClick := nil;
+//
+//  i := FSenderList.Count;
+//  while i > 0 do
+//  begin
+//    Dec(i);
+//
+//    if FSenderList[i].Sender = Sender then
+//    begin
+//      _Sender := FSenderList[i].Sender;
+//      _OnClick := FSenderList[i].NotifyEvent;
+//
+//      Break;
+//    end;
+//  end;
+//
+//  if Assigned(FExternalProc) then
+//    FExternalProc;
+//
+//  if not Assigned(_Sender) or not Assigned(_OnClick) then
+//    raise Exception.
+//      Create('TOnClickReplacer.InnerOnClickHandler: can`t execute OnClick event');
+//
+//  _OnClick(_Sender);
+//end;
 
 initialization
   TOnClickReplacer.Init;

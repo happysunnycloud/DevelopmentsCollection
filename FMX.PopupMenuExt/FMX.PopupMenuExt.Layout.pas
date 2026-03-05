@@ -178,10 +178,7 @@ begin
     BackgroundRectangle.SendToBack;
     BackgroundRectangle.Name := 'BackgroundRectangle';
     BackgroundRectangle.HitTest := false;
-    BackgroundRectangle.Fill.Color := Theme.PopUpMenuSettings.FormBackgroundColor;
-    //BackgroundColor;
-
-    { TODO : Создать тему для кнопок меню }
+    BackgroundRectangle.Fill.Color := Theme.PopUpMenuSettings.BackgroundColor;
 
     {$IFDEF ANDROID}
     AndroidGoBackButtonLayout := TLayout.Create(BackgroundRectangle);
@@ -263,7 +260,7 @@ begin
       Rectangle.Margins.Left := RectangleMargin;
       Rectangle.Margins.Right := RectangleMargin;
       Rectangle.Margins.Bottom := 0;
-      Rectangle.Fill.Color := Theme.PopUpMenuSettings.BackgroundColor;
+      Rectangle.Fill.Color := Theme.PopUpMenuSettings.NormalBackgroundColor;
 
       TextArrow := TText.Create(Rectangle);
       TextArrow.Parent := Rectangle;
@@ -273,8 +270,7 @@ begin
       TextArrow.TextSettings.HorzAlign := TTextAlign.Trailing;
       TextArrow.Margins.Right := TextArrowMargin;
       TextArrow.AutoSize := true;
-      TextArrow.TextSettings.FontColor := Theme.TextSettings.FontColor;
-
+      Theme.PopUpMenuSettings.CustomTextSettings.ApplyTo(TextArrow);
 //      ParentArrowWidth :=
 //        TControlTools.MeasureTextWidth(TextArrow.Text, TextArrow.Font);
       if Item.Children.Count = 0 then
@@ -292,7 +288,8 @@ begin
       Text.Align := TAlignLayout.Client;
       Text.HitTest := false;
       Text.Margins.Left := TextMargin;
-      Theme.TextSettings.ApplyTo(Text);
+      Text.TextSettings.HorzAlign := TTextAlign.Leading;
+      Theme.PopUpMenuSettings.CustomTextSettings.ApplyTo(Text);
 
       RectangleIsCheckedLayout := TRectangle.Create(Rectangle);
       RectangleIsCheckedLayout.Parent := Rectangle;
@@ -305,12 +302,14 @@ begin
       RectangleIsCheckedLayout.Fill.Color := TAlphaColorRec.Null;
       RectangleIsCheckedLayout.Stroke.Thickness := 0.5;
       RectangleIsCheckedLayout.Stroke.Kind := TBrushKind.Solid;
-      RectangleIsCheckedLayout.Stroke.Color := Theme.TextSettings.FontColor;
+      RectangleIsCheckedLayout.Stroke.Color :=
+        Theme.PopUpMenuSettings.CustomTextSettings.FontColor;
       RectangleIsCheckedLayout.Visible := not TextArrow.Visible;
 
       RectangleIsCheckedTrue := TRectangle.Create(RectangleIsCheckedLayout);
       RectangleIsCheckedTrue.Parent := RectangleIsCheckedLayout;
-      RectangleIsCheckedTrue.Fill.Color := Theme.TextSettings.FontColor;
+      RectangleIsCheckedTrue.Fill.Color :=
+        Theme.PopUpMenuSettings.CustomTextSettings.FontColor;
       RectangleIsCheckedTrue.Stroke.Thickness := 0;
       RectangleIsCheckedTrue.Stroke.Kind := TBrushKind.None;
       RectangleIsCheckedTrue.HitTest := false;
@@ -367,7 +366,7 @@ var
   Rectangle: TRectangle;
 begin
   Rectangle := TRectangle(TLayout(Sender).Children[0]);
-  Rectangle.Fill.Color := FTheme.PopUpMenuSettings.BackgroundColor;
+  Rectangle.Fill.Color := FTheme.PopUpMenuSettings.NormalBackgroundColor;
 end;
 {$IFDEF ANDROID}
 procedure TPopupMenuLayout.OnGoBackButtonClickInternalHandler(Sender: TObject);

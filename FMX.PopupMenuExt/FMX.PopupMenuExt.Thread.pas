@@ -116,7 +116,6 @@ begin
 
   inherited Create(
     AThreadFactory,
-    'TPopupMenuExtThread',
     true);
 
 //  OnSetTerminate := OnSetTerminatedHandler;

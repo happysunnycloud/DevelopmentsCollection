@@ -32,7 +32,7 @@ type
 
     FMouseHandlersDict: TDictionary<TControl, THintMouseHandlers>;
 
-    FTheme: TTheme;
+    FTheme: THintSettings;
 
     procedure OnHintFormDestroyHandler(Sender: TObject);
 
@@ -67,7 +67,7 @@ type
 
     procedure UnHookHints;
 
-    property Theme: TTheme read FTheme write FTheme;
+    property Theme: THintSettings read FTheme write FTheme;
   end;
 
 implementation
@@ -142,8 +142,8 @@ begin
 
   FHintForm := THintForm.CreateNew(nil);
 
-  FHintForm.Theme.HintSettings.CopyFrom(FTheme.HintSettings);
-  FHintForm.Theme.HintSettings.Apply;
+  FHintForm.Theme.HintTheme.CopyFrom(FTheme);
+  FHintForm.Theme.HintTheme.Apply;
 
   FHintForm.Hint := FControl.Hint;
   FHintForm.Left := X - FHintForm.Width div 2;
@@ -180,9 +180,9 @@ begin
   inherited Create(Owner);
 
   try
-    FTheme := TTheme.Create;
-    FTheme.HintSettings.BackgroundColor := TAlphaColorRec.Black;
-    FTheme.HintSettings.CustomTextSettings.FontColor := TAlphaColorRec.White;
+    FTheme := THintSettings.Create;
+    FTheme.BackgroundColor := TAlphaColorRec.Black;
+    FTheme.CustomTextSettings.FontColor := TAlphaColorRec.White;
 
     // Отключаем стандартный механизм хинтов
     Application.ShowHint := False;
