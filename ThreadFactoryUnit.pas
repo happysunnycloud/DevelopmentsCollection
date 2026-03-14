@@ -276,7 +276,7 @@ type
     // Терминировать поток нужно через TerminateThread
     function FindThread(const AThreadName: String): TThreadExt;
     // Проверяет регистрацию потока в реестре
-    function ThreadExists(const AThread: TThreadExt): Boolean;
+    function ThreadExists(const AExistingThread: TThreadExt): Boolean;
     {TODO: Реализоавть FinedAndDo - находит трид и тут же его обрабатываем,
            это гарантия, что ссылка на трид действительна
            Варианты вызова FinedAndDo(Name: String, procedure (AThread: TThreadExt))
@@ -925,7 +925,7 @@ begin
   Result := Thread;
 end;
 
-function TThreadFactory.ThreadExists(const AThread: TThreadExt): Boolean;
+function TThreadFactory.ThreadExists(const AExistingThread: TThreadExt): Boolean;
 var
   IsExists: Boolean;
 begin
@@ -934,7 +934,7 @@ begin
   FThreadRegistry.Enumerator(
     procedure (const AThread: TThreadExt; var ABreak: Boolean)
     begin
-      if AThread = AThread then
+      if AThread = AExistingThread then
       begin
         IsExists := true;
 

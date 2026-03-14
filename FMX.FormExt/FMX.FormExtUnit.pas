@@ -16,8 +16,6 @@ uses
   {$IFDEF MSWINDOWS}
   , FMX.Types
   , FMX.TrayIcon.Win
-  {$ENDIF}
-  {$IFDEF MSWINDOWS}
   , BorderFrameUnit
   {$ENDIF}
   , FMX.Theme
