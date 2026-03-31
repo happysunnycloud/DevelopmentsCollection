@@ -16,11 +16,14 @@ type
     FOnHardwareBackButtonClick: TNotifyEvent;
     FOwnerItemRef: TObject;
     FIsNowClosing: Boolean;
+    FScreenScale: Single;
   protected
     procedure OnKeyUpHandler(Sender: TObject; var Key: Word; var KeyChar: Char;
       Shift: TShiftState);
   public
     constructor CreateNew(AOwner: TComponent; Dummy: NativeInt = 0); reintroduce;
+
+    property ScreenScale: Single read FScreenScale;
 
     property OnHardwareBackButtonClick: TNotifyEvent
       write FOnHardwareBackButtonClick;
@@ -48,6 +51,7 @@ begin
 
   FOwnerItemRef := nil;
   FIsNowClosing := false;
+  FScreenScale  := Canvas.Scale;
 
   FOnHardwareBackButtonClick := nil;
 end;

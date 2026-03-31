@@ -277,6 +277,9 @@ begin
 
   GetCursorPos(Point);
 
+  Point.X := Round(Point.X / FForm.ScreenScale);
+  Point.Y := Round(Point.Y / FForm.ScreenScale);
+
   FCriticalSection.Enter;
   try
     if FRectF.Contains(Point) then

@@ -77,8 +77,8 @@ implementation
 uses
     Winapi.Windows
   , Winapi.ShellAPI
-  , FMX.Platform.Win,
-    System.SysUtils
+  , FMX.Platform.Win
+  , System.SysUtils
   , System.Types
   , FMX.Graphics
   , FMX.Layouts
@@ -88,6 +88,8 @@ uses
   , FMX.Controls
   , FMX.ControlToolsUnit
   , FMX.PopupMenuExt.Layout
+  ,
+  FMX.StdCtrls
   ;
 
 type
@@ -490,8 +492,9 @@ begin
   PopupForm.OnCloseQuery := OnPopupMenuExtFormCloseQuery;
   PopupForm.OnClose := OnPopupMenuExtFormClose;
   PopupForm.BorderStyle := TFmxFormBorderStyle.None;
-  PopupForm.Left := Trunc(X);
-  PopupForm.Top := Trunc(Y);
+
+  PopupForm.Left := Round(X / PopupForm.ScreenScale);
+  PopupForm.Top := Round(Y / PopupForm.ScreenScale);
 
   PopupForm.OwnerItem := AOwnerItem;
   PopupForm.Width := Round(ItemsWidth);

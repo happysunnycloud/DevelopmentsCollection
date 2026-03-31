@@ -63,6 +63,7 @@ type
     FToDoClose: Boolean;
     FCanClose: Boolean;
     FTheme: TTheme;
+    FScreenScale: Single;
     {$IFDEF MSWINDOWS}
     FBorderFrame: TBorderFrame;
     FBorderFrameKind: TBorderFrameKind;
@@ -124,6 +125,7 @@ type
 
     property ToDoClose: Boolean read FToDoClose write FToDoClose;
     property Theme: TTheme read FTheme;
+    property ScreenScale: Single read FScreenScale;
     {$IFDEF MSWINDOWS}
     property BorderFrame: TBorderFrame read FBorderFrame;
 
@@ -174,6 +176,8 @@ begin
   inherited OnCloseQuery := OnCloseQueryInternalHandler;
   inherited OnClose := OnCloseInternalHandler;
   inherited OnKeyUp := OnKeyUpInternalHandler;
+
+  FScreenScale := Canvas.Scale;
 
   FModalResult := mrNone;
 

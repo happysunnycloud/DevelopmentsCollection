@@ -934,13 +934,17 @@ class function TControlTools.IsMouseOverForm(const AForm: TForm): Boolean;
 var
   Point: TPoint;
   RectF: TRectF;
+  ScreenScale: Single;
 begin
   if not Assigned(AForm) then
     raise Exception.Create('TControlTools.IsMouseOverForm - > AForm is nil');
 
   Result := false;
 
+  ScreenScale := AForm.Canvas.Scale;
   GetCursorPos(Point);
+  Point.X := Round(Point.X / ScreenScale);
+  Point.Y := Round(Point.Y / ScreenScale);
 
   RectF := TRectF.Create(AForm.ClientToScreen(AForm.ClientRect.TopLeft),
                          AForm.ClientToScreen(AForm.ClientRect.BottomRight));
