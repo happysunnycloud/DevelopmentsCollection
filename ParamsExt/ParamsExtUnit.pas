@@ -162,7 +162,7 @@ type
     function TryGetParamVal(
       var AVal: Variant;
       const AParamIdent: String): Boolean; overload;
-    {TODO: Провериться корректность парсинга из одного класса в другой и оставить}
+    {TODO: Проверить корректность парсинга из одного класса в другой и оставить}
     procedure ObjectToParams(
       const AObject: TObject;
       const AAncestor: String = ''); overload;
