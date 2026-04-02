@@ -21,6 +21,8 @@ const
   PACK_FILE_SIGNATURE: TBinFileSign = 'PACKFILE';
   // Файл хранения параметров класса TParamsExt
   PARAMS_FILE_SIGNATURE: TBinFileSign = 'PARAMSFILE';
+  // Файл хранения параметров класса TTheme
+  THEME_FILE_SIGNATURE: TBinFileSign = 'THEMEFILE';
 
   // Пак-файл с png
   PNG_FILE_CONTENT_SIGNATURE: TBinFileSign = 'PNGPACK';

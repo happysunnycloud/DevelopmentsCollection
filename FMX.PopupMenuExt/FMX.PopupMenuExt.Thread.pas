@@ -116,6 +116,7 @@ begin
 
   inherited Create(
     AThreadFactory,
+    '',
     true);
 
 //  OnSetTerminate := OnSetTerminatedHandler;

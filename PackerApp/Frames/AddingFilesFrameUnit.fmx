@@ -14,6 +14,16 @@ inherited AddingFilesFrame: TAddingFilesFrame
       Text = 'Back'
       OnClick = BackButtonClick
     end
+    object HelpButton: TButton
+      Align = Right
+      Position.X = 935.000000000000000000
+      Size.Width = 30.000000000000000000
+      Size.Height = 30.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 4
+      Text = '???'
+      OnClick = HelpButtonClick
+    end
   end
   inherited ContentContainerLayout: TLayout
     inherited ScrollBox: TScrollBox
@@ -37,8 +47,8 @@ inherited AddingFilesFrame: TAddingFilesFrame
         Size.Height = 465.000000000000000000
         Size.PlatformDefault = False
         TabOrder = 0
-        Viewport.Width = 271.000000000000000000
-        Viewport.Height = 461.000000000000000000
+        Viewport.Width = 275.000000000000000000
+        Viewport.Height = 465.000000000000000000
       end
       object Image: TImage
         MultiResBitmap = <

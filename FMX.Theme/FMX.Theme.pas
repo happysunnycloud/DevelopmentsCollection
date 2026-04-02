@@ -281,6 +281,7 @@ implementation
 uses
     System.Rtti
   , System.Variants
+  , BinFileTypes
   , FMX.Styles
   , FMX.FormExtUnit
   ;
@@ -1021,7 +1022,7 @@ begin
   try
     SettingsToParams(Params);
 
-    ContentSignarute := 'THEMEFILE';
+    ContentSignarute := THEME_FILE_SIGNATURE;
     ContentVersion.Major := 0;
     ContentVersion.Minor := 0;
     Params.SaveToStreamAsFile(ContentSignarute, ContentVersion, AFileName);

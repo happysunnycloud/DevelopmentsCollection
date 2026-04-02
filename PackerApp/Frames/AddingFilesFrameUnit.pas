@@ -3,7 +3,7 @@
 interface
 
 uses
-  System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants, 
+  System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
   FMX.Types, FMX.Graphics, FMX.Controls, FMX.Forms, FMX.Dialogs, FMX.StdCtrls,
   BaseFrameUnit, FMX.Layouts, FMX.Controls.Presentation, FMX.Objects,
   FilePackerUnit, FMX.Memo.Types, FMX.ScrollBox, FMX.Memo,
@@ -24,9 +24,11 @@ type
     Image: TImage;
     ImageBackgroundRectangle: TRectangle;
     BackButton: TButton;
+    HelpButton: TButton;
 
     procedure BackButtonClick(Sender: TObject);
     procedure CloseButtonClick(Sender: TObject);
+    procedure HelpButtonClick(Sender: TObject);
   private
     FLabelOnClickHandlerProcRef: TProcRef;
 
@@ -60,6 +62,7 @@ uses
   , TextExtractorUnit
   , ParamsExtractorUnit
   , ParamsExtUnit
+  , GuideFormUnit
   ;
 
 procedure TAddingFilesFrame.BackButtonClick(Sender: TObject);
@@ -185,6 +188,16 @@ end;
 function TAddingFilesFrame.GetFileExt: String;
 begin
   Result := '*';
+end;
+
+procedure TAddingFilesFrame.HelpButtonClick(Sender: TObject);
+begin
+  TGuideForm.Text := '';
+  TGuideForm.AddString('Вкладка позволяет компоновать упакованные файлы, например с сигнатурами PNGPACK, SQLPACK, ADDPACK');
+  TGuideForm.AddString('Если в упакованный файл в корень будут добавлены обычные файлы, например, *.png или *.sql');
+  TGuideForm.AddString('Которые не являются упакованными, то приложение не сможет их открыть, они будут проигнорированы');
+  TGuideForm.AddString('Однако, обычные файлы из упакованного файла с сигнатурой "ADDPACK" могут быть открыты через API');
+  TGuideForm.ShowGuideForm('Adding');
 end;
 
 end.

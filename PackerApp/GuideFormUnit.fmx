@@ -1,0 +1,35 @@
+object GuideForm: TGuideForm
+  Left = 0
+  Top = 0
+  Caption = 'Guide'
+  ClientHeight = 625
+  ClientWidth = 1041
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  DesignerMasterStyle = 0
+  object BaseLayout: TLayout
+    Align = Contents
+    Size.Width = 1041.000000000000000000
+    Size.Height = 625.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 0
+    object Memo: TMemo
+      Touch.InteractiveGestures = [Pan, LongTap, DoubleTap]
+      DataDetectorTypes = []
+      StyledSettings = [Family, Style, FontColor]
+      TextSettings.Font.Size = 16.000000000000000000
+      Align = Contents
+      Margins.Left = 10.000000000000000000
+      Margins.Top = 10.000000000000000000
+      Margins.Right = 10.000000000000000000
+      Margins.Bottom = 10.000000000000000000
+      Size.Width = 1021.000000000000000000
+      Size.Height = 605.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 0
+      Viewport.Width = 1021.000000000000000000
+      Viewport.Height = 605.000000000000000000
+    end
+  end
+end

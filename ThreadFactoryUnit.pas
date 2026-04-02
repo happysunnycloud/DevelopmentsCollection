@@ -72,6 +72,7 @@ type
 
     // Выполняется при выставлении свойства Terminate потоку
     FOnSetTerminate: TNotifyEvent;
+    FOnSetTerminateProcRef: TProc;
     // Выполняется во время вызова OnTerminate в главном потоке
     FOnTerminateExternalHandler: TNotifyEvent;
     // Ссылка на внешний эвент, если не nil,
@@ -107,6 +108,8 @@ type
 
     procedure SetOnSetTerminate(const AOnSetTerminate: TNotifyEvent);
     function GetOnSetTerminate: TNotifyEvent;
+    procedure SetOnSetTerminateProcRef(const AOnSetTerminateProcRef: TProc);
+    function GetOnSetTerminateProcRef: TProc;
 
     procedure SetThreadIsDeadEventRef(const AThreadIsDeadEventRef: TEvent);
     function GetThreadIsDeadEventRef: TEvent;
@@ -120,8 +123,12 @@ type
     procedure InnerExecute; virtual; abstract;
     procedure TryExcept(const AProc: TProc);
 
-    property ThreadName: String read GetThreadName write SetThreadName;
-    property OnSetTerminate: TNotifyEvent read GetOnSetTerminate write SetOnSetTerminate;
+    property ThreadName: String
+      read GetThreadName write SetThreadName;
+    property OnSetTerminate: TNotifyEvent
+      read GetOnSetTerminate write SetOnSetTerminate;
+    property OnSetTerminateProcRef: TProc
+      read GetOnSetTerminateProcRef write SetOnSetTerminateProcRef;
   public
     /// <summary>
     ///   Создает автоименованный поток с исполняемым анонимным методом
@@ -147,6 +154,7 @@ type
     /// <summary>
     ///   Создает именованный поток с перегрузкой Execute/InnerExecute
     ///   C указанием фабрики регистрирующей нить
+    ///   Если не указать имя, будет произведено автоименование
     ///   Suspended = false, FreeOnTerminate = true
     /// </summary>
     constructor Create(
@@ -154,15 +162,15 @@ type
       const AThreadName: String = '';
       const ASuspended: Boolean = false;
       const AFreeOnTerminate: Boolean = true); overload;
-    /// <summary>
-    ///   Создает автоименованный поток с перегрузкой Execute/InnerExecute
-    ///   C указанием фабрики регистрирующей нить
-    ///   Suspended = false, FreeOnTerminate = true
-    /// </summary>
-    constructor Create(
-      const AThreadFactory: TThreadFactory;
-      const ASuspended: Boolean = false;
-      const AFreeOnTerminate: Boolean = true); overload;
+//    /// <summary>
+//    ///   Создает автоименованный поток с перегрузкой Execute/InnerExecute
+//    ///   C указанием фабрики регистрирующей нить
+//    ///   Suspended = false, FreeOnTerminate = true
+//    /// </summary>
+//    constructor Create(
+//      const AThreadFactory: TThreadFactory;
+//      const ASuspended: Boolean = false;
+//      const AFreeOnTerminate: Boolean = true); overload;
 
     destructor Destroy; override;
     // Это только намерение, не фактическая остановка
@@ -384,6 +392,7 @@ begin
   FExecProc := AExecProc;
 
   FOnSetTerminate := nil;
+  FOnSetTerminateProcRef := nil;
 
   FOnTerminateExternalHandler := nil;
 
@@ -411,6 +420,9 @@ constructor TThreadExt.Create(
   const ASuspended: Boolean = false;
   const AFreeOnTerminate: Boolean = true);
 begin
+  if not Assigned(AThreadFactory) then
+    raise Exception.Create('AThreadFactory is nil');
+
   DoInit(
     '',
     AExecProc,
@@ -427,6 +439,9 @@ constructor TThreadExt.Create(
   const ASuspended: Boolean = false;
   const AFreeOnTerminate: Boolean = true);
 begin
+  if not Assigned(AThreadFactory) then
+    raise Exception.Create('AThreadFactory is nil');
+
   DoInit(
     AThreadName,
     AExecProc,
@@ -442,6 +457,9 @@ constructor TThreadExt.Create(
   const ASuspended: Boolean = false;
   const AFreeOnTerminate: Boolean = true);
 begin
+  if not Assigned(AThreadFactory) then
+    raise Exception.Create('AThreadFactory is nil');
+
   DoInit(
     AThreadName,
     nil,
@@ -451,19 +469,19 @@ begin
     AFreeOnTerminate);
 end;
 
-constructor TThreadExt.Create(
-  const AThreadFactory: TThreadFactory;
-  const ASuspended: Boolean = false;
-  const AFreeOnTerminate: Boolean = true);
-begin
-  DoInit(
-    '',
-    nil,
-    AThreadFactory.RegThreadProc,
-    AThreadFactory.UnRegThreadProc,
-    ASuspended,
-    AFreeOnTerminate);
-end;
+//constructor TThreadExt.Create(
+//  const AThreadFactory: TThreadFactory;
+//  const ASuspended: Boolean = false;
+//  const AFreeOnTerminate: Boolean = true);
+//begin
+//  DoInit(
+//    '',
+//    nil,
+//    AThreadFactory.RegThreadProc,
+//    AThreadFactory.UnRegThreadProc,
+//    ASuspended,
+//    AFreeOnTerminate);
+//end;
 
 destructor TThreadExt.Destroy;
 begin
@@ -664,6 +682,27 @@ begin
     FCriticalSection.Leave;
   end;
 end;
+
+procedure TThreadExt.SetOnSetTerminateProcRef(const AOnSetTerminateProcRef: TProc);
+begin
+  FCriticalSection.Enter;
+  try
+    FOnSetTerminateProcRef := AOnSetTerminateProcRef;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
+function TThreadExt.GetOnSetTerminateProcRef: TProc;
+begin
+  FCriticalSection.Enter;
+  try
+    Result := FOnSetTerminateProcRef;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
 
 procedure TThreadExt.ExecHold;
 begin

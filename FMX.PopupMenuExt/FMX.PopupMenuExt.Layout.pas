@@ -200,13 +200,13 @@ begin
     AndroidGoBackButtonRectangle.Margins.Left := 2;
     AndroidGoBackButtonRectangle.Margins.Right := 2;
     AndroidGoBackButtonRectangle.Margins.Bottom := 2;
-    AndroidGoBackButtonRectangle.Fill.Color := Theme.PopUpMenuSettings.BackgroundColor;
+    AndroidGoBackButtonRectangle.Fill.Color := Theme.NormalBackgroundColor;
 
     AndroidGoBackButtonText := TText.Create(AndroidGoBackButtonRectangle);
     AndroidGoBackButtonText.Parent := AndroidGoBackButtonRectangle;
     AndroidGoBackButtonText.Text := 'Back';
     AndroidGoBackButtonText.HitTest := false;
-    Theme.TextSettings.ApplyTo(AndroidGoBackButtonText);
+    Theme.CustomTextSettings.ApplyTo(AndroidGoBackButtonText);
     AndroidGoBackButtonText.TextSettings.HorzAlign := TTextAlign.Center;
     AndroidGoBackButtonText.Align := TAlignLayout.Client;
     {$ENDIF}

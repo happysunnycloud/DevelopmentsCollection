@@ -58,11 +58,6 @@ type
       const ACallingObject: TObject;
       const AOwnerItem: TItem = nil); overload;
     procedure Close; override;
-
-    property Items: TItems read FItems;
-
-    property Theme: TTheme read FTheme write FTheme;
-    property CallingObject: TObject read FCallingObject;
   end;
 
 implementation
