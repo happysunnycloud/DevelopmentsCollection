@@ -256,7 +256,7 @@ var
   LocalModified: Boolean;
 begin
   if not FLocked then
-    Exit;
+    raise Exception.Create('BeginFrame not called');
 
   StartRow := Max(0, Region.Top);
   EndRow := Min(FTarget.Height - 1, Region.Bottom);
@@ -274,7 +274,6 @@ begin
   begin
     TargetScanline := FTargetBD.GetScanline(Row);
     BackgroundScanline := FBackgroundBD.GetScanline(Row);
-
 
     Move(BackgroundScanline[StartCol], TargetScanline[StartCol], CopyWidth * SizeOf(TAlphaColor));
     LocalModified := True;
