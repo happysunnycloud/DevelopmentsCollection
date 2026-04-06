@@ -380,23 +380,34 @@ begin
     case Command of
       cmdPlay:
       begin
-        _RenderFreame(FrameIndex);
-
-        Inc(FrameIndex);
-
-        if FrameIndex >= FBitmapList.Count then
+        if FrameIndex > Pred(FBitmapList.Count) then
         begin
           FrameIndex := 0;
+          Command := cmdStop;
           OnFinishProcRef := FOnFinishProcRef;
           if Assigned(OnFinishProcRef) then
           begin
             Command := cmdStop;
+
+            FTripleBuffer.OpenBufferToWrite;
+            try
+              FTripleBuffer.ClearBuffer;
+            finally
+              FTripleBuffer.CloseBuffer;
+            end;
+
             Queue(
               procedure
               begin
                 OnFinishProcRef();
               end);
           end;
+        end
+        else
+        begin
+          _RenderFreame(FrameIndex);
+
+          Inc(FrameIndex);
         end;
       end;
       cmdPause:
@@ -421,6 +432,7 @@ begin
 
     Sleep(RenderSleepTime);
   end;
+
   FSurface := nil;
 end;
 
