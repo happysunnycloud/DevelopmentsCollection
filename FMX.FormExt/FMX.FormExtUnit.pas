@@ -144,6 +144,9 @@ type
       read FTrayIconMouseRightButtonDown write FTrayIconMouseRightButtonDown;
     property TrayIconMouseLeftButtonDown: TMouseEvent
       read FTrayIconMouseLeftButtonDown write FTrayIconMouseLeftButtonDown;
+
+    procedure Rollup;
+    procedure Rolldown;
     {$ENDIF}
 
     procedure ApplyFormTheme;
@@ -326,6 +329,18 @@ begin
   Result := FTrayIcon;
 end;
 
+procedure TFormExt.Rollup;
+begin
+  ShowWindow(ApplicationHwnd, SW_SHOW);
+  Self.Show;
+end;
+
+procedure TFormExt.Rolldown;
+begin
+  Self.Hide;
+  ShowWindow(ApplicationHwnd, SW_HIDE);
+end;
+
 procedure TFormExt.InnerTrayIconMouseDown(
   Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Single);
 begin
@@ -333,13 +348,11 @@ begin
   begin
     if not Self.Visible then
     begin
-      ShowWindow(ApplicationHwnd, SW_SHOW);
-      Self.Show;
+      Rollup;
     end
     else
     begin
-      Self.Hide;
-      ShowWindow(ApplicationHwnd, SW_HIDE);
+      Rolldown;
     end;
 
     if Assigned(FTrayIconMouseLeftButtonDown) then
@@ -553,5 +566,6 @@ begin
 end;
 
 end.
+
 
 
