@@ -637,6 +637,9 @@ begin
     if Assigned(FOnSetTerminate) then
       FOnSetTerminate(Self);
 
+    if Assigned(FOnSetTerminateProcRef) then
+      FOnSetTerminateProcRef();
+
     UnHoldThread;
   finally
     FCriticalSection.Leave;
@@ -702,7 +705,6 @@ begin
     FCriticalSection.Leave;
   end;
 end;
-
 
 procedure TThreadExt.ExecHold;
 begin

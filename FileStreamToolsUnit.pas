@@ -26,6 +26,8 @@ type
       const AVal: Int64): Int64;
     function WriteUInt32(
       const AVal: UInt32): Int64;
+    function WriteDouble(
+      const AVal: Double): Int64;
     function WriteBoolean(
       const AVal: Boolean): Int64;
 
@@ -43,6 +45,7 @@ type
     function ReadAsInteger: Integer;
     function ReadAsInt64: Int64;
     function ReadAsUInt32: UInt32;
+    function ReadAsDouble: Double;
     function ReadAsBoolean: Boolean;
 
     function Write(
@@ -140,6 +143,13 @@ begin
   FFileStream.Read(Result, SizeOf(UInt32));
 end;
 
+function TFileStreamTools.ReadAsDouble: Double;
+begin
+  CheckCorrect(ReadValType, varDouble);
+
+  FFileStream.Read(Result, SizeOf(Double));
+end;
+
 function TFileStreamTools.ReadAsBoolean: Boolean;
 begin
   CheckCorrect(ReadValType, varBoolean);
@@ -199,6 +209,14 @@ begin
   Result := GetPosition;
 end;
 
+function TFileStreamTools.WriteDouble(
+  const AVal: Double): Int64;
+begin
+  FFileStream.Write(AVal, SizeOf(Double));
+
+  Result := GetPosition;
+end;
+
 function TFileStreamTools.WriteBoolean(
   const AVal: Boolean): Int64;
 begin
@@ -216,35 +234,23 @@ begin
   WriteWord(VarType);
   case VarType of
     varUString:
-    begin
       WriteString(AVal);
-    end;
     varWord:
-    begin
       WriteWord(AVal);
-    end;
     varByte:
-    begin
       WriteByte(AVal);
-    end;
     varInteger:
-    begin
       WriteInteger(AVal);
-    end;
     varInt64:
-    begin
       WriteInt64(AVal);
-    end;
     varUInt32:
       WriteUInt32(AVal);
+    varDouble:
+      WriteDouble(AVal);
     varBoolean:
-    begin
       WriteBoolean(AVal);
-    end;
     else
-    begin
       raise Exception.Create('Unknown type');
-    end;
   end;
 
   Result := GetPosition;

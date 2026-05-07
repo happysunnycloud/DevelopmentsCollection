@@ -16,6 +16,9 @@ uses
   Androidapi.JNI.GraphicsContentViewText
   ;
 
+const
+  APP_PACKAGE = 'com.solaris.alarmengine';
+
 type
   TJsonParserProc = procedure (const AJson: String = '') of Object;
 
@@ -47,7 +50,9 @@ type
     property Title: String read FTitle write FTitle;
     property _Message: String read FMessage write FMessage;
     property Payload: String read FPayload write FPayload;
+    // Id андроид нотификатора
     property NotifyCode: Integer read FNotifyCode write FNotifyCode;
+    // Позволяет AlarmEngine идентифициаровать запросы свой/чужой
     property Token: String read FToken write FToken;
     property PackageName: String read FPackage write FPackage;
     property _ClassName: String read FClass write FClass;
@@ -66,13 +71,23 @@ type
     acmSetAlarm  = 'SET_ALARM';
     acmStopAlarm = 'STOP_ALARM';
   strict private
+    class var FIsEngineInitialized: Boolean;
     class var FAlarmData: TAlarmData;
     class var FReceiver: TAlarmReceiver;
     class var FBroadcastReceiver: JFMXBroadcastReceiver;
     class var FLastIntentJson: String;
     class var FJsonParserProc: TJsonParserProc;
+    // Запускает минимальный активити, что бы получить
+    // автоматическое разрешение на отображение уведомлений
+    class function StartNotificationEngine: Boolean;
+
+    class procedure CheckInit;
+  private
+    class procedure FirstInit;
   public
-    class procedure Init(const AJsonParserProc: TJsonParserProc);
+    class function Init(
+      const ANotifyCode: Integer;
+      const AJsonParserProc: TJsonParserProc): Boolean;
     class procedure Uninit;
 
     class procedure HandleIntent;
@@ -92,6 +107,11 @@ uses
     System.SysUtils
   , System.DateUtils
   ;
+
+procedure RaiseNotInit;
+begin
+  raise Exception.Create('Alarm engine not initialized');
+end;
 
 { TAlarmData }
 
@@ -172,57 +192,69 @@ end;
 
 { TAndroidAlarm }
 
-class procedure TAndroidAlarm.Init(const AJsonParserProc: TJsonParserProc);
+class function TAndroidAlarm.Init(
+  const ANotifyCode: Integer;
+  const AJsonParserProc: TJsonParserProc): Boolean;
 var
   Filter: JIntentFilter;
   BellTime: TDateTime;
   Pkg: String;
   Cls: String;
 begin
-  if not Assigned(AJsonParserProc) then
-    raise Exception.Create('TAndroidAlarm.Init -> AJsonParserProc is nil');
+  try
+    if not Assigned(AJsonParserProc) then
+      raise Exception.Create('TAndroidAlarm.Init -> AJsonParserProc is nil');
 
-  Pkg := JStringToString(TAndroidHelper.Context.getPackageName);
-  Cls := JStringToString(TAndroidHelper.Activity.getClass.getName);
+    FIsEngineInitialized := StartNotificationEngine;
+    if not FIsEngineInitialized then
+      Exit;
 
-  BellTime := Now;
+    Pkg := JStringToString(TAndroidHelper.Context.getPackageName);
+    Cls := JStringToString(TAndroidHelper.Activity.getClass.getName);
 
-  FAlarmData := TAlarmData.Create;
-  FAlarmData.Version := 1;
-  FAlarmData.Id := 1;
-  FAlarmData._Type := 'DEBUG';
-  FAlarmData.TriggerAt := DateTimeToUnix(BellTime, false) * 1000;
-  FAlarmData.Title := 'Bell';
-  FAlarmData._Message := 'Bell time: ' + (TimeToStr(BellTime));
-  FAlarmData.Payload := 'Wake up';
-  FAlarmData.NotifyCode := 1001;
-  FAlarmData.Token := 'ALARM_TOKEN_2104261625';
-  FAlarmData.PackageName := Pkg;
-  FAlarmData._ClassName := Cls;
+    BellTime := Now;
 
-  FJsonParserProc := AJsonParserProc;
+    FAlarmData := TAlarmData.Create;
+    FAlarmData.Version := 1;
+    FAlarmData.Id := 1;
+    FAlarmData._Type := 'ALFA';
+    FAlarmData.TriggerAt := DateTimeToUnix(BellTime, false) * 1000;
+    FAlarmData.Title := 'Bell';
+    FAlarmData._Message := 'Bell time: ' + (TimeToStr(BellTime));
+    FAlarmData.Payload := 'Wake up';
+    FAlarmData.NotifyCode := ANotifyCode;
+    FAlarmData.Token := 'ALARM_TOKEN_2104261625';
+    FAlarmData.PackageName := Pkg;
+    FAlarmData._ClassName := Cls;
 
-  FLastIntentJson := '';
+    FJsonParserProc := AJsonParserProc;
 
-  // ✔ receiver listener
-  FReceiver := TAlarmReceiver.Create(FJsonParserProc);
+    FLastIntentJson := '';
 
-  // ✔ FMX bridge receiver
-  FBroadcastReceiver := TJFMXBroadcastReceiver.JavaClass.init(FReceiver);
+    // ✔ receiver listener
+    FReceiver := TAlarmReceiver.Create(FJsonParserProc);
 
-  // ✔ filter
-  Filter := TJIntentFilter.JavaClass.init;
-  Filter.addAction(StringToJString('com.solaris.alarmengine.EVENT'));
+    // ✔ FMX bridge receiver
+    FBroadcastReceiver := TJFMXBroadcastReceiver.JavaClass.init(FReceiver);
 
-  // ✔ register
-  TAndroidHelper.Context.getApplicationContext.registerReceiver(
-//  TAndroidHelper.Activity.registerReceiver(
-    FBroadcastReceiver,
-    Filter);
+    // ✔ filter
+    Filter := TJIntentFilter.JavaClass.init;
+    Filter.addAction(StringToJString(APP_PACKAGE + '.EVENT'));
+
+    // ✔ register
+    TAndroidHelper.Context.getApplicationContext.registerReceiver(
+  //  TAndroidHelper.Activity.registerReceiver(
+      FBroadcastReceiver,
+      Filter);
+  finally
+    Result := FIsEngineInitialized;
+  end;
 end;
 
 class procedure TAndroidAlarm.Uninit;
 begin
+  CheckInit;
+
   FreeAndNil(FAlarmData);
 
   try
@@ -233,11 +265,36 @@ begin
   end;
 end;
 
+class function TAndroidAlarm.StartNotificationEngine: Boolean;
+var
+  Intent: JIntent;
+begin
+  Result := false;
+
+  try
+    Intent := TJIntent.JavaClass.init;
+    if not Assigned(Intent) then
+      Exit;
+
+    Intent.setClassName(
+      StringToJString(APP_PACKAGE),
+      StringToJString(APP_PACKAGE + '.MainActivity'));
+    Intent.addFlags(TJIntent.JavaClass.FLAG_ACTIVITY_NEW_TASK);
+    TAndroidHelper.Context.startActivity(Intent);
+
+    Result := true;
+  except
+    // void
+  end;
+end;
+
 class procedure TAndroidAlarm.HandleIntent;
 var
   Intent: JIntent;
   Json: string;
 begin
+  CheckInit;
+
   Intent := TAndroidHelper.Activity.getIntent;
   if not Assigned(Intent) then
     Exit;
@@ -264,16 +321,19 @@ class procedure TAndroidAlarm.SendToAlarmEngine(
 var
   Intent: JIntent;
 begin
+  CheckInit;
+
   Intent := TJIntent.JavaClass.init;
   if not Assigned(Intent) then
     Exit;
 
-  Intent.setAction(StringToJString('com.solaris.alarmengine.' + ACommand));
-  Intent.setPackage(StringToJString('com.solaris.alarmengine'));
+  Intent.setAction(StringToJString(APP_PACKAGE + '.' + ACommand));
+  Intent.setPackage(StringToJString(APP_PACKAGE));
   Intent.addFlags(TJIntent.JavaClass.FLAG_INCLUDE_STOPPED_PACKAGES);
 
   if not AJson.IsEmpty then
-    Intent.putExtra(StringToJString('alarm_json'),
+    Intent.
+    putExtra(StringToJString('alarm_json'),
                     StringToJString(AJson));
 
   TAndroidHelper.Context.sendBroadcast(Intent);
@@ -284,6 +344,8 @@ var
   BellTime: TDateTime;
   Json: String;
 begin
+  CheckInit;
+
   CancelAlarm;
 
   BellTime := AAlarmDateTime;
@@ -302,11 +364,27 @@ class procedure TAndroidAlarm.CancelAlarm;
 var
   Json: String;
 begin
+  CheckInit;
+
   FAlarmData.Payload := 'Clear notification';
 
   Json := AlarmData.ToJson;
 
   TAndroidAlarm.SendToAlarmEngine(TAndroidAlarm.acmStopAlarm, Json);
 end;
+
+class procedure TAndroidAlarm.FirstInit;
+begin
+  FIsEngineInitialized := false;
+end;
+
+class procedure TAndroidAlarm.CheckInit;
+begin
+  if not FIsEngineInitialized then
+    RaiseNotInit;
+end;
+
+initialization
+  TAndroidAlarm.FirstInit;
 
 end.
