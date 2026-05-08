@@ -33,22 +33,28 @@ type
     public
       property  SQLQueryPrepared: String read FSQLQuery;
 
-      procedure AddQuery              (const ASQLQuery:      String);
-      procedure AddParameterAsString  (
+      procedure AddQuery(const ASQLQuery: String);
+      procedure AddParameterAsString(
         const AParameterName: String;
         const AParameter: String;
         const ANeedQuotes: Boolean = true);
       procedure AddParameterAsInteger(
-        const AParameterName: String; const AParameter: Integer);
+        const AParameterName: String;
+        const AParameter: Integer);
       procedure AddParameterAsLargeInt(
-        const AParameterName: String; const AParameter: Int64);
+        const AParameterName: String;
+        const AParameter: Int64);
       procedure AddParameterAsBoolean(
-        const AParameterName: String; const AParameter: Boolean);
+        const AParameterName: String;
+        const AParameter: Boolean);
       procedure AddParameterAsDouble(
-        const AParameterName: String; const AParameter: Double);
+        const AParameterName: String;
+        const AParameter: Double);
 
       procedure ClearQuery;
     end;
+  strict private
+    class var Flock: TObject;
   private
     FQuery:             TQuery;
 
@@ -72,6 +78,9 @@ type
 
     constructor Create(const ADBFileName: String);
     destructor Destroy; override;
+
+    class procedure CreateLock;
+    class procedure DestroyLock;
   end;
 
 implementation
@@ -184,6 +193,8 @@ end;
 
 constructor TDBTools.Create(const ADBFileName: String);
 begin
+  TMonitor.Enter(FLock);
+
   if not FileExists(ADBFileName) then
     raise Exception.Create('TDataBaseTools.Create: DB "' + ADBFileName + '" file not exists');
 
@@ -225,8 +236,10 @@ begin
   FreeAndNil(FFDQuery);
 
   if Assigned(FFDConnection) then
-    fFDConnection.Close;
+    FFDConnection.Close;
   FreeAndNil(FFDConnection);
+
+  TMonitor.Exit(FLock);
 end;
 
 function TDBTools.CreateQuery: TQuery;
@@ -301,5 +314,21 @@ begin
     raise;
   end;
 end;
+
+class procedure TDBTools.CreateLock;
+begin
+  FLock := TObject.Create;
+end;
+
+class procedure TDBTools.DestroyLock;
+begin
+  FreeAndNil(FLock);
+end;
+
+initialization
+  TDBTools.CreateLock;
+
+finalization
+  TDBTools.DestroyLock;
 
 end.
