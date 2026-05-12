@@ -22,7 +22,10 @@ type
     crFileNotExists = 1,
     crCopyError = 2,
     crDestFileNotDeleted = 3,
-    crSourceFileNotDeleted = 4);
+    crSourceFileNotDeleted = 4,
+    crUnableToCreateDirectory = 5,
+    crSourceFileNameIsEmpty = 6,
+    crDestFileNameIsEmpty =7);
   TCopyFileAction = (caNothing = 0, caRename = 1, caReplace = 2);
   TFileNames = array of String;
 
@@ -78,6 +81,10 @@ type
       const AExt: array of String;
       var AFileNames: TFileNames);
 
+    class function RaiseIfCopyMoveError(
+      const AFileNameFrom: String;
+      const AFileNameTo: String;
+      const ACopyFileResult: TCopyFileResult): Boolean;
     class function CopyFile(
       const AFileNameFrom: String;
       const AFileNameTo: String;
@@ -224,7 +231,13 @@ begin
 
   DirTo := ExtractFilePath(AFileNameTo);
   if not DirectoryExists(DirTo) then
-    ForceDirectories(DirTo);
+  begin
+    try
+      ForceDirectories(DirTo);
+    except
+      Exit(crUnableToCreateDirectory);
+    end;
+  end;
 
   try
     FileStreamFrom := nil;
@@ -353,6 +366,39 @@ begin
   System.SysUtils.FindClose(SearchRec);
 end;
 
+class function TFileTools.RaiseIfCopyMoveError(
+  const AFileNameFrom: String;
+  const AFileNameTo: String;
+  const ACopyFileResult: TCopyFileResult): Boolean;
+var
+  DestDir: String;
+begin
+  Result := false;
+  try
+    case ACopyFileResult of
+      crFileNotExists:
+        raise Exception.CreateFmt('Source file "%s" not exists', [AFileNameFrom]);
+      crCopyError:
+        raise Exception.CreateFmt('Copy file "%s" error', [AFileNameFrom]);
+      crDestFileNotDeleted:
+        raise Exception.CreateFmt('Destination file "%s" not deleted', [AFileNameTo]);
+      crSourceFileNotDeleted:
+        raise Exception.CreateFmt('Source file "%s" not deleted', [AFileNameFrom]);
+      crUnableToCreateDirectory:
+      begin
+        DestDir := ExtractFileDir(AFileNameTo);
+        raise Exception.CreateFmt('Unable to create destination directory "%s"', [DestDir]);
+      end;
+      crSourceFileNameIsEmpty:
+        raise Exception.Create('Source file name is empty');
+      crDestFileNameIsEmpty:
+        raise Exception.Create('Destination file name is empty');
+    end;
+  except
+    Result := true;
+  end;
+end;
+
 class function TFileTools.CopyFile(
   const AFileNameFrom: String;
   const AFileNameTo: String;
@@ -361,48 +407,72 @@ var
   FileNameTo: String;
 begin
   Result := crOk;
+
   FileNameTo := AFileNameTo;
+  try
+    if ExtractFileName(AFileNameFrom).Length = 0 then
+    begin
+      Result := crSourceFileNameIsEmpty;
 
-  if FileExists(AFileNameTo) then
-  begin
-    case ADoIfExists of
-      caNothing:
-      begin
-        Exit;
-      end;
-      caReplace:
-      begin
-        if not DeleteFile(FileNameTo) then
+      Exit;
+    end;
+    if ExtractFileName((FileNameTo)).Length = 0 then
+    begin
+      Result := crDestFileNameIsEmpty;
+
+      Exit;
+     end;
+
+    if FileExists(FileNameTo) then
+    begin
+      case ADoIfExists of
+        caNothing:
         begin
-          Result := crDestFileNotDeleted;
-
           Exit;
         end;
-      end;
-      caRename:
-      begin
-        FileNameTo := GetNewFileName(AFileNameTo);
-      end;
-    end
-  end;
+        caReplace:
+        begin
+          if not DeleteFile(FileNameTo) then
+          begin
+            Result := crDestFileNotDeleted;
 
-  CommonCopyFile(AFileNameFrom, FileNameTo);
+            Exit;
+          end;
+        end;
+        caRename:
+        begin
+          FileNameTo := GetNewFileName(FileNameTo);
+        end;
+      end
+    end;
+
+    Result := CommonCopyFile(AFileNameFrom, FileNameTo);
+  finally
+    RaiseIfCopyMoveError(
+      AFileNameFrom,
+      FileNameTo,
+      Result);
+  end
 end;
 
 class function TFileTools.MoveFile(
   const AFileNameFrom: String;
   const AFileNameTo: String;
   const ADoIfExists: TCopyFileAction = caNothing): TCopyFileResult;
-var
-  CopyFileResult: TCopyFileResult;
 begin
-  Result := crOk;
-  CopyFileResult := CopyFile(AFileNameFrom, AFileNameTo, ADoIfExists);
-  if CopyFileResult = crOk then
+  Result := CopyFile(AFileNameFrom, AFileNameTo, ADoIfExists);
+  if Result = crOk then
+  begin
     if not DeleteFile(AFileNameFrom) then
-      Result := crSourceFileNotDeleted
-  else
-    Result := CopyFileResult;
+    begin
+      Result := crSourceFileNotDeleted;
+
+      RaiseIfCopyMoveError(
+        AFileNameFrom,
+        AFileNameTo,
+        Result);
+    end;
+  end;
 end;
 
 class procedure TFileTools.GetFileNames(
