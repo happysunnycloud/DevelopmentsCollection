@@ -75,15 +75,23 @@ type
     procedure StartTransaction;
     procedure Commit;
     procedure Rollback;
+    procedure Backup(
+      const ASourcePath: String;
+      const ADestPath: String);
 
     constructor Create(const ADBFileName: String);
     destructor Destroy; override;
 
+    // Блокировка для реализации монопольного доступу к объекту
     class procedure CreateLock;
     class procedure DestroyLock;
   end;
 
 implementation
+
+uses
+    FileToolsUnit
+  ;
 
 procedure PlaceParameterAsInteger(
   var ASQLQuery: String;
@@ -312,6 +320,20 @@ begin
     FFDQuery.ExecSQL;
   except
     raise;
+  end;
+end;
+
+procedure TDBTools.Backup(
+  const ASourcePath: String;
+  const ADestPath: String);
+begin
+  if not FileExists(ASourcePath) then
+    raise Exception.CreateFmt('TDBTools.Backup -> File %s not exists', [ASourcePath]);
+
+  try
+    TFileTools.CopyFile(ASourcePath, ADestPath, caRename);
+  except
+    raise Exception.Create('TDBTools.Backup -> Backaup not complete');
   end;
 end;
 
