@@ -75,9 +75,6 @@ type
     procedure StartTransaction;
     procedure Commit;
     procedure Rollback;
-    procedure Backup(
-      const ASourcePath: String;
-      const ADestPath: String);
 
     constructor Create(const ADBFileName: String);
     destructor Destroy; override;
@@ -85,6 +82,10 @@ type
     // Блокировка для реализации монопольного доступу к объекту
     class procedure CreateLock;
     class procedure DestroyLock;
+
+    class procedure Backup(
+      const ASourcePath: String;
+      const ADestPath: String);
   end;
 
 implementation
@@ -323,20 +324,6 @@ begin
   end;
 end;
 
-procedure TDBTools.Backup(
-  const ASourcePath: String;
-  const ADestPath: String);
-begin
-  if not FileExists(ASourcePath) then
-    raise Exception.CreateFmt('TDBTools.Backup -> File %s not exists', [ASourcePath]);
-
-  try
-    TFileTools.CopyFile(ASourcePath, ADestPath, caRename);
-  except
-    raise Exception.Create('TDBTools.Backup -> Backaup not complete');
-  end;
-end;
-
 class procedure TDBTools.CreateLock;
 begin
   FLock := TObject.Create;
@@ -345,6 +332,25 @@ end;
 class procedure TDBTools.DestroyLock;
 begin
   FreeAndNil(FLock);
+end;
+
+class procedure TDBTools.Backup(
+  const ASourcePath: String;
+  const ADestPath: String);
+begin
+  if not FileExists(ASourcePath) then
+    raise Exception.CreateFmt('TDBTools.Backup -> File %s not exists', [ASourcePath]);
+
+  TMonitor.Enter(FLock);
+  try
+    try
+      TFileTools.CopyFile(ASourcePath, ADestPath, caRename);
+    except
+      raise Exception.Create('TDBTools.Backup -> Backaup not complete');
+    end;
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 initialization
