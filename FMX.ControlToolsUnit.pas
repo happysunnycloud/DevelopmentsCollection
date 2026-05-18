@@ -170,6 +170,7 @@ type
     class procedure FreeAndNil(var aComponent: TComponent); overload;
     //  --- Какая-то времянка, надо разобраться и убрать ---
 
+    class procedure GetCurPos(var X, Y: Single);
 {$IFDEF MSWINDOWS}
     // Находит положение панели задач
     // ARect - координаты, результат - положение
@@ -825,6 +826,22 @@ begin
       Component.Free;
     end);
   aComponent := nil;
+end;
+
+class procedure TControlTools.GetCurPos(var X, Y: Single);
+{$IFDEF MSWINDOWS}
+var
+  MousePoint: TPoint;
+{$ENDIF}
+begin
+  {$IFDEF MSWINDOWS}
+  GetCursorPos(MousePoint);
+  X := MousePoint.X;
+  Y := MousePoint.Y;
+  {$ELSE IF ANDROID}
+  X := X;
+  Y := Y;
+  {$ENDIF}
 end;
 
 {$IFDEF MSWINDOWS}
