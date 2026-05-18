@@ -161,10 +161,15 @@ type
 
   THintSettings = class(TBaseControlSettings)
   strict private
+    FBorderFrameColor: TAlphaColor;
     FOnApplyProcRef: THintSettingsApplyProcRef;
   public
     constructor Create;
 
+    procedure CopyFrom(const AHintSettings: THintSettings); reintroduce;
+
+    property BorderFrameColor: TAlphaColor
+      read FBorderFrameColor write FBorderFrameColor;
     property OnApplyProcRef: THintSettingsApplyProcRef
       read FOnApplyProcRef write FOnApplyProcRef;
 
@@ -684,6 +689,14 @@ begin
   CustomTextSettings.FontColor := TAlphaColorRec.Black;
 
   FOnApplyProcRef := nil;
+end;
+
+procedure THintSettings.CopyFrom(
+  const AHintSettings: THintSettings);
+begin
+  inherited CopyFrom(AHintSettings);
+
+  FBorderFrameColor := AHintSettings.BorderFrameColor;
 end;
 
 procedure THintSettings.Apply;

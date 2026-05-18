@@ -7,6 +7,7 @@ uses
   , System.UITypes
   , System.Types
   , FMX.Forms
+  , FMX.Objects
   , FMX.Graphics
   , FMX.StdCtrls
   , FMX.Theme
@@ -21,6 +22,7 @@ type
     FTheme: TTheme;
 
     FHint: String;
+    FBorderFrameRectangle: TRectangle;
     FLabel: TLabel;
 
     procedure Paint(Sender: TObject; Canvas: TCanvas;
@@ -103,7 +105,9 @@ begin
     procedure (const AHintSettings: THintSettings)
     begin
       Self.Fill.Color := AHintSettings.BackgroundColor;
-      Self.FLabel.TextSettings.FontColor := AHintSettings.CustomTextSettings.FontColor;
+      Self.FLabel.TextSettings.FontColor :=
+        AHintSettings.CustomTextSettings.FontColor;
+      Self.FBorderFrameRectangle.Stroke.Color := AHintSettings.BorderFrameColor;
     end;
 
   OnPaint := Paint;
@@ -112,6 +116,13 @@ begin
   OnClose := OnCloseInternalHandler;
 
   FHint := '';
+
+  FBorderFrameRectangle := TRectangle.Create(Self);
+  FBorderFrameRectangle.Parent := Self;
+  FBorderFrameRectangle.Fill.Color := TAlphaColorRec.Null;
+  FBorderFrameRectangle.Align := TAlignLayout.Contents;
+  FBorderFrameRectangle.Stroke.Kind := TBrushKind.Solid;
+  FBorderFrameRectangle.Stroke.Thickness := 0.5;
 
   FLabel := TLabel.Create(Self);
   FLabel.Parent := Self;
