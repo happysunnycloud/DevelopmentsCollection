@@ -49,9 +49,6 @@ type
     FCachedCurrentTime: TMediaTime;
     FCachedMediaState: TMediaState;
 
-    FOnGetDataExternalHandler: TDataProc;
-    FOnFinishedExternalHandler: TProc;
-
     // Кэшируем eдиножды FileName при загрузке трека
     // Нет смысла вытаскивать его каджый раз в UpdateCache
     FFileName: String;
@@ -63,6 +60,10 @@ type
     // После вызова Stop Android обнулит значение Volume
     // По этому всегда используем кэшированное значение
     FVolume: Single;
+
+    FOnGetDataExternalHandler: TDataProc;
+    FOnFinishedExternalHandler: TProc;
+
 
     procedure SetFileName(const AFileName: String);
     function GetFileName: String;
