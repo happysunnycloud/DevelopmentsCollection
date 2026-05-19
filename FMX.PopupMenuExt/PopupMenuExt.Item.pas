@@ -5,6 +5,7 @@ interface
 uses
     System.Classes
   , System.Generics.Collections
+  , System.SysUtils
   ;
 
 type
@@ -21,6 +22,7 @@ type
     FChildren: TItems;
     FText: String;
     FOnClick: TNotifyEvent;
+    FOnClickProcRef: TProc;
     // Форма/слой на которой расположен TItem
     FItemOwner: TObject;
     FTag: NativeInt;
@@ -38,7 +40,8 @@ type
     property Parent: TItem read FParent write SetParent;
     property Children: TItems read FChildren write FChildren;
     property Text: String read FText write FText;
-    property OnClick: TNotifyEvent read FOnClick  write FOnClick;
+    property OnClick: TNotifyEvent read FOnClick write FOnClick;
+    property OnClickProcRef: TProc read FOnClickProcRef write FOnClickProcRef;
     property ItemOwner: TObject read FItemOwner write FItemOwner;
     property Level: Word read GetLevel;
 
@@ -50,9 +53,9 @@ type
 
 implementation
 
-uses
-    System.SysUtils
-  ;
+//uses
+//    System.SysUtils
+//  ;
 
 { TItems }
 
@@ -92,6 +95,7 @@ begin
   FChildren := TItems.Create;
   FText := '';
   FOnClick := nil;
+  FOnClickProcRef := nil;
   FItemOwner := nil;
   //FTag := 0;
   FName := '';
@@ -126,6 +130,5 @@ begin
 
   Result := Level;
 end;
-
 
 end.
