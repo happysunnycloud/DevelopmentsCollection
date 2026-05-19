@@ -18,7 +18,6 @@ type
   strict private
     FCriticalSection: TCriticalSection;
     FStepDirection: TStepDirection;
-//    FHoldEvent: TEvent;
     FDoneEvent: TEvent;
     FCountDown: Integer;
     FTimeout: Integer;
@@ -57,8 +56,6 @@ type
     function GetTimeout: Integer;
 
     function IsMouseOverForm: Boolean;
-
-//    procedure OnSetTerminatedHandler(Sender: TObject);
   protected
     procedure InnerExecute; override;
   public
@@ -79,7 +76,6 @@ type
     property Timeout: Integer read GetTimeout write SetTimeout;
 
     property OnTimeIsOut: TNotifyEvent write FOnTimeIsOut;
-//    property HoldEvent: TEvent read FHoldEvent;
   end;
 
 implementation
@@ -99,7 +95,6 @@ begin
   FCriticalSection := TCriticalSection.Create;
   FStepDirection := AStepDirection;
   FDoneEvent := TEvent.Create(nil, true, false, '', false);
-  //FHoldEvent := TEvent.Create(nil, true, false, '', false);
   FTimeIsOutFixed := false;
   FClickFixed := false;
   FGoBackClickFixed := false;
@@ -118,8 +113,6 @@ begin
     AThreadFactory,
     '',
     true);
-
-//  OnSetTerminate := OnSetTerminatedHandler;
 end;
 
 destructor TPopupMenuExtThread.Destroy;
@@ -127,16 +120,10 @@ begin
   Form := nil;
 
   FreeAndNil(FDoneEvent);
-//  FreeAndNil(FHoldEvent);
   FreeAndNil(FCriticalSection);
 
   inherited Destroy;
 end;
-
-//procedure TPopupMenuExtThread.OnSetTerminatedHandler(Sender: TObject);
-//begin
-//  FHoldEvent.SetEvent;
-//end;
 
 procedure TPopupMenuExtThread.SetClickedItem(const AClickedItem: TObject);
 begin
@@ -167,7 +154,6 @@ begin
     FGoBackClickFixed := AGoBackClickFixed;
 
     HoldThread;
-//    FHoldEvent.ResetEvent;
   finally
     FCriticalSection.Leave;
   end;
@@ -245,7 +231,6 @@ begin
       FClickFixed := false;
 
       UnHoldThread;
-      //FHoldEvent.SetEvent;
     end
     else
     begin
@@ -357,14 +342,12 @@ begin
   FDoneEvent.ResetEvent;
   HoldThread;
   ExecHold;
-//  FHoldEvent.ResetEvent;
-//  FHoldEvent.WaitFor(INFINITE);
 
   while not Terminated do
   begin
     if not Terminated then
       HoldThread;
-      //FHoldEvent.ResetEvent;
+
     while not Terminated and not ClickFixed and not TimeIsOutFixed do
     begin
       if not IsMouseOverForm then
@@ -413,7 +396,6 @@ begin
 
     if not Terminated then
       ExecHold;
-      //FHoldEvent.WaitFor(INFINITE);
   end;
 end;
 

@@ -35,9 +35,7 @@ type
 
     procedure HideAllForms;
     procedure CloseAllForms;
-    procedure CloseForm(
-      const AForm: TPopupMenuExtForm;
-      const ARecursiveClose: Boolean = false);
+    procedure CloseForm(const AForm: TPopupMenuExtForm);
     procedure OnPopupMenuExtFormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure OnPopupMenuExtFormClose(Sender: TObject; var Action: TCloseAction);
     procedure OnItemClickHandler(Sender: TObject);
@@ -187,6 +185,7 @@ var
   Point: TPoint;
   Item: TItem;
   OnClick: TNotifyEvent;
+  OnClickProcRef: TProc;
 begin
   ItemLayout := Sender as TItemLayout;
   Item := ItemLayout.Item;
@@ -202,15 +201,23 @@ begin
   end
   else
   begin
-    if Assigned(Item.OnClick) then
+    FPopupMenuThread.ClickFixed := true;
+
+    if Assigned(Item.OnClick) or Assigned(Item.OnClickProcRef) then
     begin
       HideAllForms;
 
-      if Assigned(FPopupMenuThread) then
-        FPopupMenuThread.ClickFixed := true;
+      if Assigned(Item.OnClick) then
+      begin
+        OnClick := Item.OnClick;
+        OnClick(Item);
+      end;
 
-      OnClick := Item.OnClick;
-      OnClick(Item);
+      if Assigned(Item.OnClickProcRef) then
+      begin
+        OnClickProcRef := Item.OnClickProcRef;
+        OnClickProcRef();
+      end;
 
       CloseAllForms;
     end;
@@ -563,14 +570,18 @@ begin
   Form := Sender as TPopupMenuExtForm;
   try
     if Form = FMainMenuForm then
+    begin
       FMainMenuForm := nil;
+      FAcviteForm := nil;
 
-    if Form.Owner is TPopupMenuExtForm then
-      FormOwner := Form.Owner as TPopupMenuExtForm
-    else
       Exit;
+    end;
 
+    FormOwner := Form.Owner as TPopupMenuExtForm;
     FAcviteForm := FormOwner;
+
+    if FPopupMenuThread.ClickFixed then
+      Exit;
 
     if not TControlTools.IsMouseOverForm(FormOwner) then
       StartPopupMenuThread(FormOwner, sdBackward)
@@ -624,8 +635,7 @@ begin
 end;
 
 procedure TPopupMenuExt.CloseForm(
-  const AForm: TPopupMenuExtForm;
-  const ARecursiveClose: Boolean = false);
+  const AForm: TPopupMenuExtForm);
 begin
   if Assigned(FPopupMenuThread) then
     FPopupMenuThread.Form := nil;

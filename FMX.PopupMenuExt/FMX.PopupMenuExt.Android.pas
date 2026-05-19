@@ -131,6 +131,7 @@ var
   ItemLayout: TItemLayout;
   Item: TItem;
   OnClick: TNotifyEvent;
+  OnClickProcRef: TProc;
 begin
   ItemLayout := Sender as TItemLayout;
   Item := ItemLayout.Item;
@@ -141,10 +142,19 @@ begin
   end
   else
   begin
-    if Assigned(Item.OnClick) then
+    if Assigned(Item.OnClick) or Assigned(Item.OnClickProcRef) then
     begin
-      OnClick := Item.OnClick;
-      OnClick(Item);
+      if Assigned(Item.OnClick) then
+      begin
+        OnClick := Item.OnClick;
+        OnClick(Item);
+      end;
+
+      if Assigned(Item.OnClickProcRef) then
+      begin
+        OnClickProcRef := Item.OnClickProcRef;
+        OnClickProcRef();
+      end;
 
       CloseAllLayouts;
     end;
