@@ -594,6 +594,7 @@ begin
 end;
 
 procedure TPopupMenuExt.HideAllForms;
+
   procedure _EnumForms(const AForm: TPopupMenuExtForm);
   var
     Component: TComponent;
@@ -613,6 +614,7 @@ procedure TPopupMenuExt.HideAllForms;
       end;
     end;
   end;
+
 begin
   _EnumForms(FMainMenuForm);
   FMainMenuForm.Hide;

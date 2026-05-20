@@ -28,10 +28,10 @@ type
     FForm: TFormExt;
     FOnKeyUpExternal: TKeyEvent;
 
+    procedure HideAllLayouts;
     procedure CloseAllLayouts;
     procedure CloseLayout(
-      const ALayout: TPopupMenuLayout;
-      const ARecursiveClose: Boolean = false);
+      const ALayout: TPopupMenuLayout);
 
     procedure OnGoBackButtonClickHandler(Sender: TObject);
     procedure OnItemClickHandler(Sender: TObject);
@@ -144,6 +144,8 @@ begin
   begin
     if Assigned(Item.OnClick) or Assigned(Item.OnClickProcRef) then
     begin
+      HideAllLayouts;
+
       if Assigned(Item.OnClick) then
       begin
         OnClick := Item.OnClick;
@@ -340,6 +342,33 @@ begin
   PopupLayout.BuildItemsLayout(AOwnerItem, ItemsWidth, ItemsHeight);
 end;
 
+procedure TPopupMenuExt.HideAllLayouts;
+
+  procedure _EnumLayouts(const ALayout: TLayout);
+  var
+    Component: TComponent;
+    i: Integer;
+    Layout: TLayout;
+  begin
+    for i := 0 to Pred(ALayout.ComponentCount) do
+    begin
+      Component := ALayout.Components[i];
+      if Component is TLayout then
+      begin
+        Layout := Component as TLayout;
+        Layout.Visible := false;
+        _EnumLayouts(Layout);
+
+        Break;
+      end;
+    end;
+  end;
+
+begin
+  _EnumLayouts(FMainMenuLayout);
+  FMainMenuLayout.Visible := false;
+end;
+
 procedure TPopupMenuExt.CloseAllLayouts;
 var
   Layout: TPopupMenuLayout;
@@ -357,8 +386,7 @@ begin
 end;
 
 procedure TPopupMenuExt.CloseLayout(
-  const ALayout: TPopupMenuLayout;
-  const ARecursiveClose: Boolean = false);
+  const ALayout: TPopupMenuLayout);
 begin
   if not Assigned(ALayout) then
     Exit;
@@ -367,7 +395,7 @@ begin
   begin
     FMainMenuLayout := nil;
 
-    // Снимаем хук, возвращаем форме оригинальный обработки OnKeyUp
+    // Снимаем хук, возвращаем форме оригинальный обработчик OnKeyUp
     FForm.OnKeyUp := FOnKeyUpExternal;
   end;
 
