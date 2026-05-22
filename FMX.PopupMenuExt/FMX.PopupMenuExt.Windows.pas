@@ -50,6 +50,7 @@ type
     // По этому везде проверяем жив ли поток
     // В терминаторе заниливаем ссылку на него
     procedure OnPopupMenuThreadTerminate(Sender: TObject);
+    procedure ForceQueueCloseAllForms;
   private
   public
     constructor Create(Owner: TComponent); reintroduce; overload;
@@ -219,7 +220,7 @@ begin
         OnClickProcRef();
       end;
 
-      CloseAllForms;
+      ForceQueueCloseAllForms;
     end;
   end
 end;
@@ -366,7 +367,7 @@ end;
 
 procedure TPopupMenuExt.Close;
 begin
-  CloseAllForms;
+  ForceQueueCloseAllForms;
 end;
 
 procedure TPopupMenuExt.Open(
@@ -533,6 +534,15 @@ end;
 procedure TPopupMenuExt.OnPopupMenuThreadTerminate(Sender: TObject);
 begin
   FPopupMenuThread := nil;
+end;
+
+procedure TPopupMenuExt.ForceQueueCloseAllForms;
+begin
+  TThread.ForceQueue(nil,
+    procedure
+    begin
+      CloseAllForms;
+    end);
 end;
 
 procedure TPopupMenuExt.OnPopupMenuExtFormCloseQuery(Sender: TObject; var CanClose: Boolean);

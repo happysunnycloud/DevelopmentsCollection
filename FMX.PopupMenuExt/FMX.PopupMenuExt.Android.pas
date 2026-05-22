@@ -138,7 +138,7 @@ begin
 
   if Item.Children.Count > 0 then
   begin
-    Open(FCallingObject, Item)
+    Open(FCallingObject, Item);
   end
   else
   begin
@@ -157,10 +157,15 @@ begin
         OnClickProcRef := Item.OnClickProcRef;
         OnClickProcRef();
       end;
-
-      CloseAllLayouts;
+      // Вызываем именно через ForceQueue, что бы
+      // TItemLayout контрол успел отработать все анимационные триггеры
+      TThread.ForceQueue(nil,
+        procedure
+        begin
+          CloseAllLayouts;
+        end);
     end;
-  end
+  end;
 end;
 
 constructor TPopupMenuExt.Create(Owner: TComponent);
