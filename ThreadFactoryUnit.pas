@@ -207,7 +207,12 @@ type
       const AThreadName: String;
       const AExecProc: TExecProc;
       const ASuspended: Boolean = false;
-      const AFreeOnTerminate: Boolean = true);
+      const AFreeOnTerminate: Boolean = true); overload;
+    constructor Create(
+      const AThreadFactory: TThreadFactory;
+      const AExecProc: TExecProc;
+      const ASuspended: Boolean = false;
+      const AFreeOnTerminate: Boolean = true); overload;
   end;
 
   TThreadExtClass = class of TThreadExt;
@@ -255,15 +260,23 @@ type
       const AThreadName: String;
       const AExecProc: TExecProc;
       const ASuspended: Boolean = false;
-      const AFreeOnTerminated: Boolean = true): TInlineThreadExt;
+      const AFreeOnTerminated: Boolean = true): TInlineThreadExt; overload;
     /// <summary>
-    ///   Создает именованый поток с исполняемым анонимным методом
-    ///   FreeOnTerminate = true
+    ///   Создает автоименованый поток с исполняемым анонимным методом
     /// </summary>
-    function CreateFreeOnTerminateInlineThread(
-      const AThreadName: String;
+    function CreateInlineThread(
       const AExecProc: TExecProc;
-      const ASuspended: Boolean = false): TInlineThreadExt;
+      const ASuspended: Boolean = false;
+      const AFreeOnTerminated: Boolean = true): TInlineThreadExt; overload;
+
+//    /// <summary>
+//    ///   Создает именованый поток с исполняемым анонимным методом
+//    ///   FreeOnTerminate = true
+//    /// </summary>
+//    function CreateFreeOnTerminateInlineThread(
+//      const AThreadName: String;
+//      const AExecProc: TExecProc;
+//      const ASuspended: Boolean = false): TInlineThreadExt;
 
     /// <summary>
     ///   Создает независимый поток с обязательной регистрацией в фабрике потоков
@@ -759,6 +772,21 @@ begin
     AFreeOnTerminate);
 end;
 
+constructor TInlineThreadExt.Create(
+  const AThreadFactory: TThreadFactory;
+  const AExecProc: TExecProc;
+  const ASuspended: Boolean = false;
+  const AFreeOnTerminate: Boolean = true);
+begin
+  FExecProc := AExecProc;
+
+  inherited Create(
+    AThreadFactory,
+    nil,
+    ASuspended,
+    AFreeOnTerminate);
+end;
+
 procedure TInlineThreadExt.InnerExecute;
 begin
   FExecProc(Self);
@@ -839,18 +867,30 @@ begin
     AFreeOnTerminated);
 end;
 
-function TThreadFactory.CreateFreeOnTerminateInlineThread(
-  const AThreadName: String;
+function TThreadFactory.CreateInlineThread(
   const AExecProc: TExecProc;
-  const ASuspended: Boolean = false): TInlineThreadExt;
+  const ASuspended: Boolean = false;
+  const AFreeOnTerminated: Boolean = true): TInlineThreadExt;
 begin
   Result := TInlineThreadExt.Create(
     Self,
-    AThreadName,
     AExecProc,
     ASuspended,
-    true);
+    AFreeOnTerminated);
 end;
+
+//function TThreadFactory.CreateFreeOnTerminateInlineThread(
+//  const AThreadName: String;
+//  const AExecProc: TExecProc;
+//  const ASuspended: Boolean = false): TInlineThreadExt;
+//begin
+//  Result := TInlineThreadExt.Create(
+//    Self,
+//    AThreadName,
+//    AExecProc,
+//    ASuspended,
+//    true);
+//end;
 
 procedure TThreadFactory.CreateRegistredThread(
   const AThreadFactoryRegistringConstructor: TThreadFactoryRegistringConstructor);
@@ -950,6 +990,9 @@ function TThreadFactory.FindThread(const AThreadName: String): TThreadExt;
 var
   Thread: TThreadExt;
 begin
+  if AThreadName.IsEmpty then
+    raise Exception.Create('Thread name is empty');
+
   Thread := nil;
 
   FThreadRegistry.Enumerator(
@@ -970,6 +1013,9 @@ function TThreadFactory.ThreadExists(const AExistingThread: TThreadExt): Boolean
 var
   IsExists: Boolean;
 begin
+  if not Assigned(AExistingThread) then
+    raise Exception.Create('Thread ref is nil');
+
   IsExists := false;
 
   FThreadRegistry.Enumerator(
@@ -990,6 +1036,9 @@ procedure TThreadFactory.CheckDuplicatedThreadName(const AThreadName: String);
 var
   Thread: TThreadExt;
 begin
+  if AThreadName.IsEmpty then
+    raise Exception.Create('Thread name is empty');
+
   Thread := FindThread(AThreadName);
   if Assigned(Thread) then
     raise Exception.CreateFmt('Duplicate thread name "%s"', [AThreadName]);
@@ -999,6 +1048,9 @@ procedure TThreadFactory.TerminateThread(const ATerminatingThreadName: String);
 var
   Thread: TThreadExt;
 begin
+  if ATerminatingThreadName.IsEmpty then
+    raise Exception.Create('Thread name is empty');
+
   Thread := nil;
 
   FThreadRegistry.Enumerator(
@@ -1020,6 +1072,9 @@ end;
 
 procedure TThreadFactory.TerminateThread(const ATerminatingThread: TThreadExt);
 begin
+  if not Assigned(ATerminatingThread) then
+    Exit;
+
   FThreadRegistry.Enumerator(
     procedure (const AThread: TThreadExt; var ABreak: Boolean)
     begin
@@ -1038,6 +1093,9 @@ procedure TThreadFactory.ActivateThreadIsDeadEvent(
 var
   Thread: TThreadExt;
 begin
+  if AActivatingThreadName.IsEmpty then
+    raise Exception.Create('Thread name is empty');
+
   Thread := nil;
 
   // Обращение через Enumerator гаратнирует,
@@ -1065,6 +1123,12 @@ procedure TThreadFactory.ActivateThreadIsDeadEvent(
 var
   ThreadExist: Boolean;
 begin
+  if not Assigned(AActivatingThread) then
+    raise Exception.Create('Thread ref is nil');
+
+  if not Assigned(AThreadIsDeadEvent) then
+    raise Exception.Create('Event is nil');
+
   ThreadExist := false;
 
   // Обращение через Enumerator гаратнирует,
