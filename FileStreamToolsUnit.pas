@@ -30,6 +30,8 @@ type
       const AVal: Double): Int64;
     function WriteBoolean(
       const AVal: Boolean): Int64;
+    function WriteDate(
+      const AVal: TDateTime): Int64;
 
     function ReadValType: Word;
 
@@ -47,6 +49,7 @@ type
     function ReadAsUInt32: UInt32;
     function ReadAsDouble: Double;
     function ReadAsBoolean: Boolean;
+    function ReadAsDate: TDateTime;
 
     function Write(
       const AVal: Variant): Int64;
@@ -157,6 +160,13 @@ begin
   FFileStream.Read(Result, SizeOf(Boolean));
 end;
 
+function TFileStreamTools.ReadAsDate: TDateTime;
+begin
+  CheckCorrect(ReadValType, varDate);
+
+  FFileStream.Read(Result, SizeOf(TDateTime));
+end;
+
 function TFileStreamTools.WriteString(
   const AVal: String): Int64;
 var
@@ -225,6 +235,14 @@ begin
   Result := GetPosition;
 end;
 
+function TFileStreamTools.WriteDate(
+  const AVal: TDateTime): Int64;
+begin
+  FFileStream.Write(AVal, SizeOf(TDateTime));
+
+  Result := GetPosition;
+end;
+
 function TFileStreamTools.Write(
   const AVal: Variant): Int64;
 var
@@ -249,6 +267,8 @@ begin
       WriteDouble(AVal);
     varBoolean:
       WriteBoolean(AVal);
+    varDate:
+      WriteDate(AVal);
     else
       raise Exception.Create('Unknown type');
   end;
