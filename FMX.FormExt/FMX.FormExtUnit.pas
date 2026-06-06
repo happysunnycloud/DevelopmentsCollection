@@ -438,7 +438,7 @@ begin
   {$IFDEF MSWINDOWS}
   FBorderFrame := TBorderFrame.Create(
     Self,
-    TBorderFrameKind.bfkNone,
+    TBorderFrameKind.bfkNormal,
     Self.Caption);
 
   FBorderFrame.OnBorderFrameMaxupButtonClick := OnBorderFrameMaxupButtonClickHandler;
