@@ -11,7 +11,11 @@ uses
   ;
 
 type
-  TBorderFrameKind = (bfkNone = -1, bfkNormal = 0, bfkNoCaption = 1);
+  TBorderFrameKind = (
+    bfkNone       = -1,
+    bfkNormal     = 0,
+    bfkNoCaption  = 1,
+    bfkNoFrame    = 2);
 
 type
   TBorderFrameMaxupButtonClickProcRef = procedure of object;
@@ -272,6 +276,7 @@ var
   ContentsLayout: TLayout;
   Control: TControl;
   i: Integer;
+  VisibleState: Boolean;
 begin
   Form := Owner as TForm;
   Form.BorderStyle := TFmxFormBorderStyle.None;
@@ -317,8 +322,39 @@ begin
     end;
   end;
 
-  CaptionLayout.Visible := FBorderFrameKind = bfkNormal;
-  UnderCaptionLayout.Visible := CaptionLayout.Visible
+  case FBorderFrameKind of
+    bfkNormal:
+    begin
+      VisibleState := true;
+      CaptionLayout.Visible := VisibleState;
+      UnderCaptionLayout.Visible := VisibleState;
+      TopLayout.Visible := VisibleState;
+      LeftLayout.Visible := VisibleState;
+      RightLayout.Visible := VisibleState;
+      BottomLayout.Visible := VisibleState;
+    end;
+    bfkNoFrame:
+    begin
+      VisibleState := false;
+      CaptionLayout.Visible := VisibleState;
+      UnderCaptionLayout.Visible := VisibleState;
+      TopLayout.Visible := VisibleState;
+      LeftLayout.Visible := VisibleState;
+      RightLayout.Visible := VisibleState;
+      BottomLayout.Visible := VisibleState;
+    end;
+    bfkNoCaption:
+    begin
+      VisibleState := false;
+      CaptionLayout.Visible := VisibleState;
+      UnderCaptionLayout.Visible := VisibleState;
+      VisibleState := true;
+      TopLayout.Visible := VisibleState;
+      LeftLayout.Visible := VisibleState;
+      RightLayout.Visible := VisibleState;
+      BottomLayout.Visible := VisibleState;
+    end;
+  end;
 end;
 
 procedure TBorderFrame.UnMount;
@@ -1166,9 +1202,7 @@ begin
   FBorderFrameKind := ABorderFrameKind;
 
   if FBorderFrameKind = bfkNone then
-  begin
     UnMount
-  end
   else
     Mount;
 end;
