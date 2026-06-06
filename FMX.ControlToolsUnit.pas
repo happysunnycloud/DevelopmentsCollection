@@ -171,6 +171,7 @@ type
     //  --- Какая-то времянка, надо разобраться и убрать ---
 
     class procedure GetCurPos(var X, Y: Single);
+    class procedure GetLocalCurPos(const AControl: TControl; var X, Y: Single);
 {$IFDEF MSWINDOWS}
     // Находит положение панели задач
     // ARect - координаты, результат - положение
@@ -842,6 +843,31 @@ begin
   X := X;
   Y := Y;
   {$ENDIF}
+end;
+
+class procedure TControlTools.GetLocalCurPos(
+  const AControl: TControl;
+  var X, Y: Single);
+var
+  {$IFDEF MSWINDOWS}
+  MousePoint: TPoint;
+  {$ENDIF}
+  PointF: TPointF;
+begin
+  if not Assigned(AControl) then
+    raise Exception.Create('AControl is nil');
+
+  {$IFDEF MSWINDOWS}
+  GetCursorPos(MousePoint);
+  PointF := TPointF.Create(MousePoint);
+  {$ELSE IF ANDROID}
+  PointF := TPointF.Create(X, Y);
+  {$ENDIF}
+  PointF := FindParentForm(AControl).ScreenToClient(PointF);
+  PointF := AControl.AbsoluteToLocal(PointF);
+
+  X := PointF.X;
+  Y := PointF.Y;
 end;
 
 {$IFDEF MSWINDOWS}
