@@ -10,16 +10,59 @@ uses
   , System.UITypes
   , FMX.Graphics
   , FMX.Forms
-//  , FMX.FormExt.Types
   , ThreadFactoryRegistryUnit
   , ThreadFactoryUnit
+  , FMX.Theme
+  , System.JSON
   {$IFDEF MSWINDOWS}
   , FMX.Types
   , FMX.TrayIcon.Win
   , BorderFrameUnit
   {$ENDIF}
-  , FMX.Theme
   ;
+
+const
+  FORM_SETTINGS_FILE_NAME = 'FormSettings.json';
+
+type
+  TWindowStateChangedProcRef = procedure(const AWindowsState: TWindowState) of object;
+
+type
+  TLastFormStateRec = record
+    Left: Integer;
+    Top: Integer;
+    Width: Integer;
+    Height: Integer;
+  end;
+
+type
+  TFormStateHelper = class
+  const
+    LEFT_PROP_NAME = 'Left';
+    TOP_PROP_NAME = 'Top';
+    WIDTH_PROP_NAME = 'Width';
+    HEIGHT_PROP_NAME = 'Height';
+    CURRENT_STATE_PROP_NAME = 'CurrentState';
+    LAST_STATE_PROP_NAME = 'LastState';
+  strict private
+    class function LoadRoot(const AFileName: String): TJSONObject;
+    class procedure SaveRoot(const AFileName: String; ARoot: TJSONObject);
+    class function GetOrCreateFormObject(
+      const ARoot: TJSONObject;
+      const AFormName: String): TJSONObject;
+    class function CreateFormStateObject(const AForm: TForm): TJSONObject;
+    class function CreateLastStateObject(
+      const ALastFormStateRec: TLastFormStateRec): TJSONObject;
+  public
+    class procedure SaveFormState(
+      const AFileName: String;
+      const AForm: TForm;
+      const ALastFormStateRec: TLastFormStateRec);
+    class procedure LoadFormState(
+      const AFileName: String;
+      const AForm: TForm;
+      var ALastFormStateRec: TLastFormStateRec);
+  end;
 
 type
   {$IFDEF MSWINDOWS}
@@ -64,6 +107,7 @@ type
     FCanClose: Boolean;
     FTheme: TTheme;
     FScreenScale: Single;
+    FPrevWindowState: TWindowState;
     {$IFDEF MSWINDOWS}
     FBorderFrame: TBorderFrame;
     FBorderFrameKind: TBorderFrameKind;
@@ -79,7 +123,11 @@ type
     // ModalResult в mrCancel, что может перезаписать наше собственное значение.
     // Таким образом мы обходим сброс ModalResult в Close
     FModalResult: TModalResult;
+    FOnWindowsStateChanged: TWindowStateChangedProcRef;
+    FWindowState: TWindowState;
+    FLastFormStateRec: TLastFormStateRec;
 
+    procedure WindowStateChanged;
     procedure OnDestroyedAllFactoriesHandler(Sender: TObject);
 
     function GetOnCloseQuery: TCloseQueryMethod;
@@ -112,7 +160,10 @@ type
     function GetTrayIcon: TCustomTrayIcon;
     procedure InnerTrayIconMouseDown(
       Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Single);
+    procedure OnBorderFrameMaxupButtonClickHandler;
     {$ENDIF}
+  protected
+    procedure Resize; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -145,8 +196,13 @@ type
     property TrayIconMouseLeftButtonDown: TMouseEvent
       read FTrayIconMouseLeftButtonDown write FTrayIconMouseLeftButtonDown;
 
+    property CustomWindowState: TWindowState read FWindowState;
+
     procedure Rollup;
     procedure Rolldown;
+
+    procedure RestoreLastSettings;
+    function IsFormMaximumSize: Boolean;
     {$ENDIF}
 
     procedure ApplyFormTheme;
@@ -159,11 +215,171 @@ implementation
 uses
     System.SysUtils
   , System.SyncObjs
+  , System.IOUtils
   {$IFDEF MSWINDOWS}
   , Winapi.Windows
   , FMX.Platform.Win
   {$ENDIF}
   ;
+
+{ TFormStateHelper }
+
+class function TFormStateHelper.LoadRoot(const AFileName: String): TJSONObject;
+var
+  JsonText: String;
+  JsonValue: TJSONValue;
+begin
+  if not TFile.Exists(AFileName) then
+    Exit(TJSONObject.Create);
+
+  JsonText := TFile.ReadAllText(AFileName, TEncoding.UTF8);
+  JsonValue := TJSONObject.ParseJSONValue(JsonText);
+
+  if JsonValue is TJSONObject then
+    Result := TJSONObject(JsonValue)
+  else
+  begin
+    JsonValue.Free;
+    Result := TJSONObject.Create;
+  end;
+end;
+
+class procedure TFormStateHelper.SaveRoot(
+  const AFileName: String;
+  ARoot: TJSONObject);
+begin
+  TFile.WriteAllText(
+    AFileName,
+    ARoot.Format(2),
+    TEncoding.UTF8);
+end;
+
+class function TFormStateHelper.GetOrCreateFormObject(
+  const ARoot: TJSONObject;
+  const AFormName: String): TJSONObject;
+var
+  JsonValue: TJSONValue;
+begin
+  JsonValue := ARoot.GetValue(AFormName);
+
+  if (JsonValue <> nil) and (JsonValue is TJSONObject) then
+    Exit(TJSONObject(JsonValue));
+
+  Result := TJSONObject.Create;
+  ARoot.AddPair(AFormName, Result);
+end;
+
+class function TFormStateHelper.CreateFormStateObject(const AForm: TForm): TJSONObject;
+begin
+  Result := TJSONObject.Create;
+  Result.AddPair(LEFT_PROP_NAME, TJSONNumber.Create(AForm.Left));
+  Result.AddPair(TOP_PROP_NAME, TJSONNumber.Create(AForm.Top));
+  Result.AddPair(WIDTH_PROP_NAME, TJSONNumber.Create(AForm.Width));
+  Result.AddPair(HEIGHT_PROP_NAME, TJSONNumber.Create(AForm.Height));
+end;
+
+class function TFormStateHelper.CreateLastStateObject(
+  const ALastFormStateRec: TLastFormStateRec): TJSONObject;
+begin
+  Result := TJSONObject.Create;
+  Result.AddPair(LEFT_PROP_NAME, TJSONNumber.Create(ALastFormStateRec.Left));
+  Result.AddPair(TOP_PROP_NAME, TJSONNumber.Create(ALastFormStateRec.Top));
+  Result.AddPair(WIDTH_PROP_NAME, TJSONNumber.Create(ALastFormStateRec.Width));
+  Result.AddPair(HEIGHT_PROP_NAME, TJSONNumber.Create(ALastFormStateRec.Height));
+end;
+
+class procedure TFormStateHelper.SaveFormState(
+  const AFileName: String;
+  const AForm: TForm;
+  const ALastFormStateRec: TLastFormStateRec);
+var
+  Root: TJSONObject;
+  FormObj: TJSONObject;
+  CurrentObj: TJSONObject;
+  LastObj: TJSONObject;
+  FormName: String;
+begin
+  FormName := AForm.Name;
+  if FormName.IsEmpty then
+    raise Exception.Create('The form name is cannot be empty');
+
+  Root := LoadRoot(AFileName);
+  try
+    FormObj := GetOrCreateFormObject(Root, FormName);
+
+    FormObj.RemovePair(CURRENT_STATE_PROP_NAME).Free;
+    FormObj.RemovePair(LAST_STATE_PROP_NAME).Free;
+
+    CurrentObj := CreateFormStateObject(AForm);
+    LastObj := CreateLastStateObject(ALastFormStateRec);
+
+    FormObj.AddPair(CURRENT_STATE_PROP_NAME, CurrentObj);
+    FormObj.AddPair(LAST_STATE_PROP_NAME, LastObj);
+
+    SaveRoot(AFileName, Root);
+  finally
+    Root.Free;
+  end;
+end;
+
+class procedure TFormStateHelper.LoadFormState(
+  const AFileName: String;
+  const AForm: TForm;
+  var ALastFormStateRec: TLastFormStateRec);
+
+  function _ObjByValue(
+    const ARoot: TJSONObject;
+    const AValue: String): TJSONObject;
+  var
+    JsonValue: TJSONValue;
+  begin
+    Result := nil;
+
+    JsonValue := ARoot.FindValue(AValue);
+    if not (JsonValue is TJSONObject) then
+      Exit;
+
+      Result := TJSONObject(JsonValue);
+  end;
+
+var
+  Root: TJSONObject;
+  FormObj: TJSONObject;
+  StateObj: TJSONObject;
+  LastObj: TJSONObject;
+  FormName: String;
+begin
+  FormName := AForm.Name;
+  if FormName.IsEmpty then
+    raise Exception.Create('The form name is cannot be empty');
+
+  Root := LoadRoot(AFileName);
+  try
+    FormObj := _ObjByValue(Root, FormName);
+    if not Assigned(FormObj) then
+      Exit;
+
+    StateObj := _ObjByValue(FormObj, CURRENT_STATE_PROP_NAME);
+    if not Assigned(StateObj) then
+      Exit;
+
+    AForm.Left := StateObj.GetValue<Integer>(LEFT_PROP_NAME, AForm.Left);
+    AForm.Top := StateObj.GetValue<Integer>(TOP_PROP_NAME, AForm.Top);
+    AForm.Width := StateObj.GetValue<Integer>(WIDTH_PROP_NAME, AForm.Width);
+    AForm.Height := StateObj.GetValue<Integer>(HEIGHT_PROP_NAME, AForm.Height);
+
+    LastObj := _ObjByValue(FormObj, LAST_STATE_PROP_NAME);
+    if not Assigned(StateObj) then
+      Exit;
+
+    ALastFormStateRec.Left := LastObj.GetValue<Integer>(LEFT_PROP_NAME, AForm.Left);
+    ALastFormStateRec.Top := LastObj.GetValue<Integer>(TOP_PROP_NAME, AForm.Top);
+    ALastFormStateRec.Width := LastObj.GetValue<Integer>(WIDTH_PROP_NAME, AForm.Width);
+    ALastFormStateRec.Height := LastObj.GetValue<Integer>(HEIGHT_PROP_NAME, AForm.Height);
+  finally
+    Root.Free;
+  end;
+end;
 
 { TFormExt }
 
@@ -179,6 +395,14 @@ begin
   inherited OnCloseQuery := OnCloseQueryInternalHandler;
   inherited OnClose := OnCloseInternalHandler;
   inherited OnKeyUp := OnKeyUpInternalHandler;
+
+  FWindowState := TWindowState.wsNormal;
+  FLastFormStateRec.Left := Left;
+  FLastFormStateRec.Top := Top;
+  FLastFormStateRec.Width := Width;
+  FLastFormStateRec.Height := Height;
+
+  FOnWindowsStateChanged := nil;
 
   FScreenScale := Canvas.Scale;
 
@@ -216,26 +440,84 @@ begin
     Self,
     TBorderFrameKind.bfkNone,
     Self.Caption);
+
+  FBorderFrame.OnBorderFrameMaxupButtonClick := OnBorderFrameMaxupButtonClickHandler;
+
+  FOnWindowsStateChanged := FBorderFrame.OnWindowStateChangedHandler;
+
   FTrayIcon := TCustomTrayIcon.Create(Self);
   FTrayIcon.Hint := Caption;
   FTrayIcon.OnMouseDown := InnerTrayIconMouseDown;
   FTrayIcon.Visible := true;
   FTrayIconMouseRightButtonDown := nil;
   FTrayIconMouseLeftButtonDown := nil;
+
+  TThread.ForceQueue(nil,
+    procedure
+    begin
+      TFormStateHelper.LoadFormState(FORM_SETTINGS_FILE_NAME, Self, FLastFormStateRec);
+    end);
   {$ENDIF}
 end;
 
 destructor TFormExt.Destroy;
 begin
-  FreeAndNil(FThreadFactoryRegistry);
-  FreeAndNil(FTheme);
   {$IFDEF MSWINDOWS}
+  TFormStateHelper.SaveFormState(
+    FORM_SETTINGS_FILE_NAME,
+    Self,
+    FLastFormStateRec);
   FreeAndNil(FBorderFrame);
   {$ENDIF}
 
+  FreeAndNil(FTheme);
+  FreeAndNil(FThreadFactoryRegistry);
+
   inherited;
 end;
+
+procedure TFormExt.Resize;
+begin
+  inherited;
+
+  if FPrevWindowState <> FWindowState then
+  begin
+    FPrevWindowState := FWindowState;
+    WindowStateChanged;
+  end;
+end;
+
+procedure TFormExt.WindowStateChanged;
+begin
+  if Assigned(FOnWindowsStateChanged) then
+    FOnWindowsStateChanged(WindowState);
+end;
+
 {$IFDEF MSWINDOWS}
+procedure TFormExt.OnBorderFrameMaxupButtonClickHandler;
+begin
+  if IsFormMaximumSize then
+  begin
+    FWindowState := TWindowState.wsNormal;
+
+    RestoreLastSettings;
+  end
+  else
+  begin
+    FWindowState := TWindowState.wsMaximized;
+
+    FLastFormStateRec.Left := Left;
+    FLastFormStateRec.Top := Top;
+    FLastFormStateRec.Width := Width;
+    FLastFormStateRec.Height := Height;
+
+    Left := 0;
+    Top := 0;
+    Width := Screen.Width;
+    Height := Screen.Height;
+  end;
+end;
+
 function TFormExt.GetClientWidth: Integer;
 begin
   Result := inherited ClientWidth;
@@ -339,6 +621,24 @@ procedure TFormExt.Rolldown;
 begin
   Self.Hide;
   ShowWindow(ApplicationHwnd, SW_HIDE);
+end;
+
+procedure TFormExt.RestoreLastSettings;
+begin
+  Left := FLastFormStateRec.Left;
+  Top := FLastFormStateRec.Top;
+  Width := FLastFormStateRec.Width;
+  Height := FLastFormStateRec.Height;
+end;
+
+function TFormExt.IsFormMaximumSize: Boolean;
+begin
+  Result := False;
+
+  if (Left = 0) and (Top = 0) and
+     (Width = Screen.Width) and (Height = Screen.Height)
+  then
+    Result := True;
 end;
 
 procedure TFormExt.InnerTrayIconMouseDown(
@@ -566,6 +866,3 @@ begin
 end;
 
 end.
-
-
-
