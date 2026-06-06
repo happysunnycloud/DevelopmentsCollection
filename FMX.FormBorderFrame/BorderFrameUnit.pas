@@ -7,12 +7,14 @@ uses
   System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
   FMX.Types, FMX.Graphics, FMX.Controls, FMX.Forms, FMX.Dialogs, FMX.StdCtrls,
   FMX.Layouts, FMX.Objects, FMX.Effects,
-  FMX.Controls.Presentation
-//  , BorderFrameTypesUnit
+  FMX.Controls.Presentation, System.ImageList, FMX.ImgList
   ;
 
 type
   TBorderFrameKind = (bfkNone = -1, bfkNormal = 0, bfkNoCaption = 1);
+
+type
+  TBorderFrameMaxupButtonClickProcRef = procedure of object;
 
 type
   TBorderFrame = class(TFrame)
@@ -42,6 +44,11 @@ type
     RolldownButtonLayout: TLayout;
     ForegroundRolldownButtonRectangle: TRectangle;
     BackgroundRolldownButtonRectangle: TRectangle;
+    MaxupButtonRectangle: TRectangle;
+    MaxButtonLayout: TLayout;
+    BackgroundMaxupButtonRectangle: TRectangle;
+    ForegroundMaxupButtonRectangle: TRectangle;
+    MaxupImageList: TImageList;
     procedure RightBottomLayoutMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Single);
     procedure LeftBottomLayoutMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Single);
     procedure RightTopLayoutMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Single);
@@ -73,6 +80,13 @@ type
     procedure TopLayoutMouseEnter(Sender: TObject);
     procedure TopLayoutMouseMove(Sender: TObject; Shift: TShiftState; X,
       Y: Single);
+    procedure BackgroundMaxupButtonRectangleMouseEnter(Sender: TObject);
+    procedure ForegroundMaxupButtonRectangleMouseLeave(Sender: TObject);
+    procedure MaxupButtonRectangleMouseEnter(Sender: TObject);
+    procedure MaxupButtonRectangleMouseLeave(Sender: TObject);
+    procedure MaxupButtonRectangleClick(Sender: TObject);
+  protected
+    procedure Resize; override;
   private
     FMinWidth, FMinHeight: Integer;
     FMaxWidth, FMaxHeight: Integer;
@@ -86,6 +100,9 @@ type
     FToolButtonMouseOverColor: TAlphaColor;
     FCaption: String;
     FBorderFrameKind: TBorderFrameKind;
+    FBorderFrameMaxupButtonClickProcRef: TBorderFrameMaxupButtonClickProcRef;
+
+    procedure ShowMaxupIcon(const AIsMaxedup: Boolean);
 
     procedure LeftConstraint(const X: Single);
     procedure RightConstraint(const X: Single);
@@ -141,30 +158,6 @@ type
     property HeightDelta: Integer read GetHeightDelta;
 
   public
-//    constructor Create(
-//      AOwner: TComponent;
-//      AContentLayout: TLayout;
-//      ACaption: String = '';
-//      AMinWidth: Integer = 0;
-//      AMinHeigth: Integer = 0;
-//      ACaptionColor: TAlphaColor = TAlphaColorRec.White;
-//      ABorderColor: TAlphaColor = TAlphaColorRec.Cornflowerblue;
-//      ACloseButtonColor: TAlphaColor = TAlphaColorRec.White;
-//      ACloseButtonMouseOverColor: TAlphaColor = TAlphaColorRec.Lime
-//      ); reintroduce; overload;
-//    constructor Create(
-//      AOwner: TComponent;
-//      AContentLayout: TLayout;
-//      ACaption: String = '';
-//      AMinWidth: Integer = 0;
-//      AMinHeigth: Integer = 0;
-//      AMaxWidth: Integer = 0;
-//      AMaxHeigth: Integer = 0;
-//      ACaptionColor: TAlphaColor = TAlphaColorRec.White;
-//      ABorderColor: TAlphaColor = TAlphaColorRec.Cornflowerblue;
-//      ACloseButtonColor: TAlphaColor = TAlphaColorRec.White;
-//      ACloseButtonMouseOverColor: TAlphaColor = TAlphaColorRec.Lime
-//      ); reintroduce; overload;
     constructor Create(
       AOwner: TComponent;
       ABorderFrameKind: TBorderFrameKind;
@@ -209,6 +202,12 @@ type
     property ToolButtonMouseOverColor: TAlphaColor read FToolButtonMouseOverColor write SetToolButtonMouseOverColor;
     property CaptionColor: TAlphaColor read FCaptionColor write SetCaptionColor;
     property Caption: String write SetCaption;
+
+    property OnBorderFrameMaxupButtonClick: TBorderFrameMaxupButtonClickProcRef
+      write FBorderFrameMaxupButtonClickProcRef;
+
+    procedure OnWindowStateChangedHandler(const AWindowsState: TWindowState);
+
   end;
 
 implementation
@@ -318,11 +317,8 @@ begin
     end;
   end;
 
-  if FBorderFrameKind = bfkNoCaption then
-  begin
-    CaptionLayout.Visible := false;
-    UnderCaptionLayout.Visible := false;
-  end;
+  CaptionLayout.Visible := FBorderFrameKind = bfkNormal;
+  UnderCaptionLayout.Visible := CaptionLayout.Visible
 end;
 
 procedure TBorderFrame.UnMount;
@@ -372,9 +368,11 @@ begin
 
   BackgroundCloseButtonRectangle.Fill.Color := FBorderColor;
   BackgroundRolldownButtonRectangle.Fill.Color := FBorderColor;
+  BackgroundMaxupButtonRectangle.Fill.Color := FBorderColor;
 
   ForegroundCloseButtonRectangle.Fill.Color := FToolButtonMouseOverColor;
   ForegroundRolldownButtonRectangle.Fill.Color := FToolButtonMouseOverColor;
+  ForegroundMaxupButtonRectangle.Fill.Color := FToolButtonMouseOverColor;
 
   CaptionText.Text := FCaption;
   CaptionText.TextSettings.FontColor := FCaptionColor;
@@ -386,6 +384,11 @@ begin
 
   TImageTools.ReplaceColor(
     RolldownButtonRectangle.Fill.Bitmap.Bitmap,
+    TAlphaColorRec.White,
+    FToolButtonColor);
+
+  TImageTools.ReplaceColor(
+    MaxupButtonRectangle.Fill.Bitmap.Bitmap,
     TAlphaColorRec.White,
     FToolButtonColor);
 end;
@@ -532,6 +535,8 @@ begin
 
   Form := AOwner as TForm;
 
+  FBorderFrameMaxupButtonClickProcRef := nil;
+
   FMinWidth := AMinWidth;
   FMinHeight := AMinHeigth;
 
@@ -567,6 +572,13 @@ begin
   FCaption := Form.Caption;
 
   Kind := ABorderFrameKind;
+
+  case Form.WindowState of
+    TWindowState.wsMaximized:
+      ShowMaxupIcon(true);
+    else
+      ShowMaxupIcon(false);
+  end;
 end;
 
 procedure TBorderFrame.ForegroundCloseButtonRectangleMouseLeave(
@@ -585,6 +597,56 @@ begin
     ForegroundRolldownButtonRectangle,
     BackgroundRolldownButtonRectangle,
     RolldownButtonRectangle);
+end;
+
+procedure TBorderFrame.ForegroundMaxupButtonRectangleMouseLeave(
+  Sender: TObject);
+begin
+  MouseLeaveControl(
+    ForegroundMaxupButtonRectangle,
+    BackgroundMaxupButtonRectangle,
+    MaxupButtonRectangle);
+end;
+
+procedure TBorderFrame.OnWindowStateChangedHandler(const AWindowsState: TWindowState);
+begin
+  case AWindowsState of
+    TWindowState.wsNormal: ShowMaxupIcon(false);
+    TWindowState.wsMaximized: ShowMaxupIcon(true);
+    TWindowState.wsMinimized: begin end;
+  end;
+end;
+
+procedure TBorderFrame.Resize;
+begin
+  if TFormExt(Owner).IsFormMaximumSize then
+    ShowMaxupIcon(true)
+  else
+    ShowMaxupIcon(false);
+
+//  case TFormExt(Owner).CustomWindowState of
+//    TWindowState.wsNormal: ShowMaxupIcon(false);
+//    TWindowState.wsMaximized: ShowMaxupIcon(true);
+//    TWindowState.wsMinimized: begin end;
+//  end;
+end;
+
+procedure TBorderFrame.ShowMaxupIcon(const AIsMaxedup: Boolean);
+begin
+  if not Assigned(MaxupButtonRectangle) then
+    Exit;
+
+  if not AIsMaxedup then
+    MaxupButtonRectangle.Fill.Bitmap.Bitmap.Assign(
+      MaxupImageList.Source.Items[0].MultiResBitmap.Items[0].Bitmap)
+  else
+    MaxupButtonRectangle.Fill.Bitmap.Bitmap.Assign(
+      MaxupImageList.Source.Items[1].MultiResBitmap.Items[0].Bitmap);
+
+  TImageTools.ReplaceColor(
+    MaxupButtonRectangle.Fill.Bitmap.Bitmap,
+    TAlphaColorRec.White,
+    FToolButtonColor);
 end;
 
 // Работаем именно c внешними размерами формы,
@@ -860,6 +922,15 @@ begin
     RolldownButtonRectangle);
 end;
 
+procedure TBorderFrame.BackgroundMaxupButtonRectangleMouseEnter(
+  Sender: TObject);
+begin
+  MouseEnterControl(
+    ForegroundMaxupButtonRectangle,
+    BackgroundMaxupButtonRectangle,
+    MaxupButtonRectangle);
+end;
+
 procedure TBorderFrame.LeftTopLayoutMouseEnter(Sender: TObject);
 begin
   Cursor := crSizeNWSE;
@@ -978,6 +1049,27 @@ begin
     BackgroundRolldownButtonRectangle,
     ForegroundRolldownButtonRectangle,
     RolldownButtonRectangle);
+end;
+
+procedure TBorderFrame.MaxupButtonRectangleClick(Sender: TObject);
+begin
+  if Assigned(FBorderFrameMaxupButtonClickProcRef) then
+    FBorderFrameMaxupButtonClickProcRef();
+end;
+
+procedure TBorderFrame.MaxupButtonRectangleMouseEnter(Sender: TObject);
+begin
+  MouseEnterControl(
+    ForegroundMaxupButtonRectangle,
+    BackgroundMaxupButtonRectangle,
+    MaxupButtonRectangle);
+end;
+procedure TBorderFrame.MaxupButtonRectangleMouseLeave(Sender: TObject);
+begin
+  MouseEnterControl(
+    BackgroundMaxupButtonRectangle,
+    ForegroundMaxupButtonRectangle,
+    MaxupButtonRectangle);
 end;
 
 procedure TBorderFrame.LeftBottomLayoutMouseEnter(Sender: TObject);
@@ -1148,3 +1240,4 @@ begin
 end;
 
 end.
+

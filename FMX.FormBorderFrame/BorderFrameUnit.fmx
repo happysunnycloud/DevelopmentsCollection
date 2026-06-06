@@ -232,7 +232,7 @@ object BorderFrame: TBorderFrame
     object RolldownButtonLayout: TLayout
       Align = Right
       Margins.Right = 5.000000000000000000
-      Position.X = 328.000000000000000000
+      Position.X = 308.000000000000000000
       Size.Width = 15.000000000000000000
       Size.Height = 15.000000000000000000
       Size.PlatformDefault = False
@@ -273,5 +273,95 @@ object BorderFrame: TBorderFrame
         OnMouseLeave = RolldownButtonRectangleMouseLeave
       end
     end
+    object MaxButtonLayout: TLayout
+      Align = Right
+      Margins.Right = 5.000000000000000000
+      Position.X = 328.000000000000000000
+      Size.Width = 15.000000000000000000
+      Size.Height = 15.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 2
+      object ForegroundMaxupButtonRectangle: TRectangle
+        Align = Contents
+        Fill.Color = claBrown
+        Size.Width = 15.000000000000000000
+        Size.Height = 15.000000000000000000
+        Size.PlatformDefault = False
+        Stroke.Thickness = 0.000000000000000000
+        OnMouseLeave = ForegroundMaxupButtonRectangleMouseLeave
+      end
+      object BackgroundMaxupButtonRectangle: TRectangle
+        Align = Contents
+        Fill.Color = claCornflowerblue
+        Size.Width = 15.000000000000000000
+        Size.Height = 15.000000000000000000
+        Size.PlatformDefault = False
+        Stroke.Thickness = 0.000000000000000000
+        OnMouseEnter = BackgroundMaxupButtonRectangleMouseEnter
+      end
+      object MaxupButtonRectangle: TRectangle
+        Align = Center
+        Fill.Bitmap.Bitmap.PNG = {
+          89504E470D0A1A0A0000000D494844520000000F0000000F08060000003BD695
+          4A000000017352474200AECE1CE90000000467414D410000B18F0BFC61050000
+          003E49444154384FEDD1310E00200843D17EEF7FE7BA2A0C4A185C7C23944082
+          D48024D9766C9C008C58AC680DA7B301B6C422E65A9BFF70517AD5ADB7AF6A99
+          466510187D3084BC0000000049454E44AE426082}
+        Fill.Bitmap.WrapMode = Tile
+        Fill.Kind = Bitmap
+        Size.Width = 15.000000000000000000
+        Size.Height = 15.000000000000000000
+        Size.PlatformDefault = False
+        Stroke.Thickness = 0.000000000000000000
+        OnClick = MaxupButtonRectangleClick
+        OnMouseEnter = MaxupButtonRectangleMouseEnter
+        OnMouseLeave = MaxupButtonRectangleMouseLeave
+      end
+    end
+  end
+  object MaxupImageList: TImageList
+    Source = <
+      item
+        MultiResBitmap.Height = 15
+        MultiResBitmap.Width = 15
+        MultiResBitmap = <
+          item
+            Width = 15
+            Height = 15
+            PNG = {
+              89504E470D0A1A0A0000000D494844520000000F0000000F08060000003BD695
+              4A000000017352474200AECE1CE90000000467414D410000B18F0BFC61050000
+              003E49444154384FEDD1310E00200843D17EEF7FE7BA2A0C4A185C7C23944082
+              D48024D9766C9C008C58AC680DA7B301B6C422E65A9BFF70517AD5ADB7AF6A99
+              466510187D3084BC0000000049454E44AE426082}
+            FileName = 
+              'C:\Desktop\DevelopmentsCollection\FMX.FormBorderFrame\SVG\Max.pn' +
+              'g'
+          end>
+        Name = 'Item 0'
+      end
+      item
+        MultiResBitmap.Height = 15
+        MultiResBitmap.Width = 15
+        MultiResBitmap = <
+          item
+            Width = 15
+            Height = 15
+            PNG = {
+              89504E470D0A1A0A0000000D494844520000000F0000000F08060000003BD695
+              4A000000017352474200AECE1CE90000000467414D410000B18F0BFC61050000
+              005449444154384FC5D2510EC0200803D076F7BF33FEC0421A894CB3F83EA148
+              34020708006666DA5821C9478B9F99D3FA4CCE1E6D9E0EC7E99966500DC31F24
+              682F94C31DFF0CAFEEFB6A855CCE969B3B2E7FCF5D03CDB147E10A1606D40000
+              000049454E44AE426082}
+            FileName = 
+              'C:\Desktop\DevelopmentsCollection\FMX.FormBorderFrame\SVG\Maxedu' +
+              'p.png'
+          end>
+        Name = 'Item 1'
+      end>
+    Destination = <>
+    Left = 319
+    Top = 35
   end
 end
