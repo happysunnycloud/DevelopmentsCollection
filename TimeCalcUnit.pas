@@ -11,12 +11,18 @@ type
       SecondsPerDay = 86400;
       MinutesPerHour = 60;
       HoursPerDay = 23;
+
+    class function TimeToSeconds(const ATime: TTime): Integer; static;
   private
   public
     class function CalcTime(
       const ACurrentTime: TTime;
       const APartTime: TTime;
       const AOperator: Boolean): TTime;
+    class function CalcDateTime(
+      const ADateTime: TDateTime;
+      const ADelta: TTime;
+      const AAdd: Boolean): TDateTime;
   end;
 
 implementation
@@ -25,25 +31,24 @@ uses
   System.SysUtils,
   System.DateUtils;
 
+class function TTimeCalc.TimeToSeconds(const ATime: TTime): Integer;
+var
+  Hours: Word;
+  Minutes: Word;
+  Seconds: Word;
+begin
+  Hours := HourOf(ATime);
+  Minutes := MinuteOf(ATime);
+  Seconds := SecondOf(ATime);
+  Result :=
+    (Hours * MinutesPerHour * SecondsPerMinute) + (Minutes * SecondsPerMinute) +
+    Seconds;
+end;
+
 class function TTimeCalc.CalcTime(
   const ACurrentTime: TTime;
   const APartTime: TTime;
   const AOperator: Boolean): TTime;
-
-  function TimeToSeconds(const ATime: TTime): Integer;
-  var
-    Hours: Word;
-    Minutes: Word;
-    Seconds: Word;
-  begin
-    Hours := HourOf(ATime);
-    Minutes := MinuteOf(ATime);
-    Seconds := SecondOf(ATime);
-    Result :=
-      (Hours * MinutesPerHour * SecondsPerMinute) + (Minutes * SecondsPerMinute) +
-      Seconds;
-  end;
-
 var
   CurrentSeconds: Integer;
   PartSeconds: Integer;
@@ -82,6 +87,17 @@ begin
 //  if Hours < 0 then
 //    Hours := HoursPerDay - (HoursPerDay - Hours);
   Result := EncodeTime(Hours, Minutes, Seconds, 0);
+end;
+
+class function TTimeCalc.CalcDateTime(
+  const ADateTime: TDateTime;
+  const ADelta: TTime;
+  const AAdd: Boolean): TDateTime;
+begin
+  if AAdd then
+    Result := ADateTime + ADelta
+  else
+    Result := ADateTime - ADelta;
 end;
 
 end.
