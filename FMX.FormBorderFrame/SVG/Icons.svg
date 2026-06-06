@@ -7,7 +7,7 @@
    viewBox="0 0 210 297"
    version="1.1"
    id="svg1"
-   inkscape:version="1.4 (86a8ad7, 2024-10-11)"
+   inkscape:version="1.4.4 (dcaf3e7, 2026-05-05)"
    sodipodi:docname="Icons.svg"
    inkscape:export-filename="Rolldown.png"
    inkscape:export-xdpi="96"
@@ -28,11 +28,11 @@
      inkscape:document-units="mm"
      showgrid="true"
      inkscape:zoom="11.313709"
-     inkscape:cx="355.71889"
-     inkscape:cy="44.857084"
-     inkscape:window-width="1920"
-     inkscape:window-height="1009"
-     inkscape:window-x="1672"
+     inkscape:cx="441.27882"
+     inkscape:cy="63.683804"
+     inkscape:window-width="2560"
+     inkscape:window-height="1369"
+     inkscape:window-x="1432"
      inkscape:window-y="-8"
      inkscape:window-maximized="1"
      inkscape:current-layer="layer1">
@@ -59,6 +59,16 @@
      inkscape:label="Слой 1"
      inkscape:groupmode="layer"
      id="layer1">
+    <rect
+       style="fill:none;stroke:#ffffff;stroke-width:1;stroke-linecap:round;stroke-dasharray:none;stroke-opacity:1"
+       id="rect2"
+       width="3.2355635"
+       height="3.2142348"
+       x="113.21249"
+       y="9.2312508"
+       inkscape:export-filename="Rollup.png"
+       inkscape:export-xdpi="81.479927"
+       inkscape:export-ydpi="81.479927" />
     <path
        style="fill:none;stroke:#ffffff;stroke-width:1;stroke-opacity:1"
        d="m 86.651039,8.5989586 -3.96875,3.9687504"
@@ -102,12 +112,57 @@
          style="fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.1;stroke-dasharray:none"
          x="97.201149"
          y="5.3164501">Свернуть</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:1.76389px;font-family:sans-serif;-inkscape-font-specification:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.1;stroke-dasharray:none;stroke-opacity:1"
+       x="110.66163"
+       y="5.201405"
+       id="text1-2-8"><tspan
+         sodipodi:role="line"
+         id="tspan1-4-5"
+         style="fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.1;stroke-dasharray:none"
+         x="110.66163"
+         y="5.201405">Развернуть</tspan></text>
     <rect
-       style="fill:none;stroke:none;stroke-width:0.0185998;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:none;stroke:#ff8f00;stroke-width:0.0185998;stroke-dasharray:none;stroke-opacity:0"
        id="rect1"
        width="4.6760001"
        height="4.6760001"
        x="99.221581"
        y="8.617322" />
+    <rect
+       style="fill:none;stroke:#ff8f00;stroke-width:0.0185998;stroke-dasharray:none;stroke-opacity:0"
+       id="rect1-2"
+       width="4.6760001"
+       height="4.6760001"
+       x="112.45818"
+       y="8.4759665" />
+    <rect
+       style="fill:none;stroke:#ffffff;stroke-width:1;stroke-linecap:round;stroke-dasharray:none;stroke-opacity:1"
+       id="rect2-9"
+       width="3.2355635"
+       height="3.2142348"
+       x="120.88541"
+       y="9.2312498"
+       inkscape:export-filename="Rolledup.png"
+       inkscape:export-xdpi="81.479927"
+       inkscape:export-ydpi="81.479927" />
+    <rect
+       style="fill:none;stroke:#ffffff;stroke-width:0.5;stroke-linecap:round;stroke-dasharray:none;stroke-opacity:1"
+       id="rect2-9-3"
+       width="1.3875024"
+       height="1.3874995"
+       x="121.80833"
+       y="10.154167"
+       inkscape:export-filename="Rollup.png"
+       inkscape:export-xdpi="81.479927"
+       inkscape:export-ydpi="81.479927" />
+    <rect
+       style="fill:none;stroke:#ff8f00;stroke-width:0.0185998;stroke-dasharray:none;stroke-opacity:0"
+       id="rect1-2-2"
+       width="4.6760001"
+       height="4.6760001"
+       x="120.13111"
+       y="8.4759655" />
   </g>
 </svg>
