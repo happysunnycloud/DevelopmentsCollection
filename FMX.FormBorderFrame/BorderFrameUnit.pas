@@ -326,9 +326,9 @@ begin
     bfkNormal:
     begin
       VisibleState := true;
+      TopLayout.Visible := VisibleState;
       CaptionLayout.Visible := VisibleState;
       UnderCaptionLayout.Visible := VisibleState;
-      TopLayout.Visible := VisibleState;
       LeftLayout.Visible := VisibleState;
       RightLayout.Visible := VisibleState;
       BottomLayout.Visible := VisibleState;
