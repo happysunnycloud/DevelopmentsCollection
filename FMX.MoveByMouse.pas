@@ -1,4 +1,4 @@
-unit FMX.MoveByMouse;
+п»їunit FMX.MoveByMouse;
 
 interface
 
@@ -74,34 +74,34 @@ type
     class procedure ConnectHandlers(
       const AControls: array of TControl); virtual;
 
-     /// <remarks>
-     ///  Назначает контрол захвата и контрол для перемещения
-     ///  Захват происходит автоматически при нажатии и удержани LBM
-     /// </remarks>
+     /// <summary>
+     ///  РќР°Р·РЅР°С‡Р°РµС‚ РєРѕРЅС‚СЂРѕР» Р·Р°С…РІР°С‚Р° Рё РєРѕРЅС‚СЂРѕР» РґР»СЏ РїРµСЂРµРјРµС‰РµРЅРёСЏ
+     ///  Р—Р°С…РІР°С‚ РїСЂРѕРёСЃС…РѕРґРёС‚ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё РїСЂРё РЅР°Р¶Р°С‚РёРё Рё СѓРґРµСЂР¶Р°РЅРё LBM
+     /// </summary>
     class procedure Activate(
       const ACapturedControl: TControl;
       const AMovingControl: TControl); overload;
-     /// <remarks>
-     ///  Назначает контрол захвата и форму для перемещения
-     ///  Захват происходит автоматически при нажатии и удержани LBM
-     /// </remarks>
+     /// <summary>
+     ///  РќР°Р·РЅР°С‡Р°РµС‚ РєРѕРЅС‚СЂРѕР» Р·Р°С…РІР°С‚Р° Рё С„РѕСЂРјСѓ РґР»СЏ РїРµСЂРµРјРµС‰РµРЅРёСЏ
+     ///  Р—Р°С…РІР°С‚ РїСЂРѕРёСЃС…РѕРґРёС‚ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё РїСЂРё РЅР°Р¶Р°С‚РёРё Рё СѓРґРµСЂР¶Р°РЅРё LBM
+     /// </summary>
     class procedure Activate(
       const ACapturedControl: TControl;
       const AMovingForm: TForm); overload;
     class procedure Deactivate(
       const ACapturedControl: TControl);
 
-     /// <remarks>
-     ///  Назначает контрол захвата и контрол для перемещения
-     ///  Захват происходит в ручном в момент вызова метода
-     /// </remarks>
+     /// <summary>
+     ///  РќР°Р·РЅР°С‡Р°РµС‚ РєРѕРЅС‚СЂРѕР» Р·Р°С…РІР°С‚Р° Рё РєРѕРЅС‚СЂРѕР» РґР»СЏ РїРµСЂРµРјРµС‰РµРЅРёСЏ
+     ///  Р—Р°С…РІР°С‚ РїСЂРѕРёСЃС…РѕРґРёС‚ РІ СЂСѓС‡РЅРѕРј СЂРµР¶РёРјРµ РІ РјРѕРјРµРЅС‚ РІС‹Р·РѕРІР° РјРµС‚РѕРґР°
+     /// </summary>
     class procedure ManualMove(
       const ACapturedControl: TControl;
       const AMovingControl: TControl); overload;
-     /// <remarks>
-     ///  Назначает контрол захвата и форму для перемещения
-     ///  Захват происходит в ручном в момент вызова метода
-     /// </remarks>
+     /// <summary>
+     ///  РќР°Р·РЅР°С‡Р°РµС‚ РєРѕРЅС‚СЂРѕР» Р·Р°С…РІР°С‚Р° Рё С„РѕСЂРјСѓ РґР»СЏ РїРµСЂРµРјРµС‰РµРЅРёСЏ
+     ///  Р—Р°С…РІР°С‚ РїСЂРѕРёСЃС…РѕРґРёС‚ РІ СЂСѓС‡РЅРѕРј СЂРµР¶РёРјРµ РІ РјРѕРјРµРЅС‚ РІС‹Р·РѕРІР° РјРµС‚РѕРґР°
+     /// </summary>
     class procedure ManualMove(
       const ACapturedControl: TControl;
       const AMovingForm: TForm); overload;
