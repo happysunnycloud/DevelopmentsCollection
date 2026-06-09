@@ -28,14 +28,17 @@ type
   TWindowStateChangedProcRef = procedure(const AWindowsState: TWindowState) of object;
 
 type
+  TFormExt = class;
+
   TLastFormStateRec = record
     Left: Integer;
     Top: Integer;
     Width: Integer;
     Height: Integer;
+    BorderFrameKind: TBorderFrameKind;
   end;
 
-type
+
   TFormStateHelper = class
   const
     LEFT_PROP_NAME = 'Left';
@@ -44,27 +47,27 @@ type
     HEIGHT_PROP_NAME = 'Height';
     CURRENT_STATE_PROP_NAME = 'CurrentState';
     LAST_STATE_PROP_NAME = 'LastState';
+    BORDER_FRAME_KIND = 'BorderFrameKind';
   strict private
     class function LoadRoot(const AFileName: String): TJSONObject;
     class procedure SaveRoot(const AFileName: String; ARoot: TJSONObject);
     class function GetOrCreateFormObject(
       const ARoot: TJSONObject;
       const AFormName: String): TJSONObject;
-    class function CreateFormStateObject(const AForm: TForm): TJSONObject;
+    class function CreateFormStateObject(const AForm: TFormExt): TJSONObject;
     class function CreateLastStateObject(
       const ALastFormStateRec: TLastFormStateRec): TJSONObject;
   public
     class procedure SaveFormState(
       const AFileName: String;
-      const AForm: TForm;
+      const AForm: TFormExt;
       const ALastFormStateRec: TLastFormStateRec);
     class procedure LoadFormState(
       const AFileName: String;
-      const AForm: TForm;
+      const AForm: TFormExt;
       var ALastFormStateRec: TLastFormStateRec);
   end;
 
-type
   {$IFDEF MSWINDOWS}
   TBorderFrame = BorderFrameUnit.TBorderFrame;
   TBorderFrameKind = BorderFrameUnit.TBorderFrameKind;
@@ -107,9 +110,9 @@ type
     FCanClose: Boolean;
     FTheme: TTheme;
     FScreenScale: Single;
-    FPrevWindowState: TWindowState;
     {$IFDEF MSWINDOWS}
     FBorderFrame: TBorderFrame;
+    { TODO: Проверить, нужен ли FBorderFrameKind: TBorderFrameKind или это анахронизм }
     FBorderFrameKind: TBorderFrameKind;
 
     FTrayIcon: TCustomTrayIcon;
@@ -124,10 +127,8 @@ type
     // Таким образом мы обходим сброс ModalResult в Close
     FModalResult: TModalResult;
     FOnWindowsStateChanged: TWindowStateChangedProcRef;
-    FWindowState: TWindowState;
     FLastFormStateRec: TLastFormStateRec;
 
-    procedure WindowStateChanged;
     procedure OnDestroyedAllFactoriesHandler(Sender: TObject);
 
     function GetOnCloseQuery: TCloseQueryMethod;
@@ -195,8 +196,6 @@ type
       read FTrayIconMouseRightButtonDown write FTrayIconMouseRightButtonDown;
     property TrayIconMouseLeftButtonDown: TMouseEvent
       read FTrayIconMouseLeftButtonDown write FTrayIconMouseLeftButtonDown;
-
-    property CustomWindowState: TWindowState read FWindowState;
 
     procedure Rollup;
     procedure Rolldown;
@@ -269,13 +268,15 @@ begin
   ARoot.AddPair(AFormName, Result);
 end;
 
-class function TFormStateHelper.CreateFormStateObject(const AForm: TForm): TJSONObject;
+class function TFormStateHelper.CreateFormStateObject(
+  const AForm: TFormExt): TJSONObject;
 begin
   Result := TJSONObject.Create;
   Result.AddPair(LEFT_PROP_NAME, TJSONNumber.Create(AForm.Left));
   Result.AddPair(TOP_PROP_NAME, TJSONNumber.Create(AForm.Top));
   Result.AddPair(WIDTH_PROP_NAME, TJSONNumber.Create(AForm.Width));
   Result.AddPair(HEIGHT_PROP_NAME, TJSONNumber.Create(AForm.Height));
+  Result.AddPair(BORDER_FRAME_KIND, TJSONNumber.Create(AForm.BorderFrame.Kind.ToInteger));
 end;
 
 class function TFormStateHelper.CreateLastStateObject(
@@ -286,11 +287,12 @@ begin
   Result.AddPair(TOP_PROP_NAME, TJSONNumber.Create(ALastFormStateRec.Top));
   Result.AddPair(WIDTH_PROP_NAME, TJSONNumber.Create(ALastFormStateRec.Width));
   Result.AddPair(HEIGHT_PROP_NAME, TJSONNumber.Create(ALastFormStateRec.Height));
+  Result.AddPair(BORDER_FRAME_KIND, TJSONNumber.Create(ALastFormStateRec.BorderFrameKind.ToInteger));
 end;
 
 class procedure TFormStateHelper.SaveFormState(
   const AFileName: String;
-  const AForm: TForm;
+  const AForm: TFormExt;
   const ALastFormStateRec: TLastFormStateRec);
 var
   Root: TJSONObject;
@@ -324,7 +326,7 @@ end;
 
 class procedure TFormStateHelper.LoadFormState(
   const AFileName: String;
-  const AForm: TForm;
+  const AForm: TFormExt;
   var ALastFormStateRec: TLastFormStateRec);
 
   function _ObjByValue(
@@ -367,6 +369,8 @@ begin
     AForm.Top := StateObj.GetValue<Integer>(TOP_PROP_NAME, AForm.Top);
     AForm.Width := StateObj.GetValue<Integer>(WIDTH_PROP_NAME, AForm.Width);
     AForm.Height := StateObj.GetValue<Integer>(HEIGHT_PROP_NAME, AForm.Height);
+    AForm.BorderFrame.Kind := TBorderFrameKind(StateObj.GetValue<Integer>(
+      BORDER_FRAME_KIND, AForm.BorderFrame.Kind.ToInteger));
 
     LastObj := _ObjByValue(FormObj, LAST_STATE_PROP_NAME);
     if not Assigned(StateObj) then
@@ -376,6 +380,8 @@ begin
     ALastFormStateRec.Top := LastObj.GetValue<Integer>(TOP_PROP_NAME, AForm.Top);
     ALastFormStateRec.Width := LastObj.GetValue<Integer>(WIDTH_PROP_NAME, AForm.Width);
     ALastFormStateRec.Height := LastObj.GetValue<Integer>(HEIGHT_PROP_NAME, AForm.Height);
+    ALastFormStateRec.BorderFrameKind := TBorderFrameKind(LastObj.GetValue<Integer>(
+      BORDER_FRAME_KIND, AForm.BorderFrame.Kind.ToInteger));
   finally
     Root.Free;
   end;
@@ -396,11 +402,11 @@ begin
   inherited OnClose := OnCloseInternalHandler;
   inherited OnKeyUp := OnKeyUpInternalHandler;
 
-  FWindowState := TWindowState.wsNormal;
   FLastFormStateRec.Left := Left;
   FLastFormStateRec.Top := Top;
   FLastFormStateRec.Width := Width;
   FLastFormStateRec.Height := Height;
+  FLastFormStateRec.BorderFrameKind := bfkNone;
 
   FOnWindowsStateChanged := nil;
 
@@ -443,8 +449,6 @@ begin
 
   FBorderFrame.OnBorderFrameMaxupButtonClick := OnBorderFrameMaxupButtonClickHandler;
 
-  FOnWindowsStateChanged := FBorderFrame.OnWindowStateChangedHandler;
-
   FTrayIcon := TCustomTrayIcon.Create(Self);
   FTrayIcon.Hint := Caption;
   FTrayIcon.OnMouseDown := InnerTrayIconMouseDown;
@@ -455,7 +459,10 @@ begin
   TThread.ForceQueue(nil,
     procedure
     begin
-      TFormStateHelper.LoadFormState(FORM_SETTINGS_FILE_NAME, Self, FLastFormStateRec);
+      TFormStateHelper.LoadFormState(
+        FORM_SETTINGS_FILE_NAME,
+        Self,
+        FLastFormStateRec);
     end);
   {$ENDIF}
 end;
@@ -480,17 +487,7 @@ procedure TFormExt.Resize;
 begin
   inherited;
 
-  if FPrevWindowState <> FWindowState then
-  begin
-    FPrevWindowState := FWindowState;
-    WindowStateChanged;
-  end;
-end;
-
-procedure TFormExt.WindowStateChanged;
-begin
-  if Assigned(FOnWindowsStateChanged) then
-    FOnWindowsStateChanged(WindowState);
+  FBorderFrame.FormResized;
 end;
 
 {$IFDEF MSWINDOWS}
@@ -498,24 +495,23 @@ procedure TFormExt.OnBorderFrameMaxupButtonClickHandler;
 begin
   if IsFormMaximumSize then
   begin
-    FWindowState := TWindowState.wsNormal;
-
     RestoreLastSettings;
   end
   else
   begin
-    FWindowState := TWindowState.wsMaximized;
-
     FLastFormStateRec.Left := Left;
     FLastFormStateRec.Top := Top;
     FLastFormStateRec.Width := Width;
     FLastFormStateRec.Height := Height;
+    FLastFormStateRec.BorderFrameKind := FBorderFrame.Kind;
 
     Left := 0;
     Top := 0;
     Width := Screen.Width;
     Height := Screen.Height;
   end;
+
+  Self.Invalidate;
 end;
 
 function TFormExt.GetClientWidth: Integer;
