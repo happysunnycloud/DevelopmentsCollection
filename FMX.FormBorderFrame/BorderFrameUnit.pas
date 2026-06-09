@@ -14,8 +14,15 @@ type
   TBorderFrameKind = (
     bfkNone       = -1,
     bfkNormal     = 0,
-    bfkNoCaption  = 1,
-    bfkNoFrame    = 2);
+    bfkSingle     = 1,
+    bfkNoCaption  = 2,
+    bfkFullScreen = 3
+  );
+
+  TBorderFrameKindHelper = record helper for TBorderFrameKind
+  public
+    function ToInteger: Integer;
+  end;
 
 type
   TBorderFrameMaxupButtonClickProcRef = procedure of object;
@@ -89,8 +96,6 @@ type
     procedure MaxupButtonRectangleMouseEnter(Sender: TObject);
     procedure MaxupButtonRectangleMouseLeave(Sender: TObject);
     procedure MaxupButtonRectangleClick(Sender: TObject);
-  protected
-    procedure Resize; override;
   private
     FMinWidth, FMinHeight: Integer;
     FMaxWidth, FMaxHeight: Integer;
@@ -160,7 +165,6 @@ type
 
     property WidthDelta: Integer read GetWidthDelta;
     property HeightDelta: Integer read GetHeightDelta;
-
   public
     constructor Create(
       AOwner: TComponent;
@@ -210,8 +214,7 @@ type
     property OnBorderFrameMaxupButtonClick: TBorderFrameMaxupButtonClickProcRef
       write FBorderFrameMaxupButtonClickProcRef;
 
-    procedure OnWindowStateChangedHandler(const AWindowsState: TWindowState);
-
+    procedure FormResized;
   end;
 
 implementation
@@ -249,6 +252,15 @@ begin
   AControl3.Repaint;
 end;
 
+{ TBorderFrameKind }
+
+function TBorderFrameKindHelper.ToInteger: Integer;
+begin
+  Result := Integer(Self);
+end;
+
+{ TBorderFrame }
+
 procedure TBorderFrame.CloseButtonRectangleClick(Sender: TObject);
 begin
   TForm(Owner).Close;
@@ -272,13 +284,13 @@ end;
 
 procedure TBorderFrame.Mount;
 var
-  Form: TForm;
+  Form: TFormExt;
   ContentsLayout: TLayout;
   Control: TControl;
   i: Integer;
   VisibleState: Boolean;
 begin
-  Form := Owner as TForm;
+  Form := Owner as TFormExt;
   Form.BorderStyle := TFmxFormBorderStyle.None;
 
   ContentsLayout := TLayout.Create(Form);
@@ -326,33 +338,77 @@ begin
     bfkNormal:
     begin
       VisibleState := true;
+
       TopLayout.Visible := VisibleState;
       CaptionLayout.Visible := VisibleState;
       UnderCaptionLayout.Visible := VisibleState;
+
       LeftLayout.Visible := VisibleState;
       RightLayout.Visible := VisibleState;
       BottomLayout.Visible := VisibleState;
+
+      TopBorderRectangle.Visible := VisibleState;
+      LeftBorderRectangle.Visible := VisibleState;
+      RightBorderRectangle.Visible := VisibleState;
+      BottomBorderRectangle.Visible := VisibleState;
     end;
-    bfkNoFrame:
+    bfkSingle:
     begin
       VisibleState := false;
+
       CaptionLayout.Visible := VisibleState;
       UnderCaptionLayout.Visible := VisibleState;
       TopLayout.Visible := VisibleState;
       LeftLayout.Visible := VisibleState;
       RightLayout.Visible := VisibleState;
       BottomLayout.Visible := VisibleState;
+
+      TopBorderRectangle.Visible := VisibleState;
+      LeftBorderRectangle.Visible := VisibleState;
+      RightBorderRectangle.Visible := VisibleState;
+      BottomBorderRectangle.Visible := VisibleState;
     end;
     bfkNoCaption:
     begin
       VisibleState := false;
+
       CaptionLayout.Visible := VisibleState;
       UnderCaptionLayout.Visible := VisibleState;
+
       VisibleState := true;
       TopLayout.Visible := VisibleState;
       LeftLayout.Visible := VisibleState;
       RightLayout.Visible := VisibleState;
       BottomLayout.Visible := VisibleState;
+
+      TopBorderRectangle.Visible := VisibleState;
+      LeftBorderRectangle.Visible := VisibleState;
+      RightBorderRectangle.Visible := VisibleState;
+      BottomBorderRectangle.Visible := VisibleState;
+    end;
+    bfkFullScreen:
+    begin
+      VisibleState := false;
+
+      CaptionLayout.Visible := VisibleState;
+      UnderCaptionLayout.Visible := VisibleState;
+
+      TopLayout.Visible := VisibleState;
+      LeftLayout.Visible := VisibleState;
+      RightLayout.Visible := VisibleState;
+      BottomLayout.Visible := VisibleState;
+
+      TopBorderRectangle.Visible := VisibleState;
+      LeftBorderRectangle.Visible := VisibleState;
+      RightBorderRectangle.Visible := VisibleState;
+      BottomBorderRectangle.Visible := VisibleState;
+
+      if not Form.IsFormMaximumSize then
+        TThread.ForceQueue(nil,
+          procedure
+          begin
+            FBorderFrameMaxupButtonClickProcRef();
+          end);
     end;
   end;
 end;
@@ -644,33 +700,20 @@ begin
     MaxupButtonRectangle);
 end;
 
-procedure TBorderFrame.OnWindowStateChangedHandler(const AWindowsState: TWindowState);
-begin
-  case AWindowsState of
-    TWindowState.wsNormal: ShowMaxupIcon(false);
-    TWindowState.wsMaximized: ShowMaxupIcon(true);
-    TWindowState.wsMinimized: begin end;
-  end;
-end;
-
-procedure TBorderFrame.Resize;
+procedure TBorderFrame.FormResized;
 begin
   if TFormExt(Owner).IsFormMaximumSize then
     ShowMaxupIcon(true)
   else
     ShowMaxupIcon(false);
-
-//  case TFormExt(Owner).CustomWindowState of
-//    TWindowState.wsNormal: ShowMaxupIcon(false);
-//    TWindowState.wsMaximized: ShowMaxupIcon(true);
-//    TWindowState.wsMinimized: begin end;
-//  end;
 end;
 
 procedure TBorderFrame.ShowMaxupIcon(const AIsMaxedup: Boolean);
 begin
   if not Assigned(MaxupButtonRectangle) then
     Exit;
+
+  MaxupButtonRectangle.Fill.Bitmap.Bitmap.Clear(0);
 
   if not AIsMaxedup then
     MaxupButtonRectangle.Fill.Bitmap.Bitmap.Assign(
@@ -683,6 +726,8 @@ begin
     MaxupButtonRectangle.Fill.Bitmap.Bitmap,
     TAlphaColorRec.White,
     FToolButtonColor);
+
+  MaxupButtonRectangle.InvalidateRect(MaxupButtonRectangle.ClipRect);
 end;
 
 // Работаем именно c внешними размерами формы,
