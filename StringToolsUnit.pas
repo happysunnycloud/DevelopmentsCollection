@@ -9,8 +9,9 @@ type
     // Обнуляется при каждом перезапуске приложения
     class var FGlobalIdentCounter: Int64;
     class function IncGlobalIdentCounter: Int64;
+  private
+    class procedure InitClass;
   public
-    class procedure Init;
     class function DateTimeToStandartFormatString(ADateTime: TDateTime): String;
     class function IsContainsOnlyDigits(AString: String): Boolean;
     class function IsIP4(AString: String): Boolean;
@@ -47,7 +48,7 @@ uses
 
 { TStringTools }
 
-class procedure TStringTools.Init;
+class procedure TStringTools.InitClass;
 begin
   FGlobalIdentCounter := 0;
 end;
@@ -234,6 +235,6 @@ begin
 end;
 
 initialization
-  TStringTools.Init;
+  TStringTools.InitClass;
 
 end.
