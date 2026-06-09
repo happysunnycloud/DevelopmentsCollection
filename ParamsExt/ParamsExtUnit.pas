@@ -97,7 +97,10 @@ type
     procedure Add(const AValue: Variant; const AIdent: String = ''); overload; virtual;
     procedure Add(const AValue: Pointer; const AIdent: String = ''); overload; virtual;
 
-//    procedure AddAsPointer(AValue: Pointer); deprecated 'Use Add(AValue: Pointer)';
+    procedure AddAsType(
+      const AValue: Variant;
+      const AVarType: TVarType;
+      const AIdent: String = '');
 
     property  AsInt64    [const AIndex: Word]: Int64      read GetAsInt64;
     property  AsString   [const AIndex: Word]: String     read GetAsString;
@@ -150,9 +153,9 @@ type
     function  IfAsVariantByIdent   (const AIdent: String; const ADefVal: Variant):   Variant;
     function  IfAsTVarTypeByIdent  (const AIdent: String; const ADefVal: TVarType):  TVarType;
 
-    function Exists(const AIdent: String):  Boolean;
+    function  Exists(const AIdent: String):  Boolean;
 
-    function IndexOf(const AIdent: String; const AOffset: Integer = 0): Integer;
+    function  IndexOf(const AIdent: String; const AOffset: Integer = 0): Integer;
 
     property  Params: TVars read FParams write FParams;
 
@@ -842,18 +845,7 @@ begin
   Param.Ident := AIdent;
 
   FParams.Add(Param);
-
-//  SetLength(FParams, System.Length(FParams) + 1);
-//  FParams[High(FParams)].v := AValue;
-//  FParams[High(FParams)].Ident := AIdent;
 end;
-
-//procedure TParamsExt.Add(const AValue: Variant; const AIdent: String = '');
-//begin
-//  SetLength(FParams, System.Length(FParams) + 1);
-//  FParams[System.Length(FParams) - 1].v := AValue;
-//  FParams[System.Length(FParams) - 1].Ident := AIdent;
-//end;
 
 procedure TParamsExt.Add(const AValue: Pointer; const AIdent: String = '');
 var
@@ -879,6 +871,21 @@ begin
 //  SetLength(FParams, System.Length(FParams) + 1);
 //  FParams[High(FParams)].v := Value;
 //  FParams[High(FParams)].Ident := AIdent;
+end;
+
+procedure TParamsExt.AddAsType(
+  const AValue: Variant;
+  const AVarType: TVarType;
+  const AIdent: String = '');
+var
+  Param: TParamRecord;
+begin
+  CheckDuplicateIdent(AIdent);
+
+  Param.v := VarAsType(AValue, AVarType);
+  Param.Ident := AIdent;
+
+  FParams.Add(Param);
 end;
 
 function TParamsExt.Exists(const AIdent: String): Boolean;
