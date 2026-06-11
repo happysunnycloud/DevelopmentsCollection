@@ -87,7 +87,7 @@ type
     // Важно для TryGetParam
     procedure CheckDuplicateIdent(const AIdent: String);
   public
-    constructor Create(const AVars: array of Variant); overload;
+//    constructor Create(const AVars: array of Variant); overload;
     constructor Create; overload;
     destructor Destroy; override;
 
@@ -278,26 +278,26 @@ begin
   end;
 end;
 
-constructor TParamsExt.Create(const AVars: array of Variant);
-var
-  i: Word;
-  _Length: Word;
-begin
-  System.SetLength(FParams, 0);
-
-  _Length := System.Length(AVars);
-  if _Length = 0 then
-    raise Exception.Create(Format('%s.%s: AVars is empty', [CLASS_NAME, 'Create']));
-
-  for i := 0 to Pred(_Length) do
-  begin
-    Add(AVars[i]);
-  end;
-
-  FParamsExtStreamer := nil;
-
-  inherited Create;
-end;
+//constructor TParamsExt.Create(const AVars: array of Variant);
+//var
+//  i: Word;
+//  _Length: Word;
+//begin
+//  System.SetLength(FParams, 0);
+//
+//  _Length := System.Length(AVars);
+//  if _Length = 0 then
+//    raise Exception.Create(Format('%s.%s: AVars is empty', [CLASS_NAME, 'Create']));
+//
+//  for i := 0 to Pred(_Length) do
+//  begin
+//    Add(AVars[i]);
+//  end;
+//
+//  FParamsExtStreamer := nil;
+//
+//  inherited Create;
+//end;
 
 constructor TParamsExt.Create;
 begin
