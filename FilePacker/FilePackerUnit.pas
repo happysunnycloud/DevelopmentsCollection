@@ -298,7 +298,6 @@ end;
 function TFilePacker.GetPackedFileSignature(
   const APackedFileName: String): TBinFileSign;
 var
-//  Fat: TFat;
   StreamHandler: TStreamHandlerExt;
   StartOffset: Int64;
 begin
@@ -313,8 +312,11 @@ begin
     StartOffset,
     false);
   try
-    {TODO: Сделать проверку на допустимые сигнатуры}
     StreamHandler.ReadBuffer(Result, SizeOf(TBinFileSign));
+
+    if not IsSignExists(Result) then
+      raise Exception.Create('TFilePacker.GetPackedFileSignature -> ' +
+                             'Signature is not exists');
   finally
     FreeAndNil(StreamHandler);
   end;

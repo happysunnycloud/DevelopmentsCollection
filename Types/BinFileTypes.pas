@@ -2,6 +2,9 @@
 
 interface
 
+uses
+  System.StrUtils;
+
 type
   TBinFileSign = array[0..9] of AnsiChar;
   TBinFileVer = packed record
@@ -17,6 +20,7 @@ type
   end;
 
 const
+  // При добавлении новой сигнатуры добавить в проверку IsSignExists
   // Пак-файл - бинарный контейнер для любых файлов
   PACK_FILE_SIGNATURE: TBinFileSign = 'PACKFILE';
   // Файл хранения параметров класса TParamsExt
@@ -31,6 +35,25 @@ const
   // Пак-файл с пак-файлами
   ADD_FILE_CONTENT_SIGNATURE: TBinFileSign = 'ADDPACK';
 
+function IsSignExists(const ASign: TBinFileSign): Boolean;
+
 implementation
+
+function IsSignExists(const ASign: TBinFileSign): Boolean;
+begin
+  Result := false;
+
+  if MatchText(String(ASign), [
+    String(PACK_FILE_SIGNATURE),
+    String(PARAMS_FILE_SIGNATURE),
+    String(THEME_FILE_SIGNATURE),
+    String(PNG_FILE_CONTENT_SIGNATURE),
+    String(SQL_FILE_CONTENT_SIGNATURE),
+    String(ADD_FILE_CONTENT_SIGNATURE)
+    ]) then
+  begin
+    Result := true;
+  end;
+end;
 
 end.
