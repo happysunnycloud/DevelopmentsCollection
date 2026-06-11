@@ -30,6 +30,7 @@ type
 type
   TFormExt = class;
 
+  {$IFDEF MSWINDOWS}
   TLastFormStateRec = record
     Left: Integer;
     Top: Integer;
@@ -37,7 +38,6 @@ type
     Height: Integer;
     BorderFrameKind: TBorderFrameKind;
   end;
-
 
   TFormStateHelper = class
   const
@@ -68,7 +68,6 @@ type
       var ALastFormStateRec: TLastFormStateRec);
   end;
 
-  {$IFDEF MSWINDOWS}
   TBorderFrame = BorderFrameUnit.TBorderFrame;
   TBorderFrameKind = BorderFrameUnit.TBorderFrameKind;
   {$ENDIF}
@@ -118,6 +117,9 @@ type
     FTrayIcon: TCustomTrayIcon;
     FTrayIconMouseRightButtonDown: TMouseEvent;
     FTrayIconMouseLeftButtonDown: TMouseEvent;
+
+    FOnWindowsStateChanged: TWindowStateChangedProcRef;
+    FLastFormStateRec: TLastFormStateRec;
     {$ENDIF}
 
     // Нарочно вводим переменную, так как мы всегда используем Close для формы
@@ -126,8 +128,6 @@ type
     // ModalResult в mrCancel, что может перезаписать наше собственное значение.
     // Таким образом мы обходим сброс ModalResult в Close
     FModalResult: TModalResult;
-    FOnWindowsStateChanged: TWindowStateChangedProcRef;
-    FLastFormStateRec: TLastFormStateRec;
 
     procedure OnDestroyedAllFactoriesHandler(Sender: TObject);
 
@@ -164,7 +164,9 @@ type
     procedure OnBorderFrameMaxupButtonClickHandler;
     {$ENDIF}
   protected
+    {$IFDEF MSWINDOWS}
     procedure Resize; override;
+    {$ENDIF}
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -222,7 +224,7 @@ uses
   ;
 
 { TFormStateHelper }
-
+{$IFDEF MSWINDOWS}
 class function TFormStateHelper.LoadRoot(const AFileName: String): TJSONObject;
 var
   JsonText: String;
@@ -386,6 +388,7 @@ begin
     Root.Free;
   end;
 end;
+{$ENDIF}
 
 { TFormExt }
 
@@ -401,14 +404,6 @@ begin
   inherited OnCloseQuery := OnCloseQueryInternalHandler;
   inherited OnClose := OnCloseInternalHandler;
   inherited OnKeyUp := OnKeyUpInternalHandler;
-
-  FLastFormStateRec.Left := Left;
-  FLastFormStateRec.Top := Top;
-  FLastFormStateRec.Width := Width;
-  FLastFormStateRec.Height := Height;
-  FLastFormStateRec.BorderFrameKind := bfkNone;
-
-  FOnWindowsStateChanged := nil;
 
   FScreenScale := Canvas.Scale;
 
@@ -442,6 +437,14 @@ begin
   FTheme := TTheme.Create;
 
   {$IFDEF MSWINDOWS}
+  FLastFormStateRec.Left := Left;
+  FLastFormStateRec.Top := Top;
+  FLastFormStateRec.Width := Width;
+  FLastFormStateRec.Height := Height;
+  FLastFormStateRec.BorderFrameKind := bfkNone;
+
+  FOnWindowsStateChanged := nil;
+
   FBorderFrame := TBorderFrame.Create(
     Self,
     TBorderFrameKind.bfkNormal,
@@ -483,6 +486,7 @@ begin
   inherited;
 end;
 
+{$IFDEF MSWINDOWS}
 procedure TFormExt.Resize;
 begin
   inherited;
@@ -490,7 +494,6 @@ begin
   FBorderFrame.FormResized;
 end;
 
-{$IFDEF MSWINDOWS}
 procedure TFormExt.OnBorderFrameMaxupButtonClickHandler;
 begin
   if IsFormMaximumSize then
