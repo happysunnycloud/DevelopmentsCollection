@@ -8,6 +8,7 @@ uses
     System.Generics.Collections
   , System.Classes
   , System.SyncObjs
+  , System.SysUtils
   , FMX.Controls
   , FMX.Forms
   , FMX.Types
@@ -22,6 +23,26 @@ type
   THintMouseHandlers = record
     OnEnterHandler: TNotifyEvent;
     OnLeaveHandler: TNotifyEvent;
+  end;
+
+  // Назначение TWatcher:
+  // Виртуальный компонент-контейнер
+  // Позволяет отслеживать уничтожение внешнего контрола,
+  // от которого мы не неследовались
+  // При создании в объекта назначаем владельцем внешний контрол
+  // При уничтожении внешнего контрола уничтожается и дочерний,
+  // здесь и происходит фиксирование факта уничтожения контрола
+  // Такой механизм позволяет удалять внешний контрол из словаря хуков
+  // и не держать в нем мусорные ссылки, если контрол был уничтоже динамически
+  TWatcher = class(TFmxObject)
+  strict private
+    FOwner: TComponent;
+    FOnOwnerDestroy: TProc<TComponent>;
+  public
+    constructor Create(AOwner: TComponent); reintroduce;
+    destructor Destroy; override;
+
+    property OnOwnerDestroy: TProc<TComponent> write FOnOwnerDestroy;
   end;
 
   TCustomHint = class (TComponent)
@@ -53,10 +74,13 @@ type
    procedure HookingOnMouseLeaveHandler(Sender: TObject);
 
    procedure HookHints(const AParent: TFmxObject);
+   procedure UnHookHints;
 
    procedure CreateHintForm;
 
    procedure CloseHintForm;
+
+   procedure OnOwnerDestroyHandler(AOwner: TComponent);
   private
   public
     constructor Create(const AOwner: TFormExt); reintroduce;
@@ -64,8 +88,6 @@ type
 
     procedure Open(
       const AControl: TControl);
-
-    procedure UnHookHints;
 
     property Theme: THintSettings read FTheme write FTheme;
   end;
@@ -77,8 +99,7 @@ uses
     Winapi.Windows
   , FMX.Platform.Win,
   {$ENDIF}
-    System.SysUtils
-  , System.UITypes
+    System.UITypes
   , System.Types
   , FMX.Graphics
   , FMX.Layouts
@@ -125,6 +146,24 @@ begin
   ShowWindow(H, SW_SHOWNOACTIVATE);
 end;
 
+{ TWatcher }
+
+constructor TWatcher.Create(AOwner: TComponent);
+begin
+  FOwner := AOwner;
+  FOnOwnerDestroy := nil;
+
+  inherited Create(AOwner);
+end;
+
+destructor TWatcher.Destroy;
+begin
+  if Assigned(FOnOwnerDestroy) then
+    FOnOwnerDestroy(FOwner);
+
+  inherited;
+end;
+
 { TCustomHint }
 
 procedure TCustomHint.CreateHintForm;
@@ -163,6 +202,14 @@ procedure TCustomHint.CloseHintForm;
 begin
   if Assigned(FHintForm) then
     FHintForm.Close;
+end;
+
+procedure TCustomHint.OnOwnerDestroyHandler(AOwner: TComponent);
+begin
+  if not Assigned(FMouseHandlersDict) then
+    Exit;
+
+  FMouseHandlersDict.Remove(AOwner as TControl);
 end;
 
 constructor TCustomHint.Create(const AOwner: TFormExt);
@@ -323,6 +370,7 @@ var
   I: Integer;
   Obj: TFmxObject;
   Control: TControl;
+  Watcher: TWatcher;
 begin
   for I := 0 to AParent.ChildrenCount - 1 do
   begin
@@ -339,6 +387,9 @@ begin
 
       Control.OnMouseEnter := HookingOnMouseEnterHandler;
       Control.OnMouseLeave := HookingOnMouseLeaveHandler;
+
+      Watcher := TWatcher.Create(Control);
+      Watcher.OnOwnerDestroy := OnOwnerDestroyHandler;
     end;
 
     HookHints(Obj);
@@ -352,8 +403,6 @@ var
 begin
   for Control in FMouseHandlersDict.Keys do
   begin
-    FMouseHandlersDict.TryGetValue(Control, MouseHandlers);
-
     Control.OnMouseEnter := MouseHandlers.OnEnterHandler;
     Control.OnMouseLeave := MouseHandlers.OnLeaveHandler;
   end;
