@@ -421,7 +421,7 @@ var
   i: Integer;
 begin
   Form := Owner as TForm;
-  Form.BorderStyle := TFmxFormBorderStyle.Sizeable;
+//  Form.BorderStyle := TFmxFormBorderStyle.Sizeable;
 
   ContentsLayout := Self.ContentLayout;
 
@@ -1247,9 +1247,17 @@ begin
   FBorderFrameKind := ABorderFrameKind;
 
   if FBorderFrameKind = bfkNone then
-    UnMount
+    TThread.Queue(nil,
+      procedure
+      begin
+        UnMount;
+      end)
   else
-    Mount;
+    TThread.Queue(nil,
+      procedure
+      begin
+        Mount;
+      end);
 end;
 
 procedure TBorderFrame.SetBorderColor(const ABorderColor: TAlphaColor);
