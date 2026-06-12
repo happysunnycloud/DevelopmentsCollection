@@ -8,12 +8,13 @@ interface
 uses
     System.Classes
   , System.UITypes
+  , System.JSON
+  , System.SysUtils
   , FMX.Graphics
   , FMX.Forms
   , ThreadFactoryRegistryUnit
   , ThreadFactoryUnit
   , FMX.Theme
-  , System.JSON
   {$IFDEF MSWINDOWS}
   , FMX.Types
   , FMX.TrayIcon.Win
@@ -120,6 +121,7 @@ type
 
     FOnWindowsStateChanged: TWindowStateChangedProcRef;
     FLastFormStateRec: TLastFormStateRec;
+    FOnFormStateLoaded: TProc<TFormExt>;
     {$ENDIF}
 
     // Нарочно вводим переменную, так как мы всегда используем Close для формы
@@ -198,6 +200,8 @@ type
       read FTrayIconMouseRightButtonDown write FTrayIconMouseRightButtonDown;
     property TrayIconMouseLeftButtonDown: TMouseEvent
       read FTrayIconMouseLeftButtonDown write FTrayIconMouseLeftButtonDown;
+    property OnFormStateLoaded: TProc<TFormExt>
+      read FOnFormStateLoaded write FOnFormStateLoaded;
 
     procedure Rollup;
     procedure Rolldown;
@@ -214,8 +218,7 @@ type
 implementation
 
 uses
-    System.SysUtils
-  , System.SyncObjs
+    System.SyncObjs
   , System.IOUtils
   {$IFDEF MSWINDOWS}
   , Winapi.Windows
@@ -444,6 +447,7 @@ begin
   FLastFormStateRec.BorderFrameKind := bfkNone;
 
   FOnWindowsStateChanged := nil;
+  FOnFormStateLoaded := nil;
 
   FBorderFrame := TBorderFrame.Create(
     Self,
@@ -466,6 +470,9 @@ begin
         FORM_SETTINGS_FILE_NAME,
         Self,
         FLastFormStateRec);
+
+      if Assigned(FOnFormStateLoaded) then
+        FOnFormStateLoaded(Self);
     end);
   {$ENDIF}
 end;
