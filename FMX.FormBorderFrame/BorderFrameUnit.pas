@@ -702,6 +702,9 @@ end;
 
 procedure TBorderFrame.FormResized;
 begin
+  if not Assigned(Self) then
+    Exit;
+
   if TFormExt(Owner).IsFormMaximumSize then
     ShowMaxupIcon(true)
   else
