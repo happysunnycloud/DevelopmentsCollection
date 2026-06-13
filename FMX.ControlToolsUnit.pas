@@ -48,6 +48,9 @@ type
 
   TControlEnumeratorCallbackProc = reference to
     procedure (const AControl: TControl);
+  TBreakingControlEnumeratorCallbackProc = reference to
+    procedure (const AControl: TControl; var ABreak: Boolean);
+
   TComponentEnumeratorCallbackProc = reference to
     procedure (const AComponent: TComponent);
   TBreakingComponentEnumeratorCallbackProc = reference to
@@ -188,7 +191,12 @@ type
   TScrollBoxHelper = class helper for TScrollBox
   public
     procedure ControlsEnumerator(
-      const AControlEnumeratorCallbackProc: TControlEnumeratorCallbackProc);
+      const AControlEnumeratorCallbackProc:
+        TControlEnumeratorCallbackProc); overload;
+    procedure ControlsEnumerator(
+      const ABreakingControlEnumeratorCallbackProc:
+        TBreakingControlEnumeratorCallbackProc); overload;
+
     procedure Clear;
   end;
 
@@ -273,6 +281,48 @@ procedure TScrollBoxHelper.ControlsEnumerator(
 
 begin
   _EnumControls(Self);
+end;
+
+procedure TScrollBoxHelper.ControlsEnumerator(
+  const ABreakingControlEnumeratorCallbackProc:
+    TBreakingControlEnumeratorCallbackProc);
+
+  procedure _EnumControls(
+    const AObj: TObject;
+    var ABreak: Boolean);
+  var
+    Component: TComponent;
+    Control: TControl;
+    i: Word;
+  begin
+    if not (AObj is TComponent) then
+      Exit;
+
+    Component := AObj as TComponent;
+    i := Component.ComponentCount;
+    while (i > 0) and (not ABreak) do
+    begin
+      Dec(i);
+
+      if Component.Components[i] is TControl then
+      begin
+        Control := Component.Components[i] as TControl;
+        ABreakingControlEnumeratorCallbackProc(Control, ABreak);
+
+        if ABreak then
+          Exit;
+
+        if Control.ComponentCount > 0 then
+          _EnumControls(Control, ABreak);
+      end;
+    end;
+  end;
+
+var
+  _Break: Boolean;
+begin
+  _Break := false;
+  _EnumControls(Self, _Break);
 end;
 
 procedure TScrollBoxHelper.Clear;
@@ -429,7 +479,7 @@ begin
       AComponentEnumeratorCallbackProc);
   end;
 end;
-
+{TODO: Проверить релевантность, при необходимости отрефакторить}
 class procedure TControlTools.ComponentEnumerator(
   const AFmxObject: TFmxObject;
   const ABreakingComponentEnumeratorCallbackProc: TBreakingComponentEnumeratorCallbackProc);
