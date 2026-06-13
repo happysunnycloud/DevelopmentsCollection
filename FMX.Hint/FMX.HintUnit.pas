@@ -360,7 +360,7 @@ begin
 //  if Assigned(FHintThread) then
 //    FHintThread.Control := nil;
 
-  TDebug.ODS('Мышь вышла из поля зрения контрола');
+//  TDebug.ODS('Мышь вышла из поля зрения контрола');
 
   CloseHintForm;
 end;
