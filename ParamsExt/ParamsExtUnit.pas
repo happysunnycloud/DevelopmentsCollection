@@ -6,7 +6,7 @@
 
 // Несохраняем и не читаем типа Pointer,
 // Нет смысла хранить указатели, так как они имеют динамические значения
-
+{TODO: Сделать возвращаемый item через указанный тип переменной, например, .Get(var AVal: Integer; const AIdent: String = '') Get(a, 'id'), где a: Integer}
 unit ParamsExtUnit;
 
 interface
@@ -36,6 +36,7 @@ type
   strict private
     FParams: TVars;
     FParamsExtStreamer: TParamsExtStreamer;
+    FAllowIdentDuplicates: Boolean;
     // В случае ненахождения значения будет возбужден raise
     function GetIndexByIdent(const AIdent: String; const AOffset: Integer = 0): Integer;
     // В случае ненахождения значения будет возвращено значение = -1
@@ -158,6 +159,8 @@ type
     function  IndexOf(const AIdent: String; const AOffset: Integer = 0): Integer;
 
     property  Params: TVars read FParams write FParams;
+    property  AllowIdentDuplicates: Boolean
+      read FAllowIdentDuplicates write FAllowIdentDuplicates;
 
     procedure CopyFrom(const AParamsObj: TParamsExt); virtual;
     procedure AddFrom(const AParamsObj: TParamsExt); virtual;
@@ -304,6 +307,7 @@ begin
   System.SetLength(FParams, 0);
 
   FParamsExtStreamer := nil;
+  FAllowIdentDuplicates := false;
 
   inherited Create;
 end;
@@ -808,6 +812,9 @@ procedure TParamsExt.CheckDuplicateIdent(const AIdent: String);
 var
   i: Integer;
 begin
+  if FAllowIdentDuplicates then
+    Exit;
+
   if AIdent.Length = 0 then
     Exit;
 
