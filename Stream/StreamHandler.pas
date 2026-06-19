@@ -155,13 +155,15 @@ begin
   inherited;
 end;
 
-procedure TBaseStreamHandler.CheckVarType(const ATypeOfVarLeft, ATypeOfVarRight: TVarType);
+procedure TBaseStreamHandler.CheckVarType(
+  const ATypeOfVarLeft, ATypeOfVarRight: TVarType);
 begin
   if ATypeOfVarLeft <> ATypeOfVarRight then
     raise Exception.CreateFmt('Expected type %d but got %d', [ATypeOfVarRight, ATypeOfVarLeft]);
 end;
 
-procedure TBaseStreamHandler.CheckDataSize(const AActualSize, AExpectedSize: Integer);
+procedure TBaseStreamHandler.CheckDataSize(
+  const AActualSize, AExpectedSize: Integer);
 begin
   if AActualSize <> AExpectedSize then
     raise Exception.CreateFmt('Invalid data size. Expected %d but got %d', [AExpectedSize, AActualSize]);
@@ -179,7 +181,8 @@ begin
 end;
 
 // Универсальная запись фиксированного типа
-procedure TBaseStreamHandler.WriteValue<T>(const ATypeOfVar: TVarType; const AValue: T);
+procedure TBaseStreamHandler.WriteValue<T>(
+  const ATypeOfVar: TVarType; const AValue: T);
 var
   TypeOfVar: TVarType;
   DataSize: Integer;
