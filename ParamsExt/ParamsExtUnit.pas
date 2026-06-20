@@ -1,4 +1,4 @@
-﻿{0.1}
+﻿{0.2}
 
 // Нужно переехать на этот модуль с ParamsClassUnit
 // Класс для упаковки/распаковки параметров
@@ -6,7 +6,7 @@
 
 // Несохраняем и не читаем типа Pointer,
 // Нет смысла хранить указатели, так как они имеют динамические значения
-{TODO: Сделать возвращаемый item через указанный тип переменной, например, .Get(var AVal: Integer; const AIdent: String = '') Get(a, 'id'), где a: Integer}
+
 unit ParamsExtUnit;
 
 interface
@@ -20,6 +20,12 @@ uses
 
 const
   CLASS_NAME = 'TParamsExt';
+
+type
+  TCheckIndexError = (
+    cieNoErrors = 0,
+    cieEmptyParams = 1,
+    cieOutOfRange = 2);
 
 type
   TBinFileSign = BinFileTypes.TBinFileSign;
@@ -38,9 +44,20 @@ type
     FParamsExtStreamer: TParamsExtStreamer;
     FAllowIdentDuplicates: Boolean;
     // В случае ненахождения значения будет возбужден raise
-    function GetIndexByIdent(const AIdent: String; const AOffset: Integer = 0): Integer;
+    function GetIndexByIdent(
+      const AIdent: String;
+      const AOffset: Integer = 0;
+      const ARaiseException: Boolean = true): Integer;
     // В случае ненахождения значения будет возвращено значение = -1
-    function IfGetIndexByIdent(const AIdent: String; const AOffset: Integer = 0): Integer;
+    function TryGetIndexByIdent(
+      const AIdent: String;
+      const AOffset: Integer = 0): Integer;
+
+//    function TypeCompare(
+//      const AVarTypeSource: TVarType;
+//      const AVarTypeDest: TVarType): Boolean;
+    procedure CheckType<T>(const AVarType: TVarType);
+    function TryCheckIndex(const AIndex: Integer): TCheckIndexError;
   private
     function GetAsInt64    (const AIndex: Word): Int64;         overload;
     function GetAsBoolean  (const AIndex: Word): Boolean;       overload;
@@ -76,13 +93,13 @@ type
     function GetAsVariant  (const AIdent: String): Variant;     overload;
     function GetTypeOfVar  (const AIdent: String): TVarType;    overload;
 
-    procedure CheckCorrect(
+    procedure CheckIndex(
       const AMethodName: String;
-      const AIndex: Integer); overload;
+      const AIndex: Integer);
     procedure CheckCorrect(
       const AMethodName: String;
       const AIndex: Integer;
-      const AVarType: TVarType); overload;
+      const AVarType: TVarType);
 
     // Проверяем на дубли, в случае, если Ident не пустой
     // Важно для TryGetParam
@@ -156,7 +173,14 @@ type
 
     function  Exists(const AIdent: String):  Boolean;
 
-    function  IndexOf(const AIdent: String; const AOffset: Integer = 0): Integer;
+    //function  IndexOf(const AIdent: String; const AOffset: Integer = 0): Integer;
+    function  IndexBy(
+      const AIdent: String;
+      const AOffset: Integer = 0): Integer;
+    function  TryIndexBy(
+      const AIdent: String;
+      var AIndex: Integer;
+      const AOffset: Integer = 0): Boolean;
 
     property  Params: TVars read FParams write FParams;
     property  AllowIdentDuplicates: Boolean
@@ -165,9 +189,26 @@ type
     procedure CopyFrom(const AParamsObj: TParamsExt); virtual;
     procedure AddFrom(const AParamsObj: TParamsExt); virtual;
 
-    function TryGetParamVal(
+    // Пробует получить значение в переменную по айденту,
+    // без проверки на релевантность типа переменной
+    // В случае ошибки не возбуждает исключение, в результате вернет false
+    function TryGetVariant(
       var AVal: Variant;
+      const AParamIdent: String): Boolean;
+
+    procedure Get<T>(
+      var AVal: T;
+      const AParamIndex: Integer); overload;
+    procedure Get<T>(
+      var AVal: T;
+      const AParamIdent: String); overload;
+    function TryGet<T>(
+      var AVal: T;
+      const AParamIndex: Integer): Boolean; overload;
+    function TryGet<T>(
+      var AVal: T;
       const AParamIdent: String): Boolean; overload;
+
     {TODO: Проверить корректность парсинга из одного класса в другой и оставить}
     procedure ObjectToParams(
       const AObject: TObject;
@@ -253,22 +294,10 @@ end;
 
 { TParamsExt }
 
-function TParamsExt.GetIndexByIdent(const AIdent: String; const AOffset: Integer = 0): Integer;
-var
-  i: Integer;
-begin
-  for i := AOffset to Pred(Length) do
-  begin
-    if FParams[i].Ident = AIdent then
-      Exit(i);
-  end;
-
-  raise Exception.CreateFmt(
-    '%s.%s: Var of ident "%s" not found',
-    [CLASS_NAME, 'GetIndexByIdent', AIdent]);
-end;
-
-function TParamsExt.IfGetIndexByIdent(const AIdent: String; const AOffset: Integer = 0): Integer;
+function TParamsExt.GetIndexByIdent(
+  const AIdent: String;
+  const AOffset: Integer = 0;
+  const ARaiseException: Boolean = true): Integer;
 var
   i: Integer;
 begin
@@ -279,6 +308,81 @@ begin
     if FParams[i].Ident = AIdent then
       Exit(i);
   end;
+
+  if ARaiseException then
+    raise Exception.CreateFmt(
+      '%s.%s: Var of ident "%s" not found',
+      [CLASS_NAME, 'GetIndexByIdent', AIdent]);
+end;
+
+function TParamsExt.TryGetIndexByIdent(
+  const AIdent: String;
+  const AOffset: Integer = 0): Integer;
+begin
+  Result := GetIndexByIdent(AIdent, AOffset, false);
+end;
+
+//function TParamsExt.TypeCompare(
+//  const AVarTypeSource: TVarType;
+//  const AVarTypeDest: TVarType): Boolean;
+//begin
+//  Result := AVarTypeSource = AVarTypeDest;
+//end;
+
+procedure TParamsExt.CheckType<T>(const AVarType: TVarType);
+const
+  METHOD = 'CheckType<T>';
+var
+  TInfo: Pointer;
+  TypeCompareResult: Boolean;
+begin
+  TInfo := TypeInfo(T);
+  if TInfo = TypeInfo(Byte) then
+    TypeCompareResult := AVarType = varByte
+  else
+  if TInfo = TypeInfo(Single) then
+    TypeCompareResult := AVarType = varSingle
+  else
+  if TInfo = TypeInfo(Double) then
+    TypeCompareResult := AVarType = varDouble
+  else
+  if TInfo = TypeInfo(Variant) then
+    TypeCompareResult := AVarType = varVariant
+  else
+  if TInfo = TypeInfo(Word) then
+    TypeCompareResult := AVarType = varWord
+  else
+  if TInfo = TypeInfo(LongWord) then
+    TypeCompareResult := AVarType = varLongWord
+  else
+  if TInfo = TypeInfo(Pointer) then
+    TypeCompareResult := AVarType = varByRef
+  else
+  if TInfo = TypeInfo(Integer) then
+    TypeCompareResult := AVarType = varInteger
+  else
+  if TInfo = TypeInfo(Int64) then
+    TypeCompareResult := AVarType = varInt64
+  else
+  if TInfo = TypeInfo(Double) then
+    TypeCompareResult := AVarType = varDouble
+  else
+  if TInfo = TypeInfo(Currency) then
+    TypeCompareResult := AVarType = varCurrency
+  else
+  if TInfo = TypeInfo(Boolean) then
+    TypeCompareResult := AVarType = varBoolean
+  else
+  if TInfo = TypeInfo(String) then
+    TypeCompareResult := AVarType = varString
+  else
+  if TInfo = TypeInfo(TDateTime) then
+    TypeCompareResult := AVarType = varDate
+  else
+    raise Exception.CreateFmt('%s: Unknown type', [METHOD]);
+
+  if not TypeCompareResult then
+    raise Exception.CreateFmt('%s: Type mismatch', [METHOD]);
 end;
 
 //constructor TParamsExt.Create(const AVars: array of Variant);
@@ -412,14 +516,14 @@ end;
 
 function TParamsExt.GetAsVariant(const AIndex: Word): Variant;
 begin
-  CheckCorrect('GetAsVariant', AIndex);
+  CheckIndex('GetAsVariant', AIndex);
 
   Result := FParams[AIndex].v;
 end;
 
 function TParamsExt.GetTypeOfVar(const AIndex: Word): TVarType;
 begin
-  CheckCorrect('GetTypeOfVar', AIndex);
+  CheckIndex('GetTypeOfVar', AIndex);
 
   Result := TVarData(FParams[AIndex].v).VType;
 end;
@@ -541,7 +645,7 @@ var
 begin
   i := GetIndexByIdent(AIdent);
 
-  CheckCorrect('GetAsSingle', i);
+  CheckIndex('GetAsSingle', i);
 
   Result := FParams[i].v;
 end;
@@ -552,7 +656,7 @@ var
 begin
   i := GetIndexByIdent(AIdent);
 
-  CheckCorrect('GetAsCardinal', i);
+  CheckIndex('GetAsCardinal', i);
 
   Result := FParams[i].v;
 end;
@@ -563,7 +667,7 @@ var
 begin
   i := GetIndexByIdent(AIdent);
 
-  CheckCorrect('GetAsVariant', i);
+  CheckIndex('GetAsVariant', i);
 
   Result := FParams[i].v;
 end;
@@ -574,7 +678,7 @@ var
 begin
   i := GetIndexByIdent(AIdent);
 
-  CheckCorrect('GetTypeOfVar', i);
+  CheckIndex('GetTypeOfVar', i);
 
   Result := TVarData(FParams[i].v).VType;
 end;
@@ -583,7 +687,7 @@ function TParamsExt.IfAsInt64ByIdent(const AIdent: String; const ADefVal: Int64)
 var
   i: Integer;
 begin
-  i := IfGetIndexByIdent(AIdent);
+  i := TryGetIndexByIdent(AIdent);
 
   if i < 0 then
     Exit(ADefVal);
@@ -597,7 +701,7 @@ function TParamsExt.IfAsStringByIdent(const AIdent: String; const ADefVal: Strin
 var
   i: Integer;
 begin
-  i := IfGetIndexByIdent(AIdent);
+  i := TryGetIndexByIdent(AIdent);
 
   if i < 0 then
     Exit(ADefVal);
@@ -611,7 +715,7 @@ function TParamsExt.IfAsTimeByIdent(const AIdent: String; const ADefVal: TTime):
 var
   i: Integer;
 begin
-  i := IfGetIndexByIdent(AIdent);
+  i := TryGetIndexByIdent(AIdent);
 
   if i < 0 then
     Exit(ADefVal);
@@ -625,7 +729,7 @@ function TParamsExt.IfAsDateByIdent(const AIdent: String; const ADefVal: TDate):
 var
   i: Integer;
 begin
-  i := IfGetIndexByIdent(AIdent);
+  i := TryGetIndexByIdent(AIdent);
 
   if i < 0 then
     Exit(ADefVal);
@@ -639,7 +743,7 @@ function TParamsExt.IfAsDateTimeByIdent(const AIdent: String; const ADefVal: TDa
 var
   i: Integer;
 begin
-  i := IfGetIndexByIdent(AIdent);
+  i := TryGetIndexByIdent(AIdent);
 
   if i < 0 then
     Exit(ADefVal);
@@ -653,7 +757,7 @@ function TParamsExt.IfAsBooleanByIdent(const AIdent: String; const ADefVal: Bool
 var
   i: Integer;
 begin
-  i := IfGetIndexByIdent(AIdent);
+  i := TryGetIndexByIdent(AIdent);
 
   if i < 0 then
     Exit(ADefVal);
@@ -667,7 +771,7 @@ function TParamsExt.IfAsIntegerByIdent(const AIdent: String; const ADefVal: Inte
 var
   i: Integer;
 begin
-  i := IfGetIndexByIdent(AIdent);
+  i := TryGetIndexByIdent(AIdent);
 
   if i < 0 then
     Exit(ADefVal);
@@ -681,7 +785,7 @@ function TParamsExt.IfAsWordByIdent(const AIdent: String; const ADefVal: Word): 
 var
   i: Integer;
 begin
-  i := IfGetIndexByIdent(AIdent);
+  i := TryGetIndexByIdent(AIdent);
 
   if i < 0 then
     Exit(ADefVal);
@@ -695,7 +799,7 @@ function TParamsExt.IfAsByteByIdent(const AIdent: String; const ADefVal: Byte): 
 var
   i: Integer;
 begin
-  i := IfGetIndexByIdent(AIdent);
+  i := TryGetIndexByIdent(AIdent);
 
   if i < 0 then
     Exit(ADefVal);
@@ -709,7 +813,7 @@ function TParamsExt.IfAsPointerByIdent(const AIdent: String; const ADefVal: Poin
 var
   i: Integer;
 begin
-  i := IfGetIndexByIdent(AIdent);
+  i := TryGetIndexByIdent(AIdent);
 
   if i < 0 then
     Exit(ADefVal);
@@ -723,7 +827,7 @@ function TParamsExt.IfAsSingleByIdent(const AIdent: String; const ADefVal: Singl
 var
   i: Integer;
 begin
-  i := IfGetIndexByIdent(AIdent);
+  i := TryGetIndexByIdent(AIdent);
 
   if i < 0 then
     Exit(ADefVal);
@@ -737,7 +841,7 @@ function TParamsExt.IfAsCardinalByIdent(const AIdent: String; const ADefVal: Car
 var
   i: Integer;
 begin
-  i := IfGetIndexByIdent(AIdent);
+  i := TryGetIndexByIdent(AIdent);
 
   if i < 0 then
     Exit(ADefVal);
@@ -751,12 +855,12 @@ function TParamsExt.IfAsVariantByIdent(const AIdent: String; const ADefVal: Vari
 var
   i: Integer;
 begin
-  i := IfGetIndexByIdent(AIdent);
+  i := TryGetIndexByIdent(AIdent);
 
   if i < 0 then
     Exit(ADefVal);
 
-  CheckCorrect('IfAsVariantByIdent', i);
+  CheckIndex('IfAsVariantByIdent', i);
 
   Result := FParams[i].v;
 end;
@@ -765,31 +869,45 @@ function TParamsExt.IfAsTVarTypeByIdent(const AIdent: String; const ADefVal: TVa
 var
   i: Integer;
 begin
-  i := IfGetIndexByIdent(AIdent);
+  i := TryGetIndexByIdent(AIdent);
 
   if i < 0 then
     Exit(ADefVal);
 
-  CheckCorrect('IfAsTVarTypeByIdent', i);
+  CheckIndex('IfAsTVarTypeByIdent', i);
 
   Result := TVarData(FParams[i].v).VType;
 end;
 
-procedure TParamsExt.CheckCorrect(
-  const AMethodName: String;
-  const AIndex: Integer);
+function TParamsExt.TryCheckIndex(const AIndex: Integer): TCheckIndexError;
 var
   _Length: Word;
 begin
+  Result := cieNoErrors;
+
   _Length := System.Length(FParams);
   if _Length = 0 then
-    raise Exception.Create(Format('%s.%s: Params property is empty', [CLASS_NAME, AMethodName]));
+    Exit(cieEmptyParams);
 
   if AIndex >= _Length then
-    raise Exception.Create(Format('%s.%s: Index out of range', [CLASS_NAME, AMethodName]));
+    Exit(cieOutOfRange);
 
   if AIndex < 0 then
-    raise Exception.Create(Format('%s.%s: Index out of range', [CLASS_NAME, AMethodName]));
+    Exit(cieOutOfRange);
+end;
+
+procedure TParamsExt.CheckIndex(
+  const AMethodName: String;
+  const AIndex: Integer);
+begin
+  case TryCheckIndex(AIndex) of
+    cieEmptyParams:
+      raise Exception.Create(Format('%s.%s: Params property is empty',
+        [CLASS_NAME, AMethodName]));
+    cieOutOfRange:
+      raise Exception.Create(Format('%s.%s: Index out of range',
+        [CLASS_NAME, AMethodName]));
+  end;
 end;
 
 procedure TParamsExt.CheckCorrect(
@@ -799,7 +917,7 @@ procedure TParamsExt.CheckCorrect(
 var
   TypeOfVar: TVarType;
 begin
-  CheckCorrect(AMethodName, AIndex);
+  CheckIndex(AMethodName, AIndex);
 
   TypeOfVar := VarType(FParams[AIndex].v);
   if TypeOfVar <> AVarType then
@@ -897,12 +1015,33 @@ end;
 
 function TParamsExt.Exists(const AIdent: String): Boolean;
 begin
-  Result := IfGetIndexByIdent(AIdent) >= 0;
+  Result := TryGetIndexByIdent(AIdent) >= 0;
 end;
 
-function TParamsExt.IndexOf(const AIdent: String; const AOffset: Integer = 0): Integer;
+//function TParamsExt.IndexOf(
+//  const AIdent: String;
+//  const AOffset: Integer = 0): Integer;
+//begin
+//  Result := GetIndexByIdent(AIdent, AOffset);
+//end;
+
+function TParamsExt.IndexBy(
+  const AIdent: String;
+  const AOffset: Integer = 0): Integer;
 begin
   Result := GetIndexByIdent(AIdent, AOffset);
+end;
+
+function TParamsExt.TryIndexBy(
+  const AIdent: String;
+  var AIndex: Integer;
+  const AOffset: Integer = 0): Boolean;
+var
+  Index: Integer;
+begin
+  Index := TryGetIndexByIdent(AIdent, AOffset);
+  Result := Index > -1;
+  AIndex := Index;
 end;
 
 procedure TParamsExt.CopyFrom(const AParamsObj: TParamsExt);
@@ -974,7 +1113,7 @@ begin
   Result := FParamsExtStreamer.TryGetParam(AParamIndex, AVal);
 end;
 
-function TParamsExt.TryGetParamVal(
+function TParamsExt.TryGetVariant(
   var AVal: Variant;
   const AParamIdent: String): Boolean;
 var
@@ -983,13 +1122,82 @@ begin
   Result := false;
   AVal := null;
 
-  try
-    i := IndexOf(AParamIdent);
-    AVal := Params[i].v;
+  i := TryGetIndexByIdent(AParamIdent);
+  if i < 0 then
+    Exit(false);
 
-    Result := true;
-  except
-  end;
+  AVal := Params[i].v;
+  Result := true;
+end;
+
+procedure TParamsExt.Get<T>(
+  var AVal: T;
+  const AParamIndex: Integer);
+const
+  METHOD = 'Get';
+var
+  i: Integer;
+  Val: Variant;
+  VT: TVarType;
+begin
+  i := AParamIndex;
+  CheckIndex(METHOD, i);
+
+  Val := Params[i].v;
+  VT := VarType(Val);
+  CheckType<T>(VT);
+
+  AVal := TValue.FromVariant(Val).AsType<T>;
+end;
+
+procedure TParamsExt.Get<T>(
+  var AVal: T;
+  const AParamIdent: String);
+const
+  METHOD = 'Get';
+var
+  i: Integer;
+begin
+  i := IndexBy(AParamIdent);
+
+  Get<T>(AVal, i);
+end;
+
+function TParamsExt.TryGet<T>(
+  var AVal: T;
+  const AParamIndex: Integer): Boolean;
+var
+  i: Integer;
+  Val: Variant;
+  VT: TVarType;
+begin
+  Result := false;
+
+  i := AParamIndex;
+  if TryCheckIndex(i) <> cieNoErrors then
+    Exit;
+
+  Val := Params[i].v;
+  VT := VarType(Val);
+  CheckType<T>(VT);
+
+  AVal := TValue.FromVariant(Val).AsType<T>;
+
+  Result := true;
+end;
+
+function TParamsExt.TryGet<T>(
+  var AVal: T;
+  const AParamIdent: String): Boolean;
+var
+  i: Integer;
+begin
+  Result := true;
+
+  if not TryIndexBy(AParamIdent, i) then
+    Exit(false);
+
+  Result := TryGet<T>(AVal, i);
 end;
 
 procedure TParamsExt.ObjectToParams(
@@ -1122,7 +1330,7 @@ begin
       PropName := RttiProp.Name;
       V := null;
       FullPropName := RootName + PropName;
-      TryGetParamVal(V, FullPropName);
+      TryGetVariant(V, FullPropName);
 
       if V = null then
         Continue;
@@ -1180,7 +1388,7 @@ begin
       PropName := RttiProp.Name;
       V := null;
       FullPropName := RootName + PropName;
-      TryGetParamVal(V, FullPropName);
+      TryGetVariant(V, FullPropName);
 
       if V = null then
         Continue;
@@ -1197,7 +1405,7 @@ procedure TParamsExt.ChangeValue(const AValue: Variant; const AIdent: String);
 var
   i: Integer;
 begin
-  i := IndexOf(AIdent);
+  i := IndexBy(AIdent);
 
   CheckCorrect('ChangeValue', i, VarType(AValue));
 
@@ -1209,7 +1417,7 @@ var
   i: Integer;
 begin
   // Здесь может принять только Pointer по этому проверку на тип не делаем
-  i := IndexOf(AIdent);
+  i := IndexBy(AIdent);
 
   TVarData(Params[i].v).VPointer := AValue;
 end;
