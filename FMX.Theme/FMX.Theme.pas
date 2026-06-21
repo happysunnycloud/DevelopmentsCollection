@@ -592,7 +592,7 @@ procedure TBaseSettings.FromParams(const AParams: TParamsExt);
 
         V := null;
         FullPropName := RootName + PropName;
-        AParams.TryGetParamVal(V, FullPropName);
+        AParams.TryGet<Variant>(V, FullPropName);
 
         if V = null then
           Continue;
