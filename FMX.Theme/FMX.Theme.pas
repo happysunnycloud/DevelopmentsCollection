@@ -561,6 +561,7 @@ procedure TBaseSettings.FromParams(const AParams: TParamsExt);
     FullPropName: String;
     Ancestor: String;
     TypeKind: TTypeKind;
+    ParamRecord: TParamRecord;
   begin
     RttiContext := TRttiContext.Create;
     try
@@ -590,12 +591,11 @@ procedure TBaseSettings.FromParams(const AParams: TParamsExt);
           Continue;
         end;
 
-        V := null;
         FullPropName := RootName + PropName;
-        AParams.TryGetVariant(V, FullPropName);
-
-        if V = null then
+        if not AParams.TryGetParamRecord(ParamRecord, FullPropName) then
           Continue;
+
+        V := ParamRecord.v;
 
         Value := TValue.FromVariant(V);
         RttiProp.SetValue(AObject, Value);
