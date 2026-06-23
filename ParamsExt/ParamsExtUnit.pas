@@ -1,4 +1,4 @@
-﻿{0.2}
+﻿{0.3}
 
 // Нужно переехать на этот модуль с ParamsClassUnit
 // Класс для упаковки/распаковки параметров
@@ -13,13 +13,13 @@ interface
 
 uses
     System.SysUtils
+  , System.Generics.Collections
   , System.Classes
+  , System.TypInfo
+  , System.Rtti
   , BinFileTypes
   , ParamsExtStreamer
   ;
-
-const
-  CLASS_NAME = 'TParamsExt';
 
 type
   TCheckIndexError = (
@@ -40,6 +40,9 @@ type
 
   TParamsExt = class
   strict private
+    const
+      CLASS_NAME = 'TParamsExt';
+  strict private
     FParams: TVars;
     FParamsExtStreamer: TParamsExtStreamer;
     FAllowIdentDuplicates: Boolean;
@@ -53,10 +56,6 @@ type
       const AIdent: String;
       const AOffset: Integer = 0): Integer;
 
-//    function TypeCompare(
-//      const AVarTypeSource: TVarType;
-//      const AVarTypeDest: TVarType): Boolean;
-    procedure CheckType<T>(const AVarType: TVarType);
     function TryCheckIndex(const AIndex: Integer): TCheckIndexError;
   private
     function GetAsInt64    (const AIndex: Word): Int64;         overload;
@@ -189,11 +188,11 @@ type
     procedure CopyFrom(const AParamsObj: TParamsExt); virtual;
     procedure AddFrom(const AParamsObj: TParamsExt); virtual;
 
-    // Пробует получить значение в переменную по айденту,
+    // Пробует получить "сырое" значение по айденту,
     // без проверки на релевантность типа переменной
     // В случае ошибки не возбуждает исключение, в результате вернет false
-    function TryGetVariant(
-      var AVal: Variant;
+    function TryGetParamRecord(
+      var AParamRecord: TParamRecord;
       const AParamIdent: String): Boolean;
 
     procedure Get<T>(
@@ -209,21 +208,20 @@ type
       var AVal: T;
       const AParamIdent: String): Boolean; overload;
 
-    {TODO: Проверить корректность парсинга из одного класса в другой и оставить}
+    procedure FromList<T>(
+      const AList: TList<T>;
+      const AName: String);
+    procedure ToList<T>(
+      const AList: TList<T>;
+      const AName: String);
     procedure ObjectToParams(
       const AObject: TObject;
-      const AAncestor: String = ''); overload;
-    procedure ObjectToParams(
-      const AObjectIdent: String;
-      const AObject: TObject;
-      const AAncestor: String = ''); overload;
+      const AAncestor: String = '';
+      const AObjectIdent: String = '');
     procedure ParamsToObject(
       const AObject: TObject;
-      const AAncestor: String = ''); overload;
-    procedure ParamsToObject(
-      const AObjectIdent: String;
-      const AObject: TObject;
-      const AAncestor: String = ''); overload;
+      const AAncestor: String = '';
+      const AObjectIdent: String = '');
 
     procedure ChangeValue(const AValue: Variant; const AIdent: String); overload;
     procedure ChangeValue(const AValue: Pointer; const AIdent: String); overload;
@@ -275,12 +273,33 @@ type
     procedure Add(const AParamRec: TParamRecord);
   end;
 
+  TTypesManager = class
+  strict private
+    const
+      CLASS_NAME = 'TTypesManager';
+  public
+    class procedure CheckType<T>(const AVarType: TVarType);
+    class function GetVarTypeByName(const AName: TSymbolName): TVarType;
+    class function TypeToVarType<T>: TVarType;
+    class function VarTypeToType(const AVarType: TVarType): Pointer;
+    class function IsTListType(const AFieldTypeName: TSymbolName): Boolean;
+
+    class procedure ParamsFromList(
+      const AParams: TParamsExt;
+      const AValue: TValue;
+      const AVarType: TVarType;
+      const AName: TSymbolName);
+    class procedure ParamsToList(
+      const AParams: TParamsExt;
+      const AValue: TValue;
+      const AVarType: TVarType;
+      const AName: TSymbolName);
+  end;
+
 implementation
 
 uses
     System.Variants
-  , System.Rtti
-  , System.TypInfo
   ;
 
 { TVarsHelper }
@@ -329,61 +348,64 @@ end;
 //  Result := AVarTypeSource = AVarTypeDest;
 //end;
 
-procedure TParamsExt.CheckType<T>(const AVarType: TVarType);
-const
-  METHOD = 'CheckType<T>';
-var
-  TInfo: Pointer;
-  TypeCompareResult: Boolean;
-begin
-  TInfo := TypeInfo(T);
-  if TInfo = TypeInfo(Byte) then
-    TypeCompareResult := AVarType = varByte
-  else
-  if TInfo = TypeInfo(Single) then
-    TypeCompareResult := AVarType = varSingle
-  else
-  if TInfo = TypeInfo(Double) then
-    TypeCompareResult := AVarType = varDouble
-  else
-  if TInfo = TypeInfo(Variant) then
-    TypeCompareResult := AVarType = varVariant
-  else
-  if TInfo = TypeInfo(Word) then
-    TypeCompareResult := AVarType = varWord
-  else
-  if TInfo = TypeInfo(LongWord) then
-    TypeCompareResult := AVarType = varLongWord
-  else
-  if TInfo = TypeInfo(Pointer) then
-    TypeCompareResult := AVarType = varByRef
-  else
-  if TInfo = TypeInfo(Integer) then
-    TypeCompareResult := AVarType = varInteger
-  else
-  if TInfo = TypeInfo(Int64) then
-    TypeCompareResult := AVarType = varInt64
-  else
-  if TInfo = TypeInfo(Double) then
-    TypeCompareResult := AVarType = varDouble
-  else
-  if TInfo = TypeInfo(Currency) then
-    TypeCompareResult := AVarType = varCurrency
-  else
-  if TInfo = TypeInfo(Boolean) then
-    TypeCompareResult := AVarType = varBoolean
-  else
-  if TInfo = TypeInfo(String) then
-    TypeCompareResult := AVarType = varString
-  else
-  if TInfo = TypeInfo(TDateTime) then
-    TypeCompareResult := AVarType = varDate
-  else
-    raise Exception.CreateFmt('%s: Unknown type', [METHOD]);
-
-  if not TypeCompareResult then
-    raise Exception.CreateFmt('%s: Type mismatch', [METHOD]);
-end;
+//procedure TParamsExt.CheckType<T>(const AVarType: TVarType);
+//const
+//  METHOD = 'CheckType<T>';
+//var
+//  TInfo: Pointer;
+//  TypeCompareResult: Boolean;
+//begin
+//  TInfo := TypeInfo(T);
+//  if TInfo = TypeInfo(Byte) then
+//    TypeCompareResult := AVarType = varByte
+//  else
+//  if TInfo = TypeInfo(Single) then
+//    TypeCompareResult := AVarType = varSingle
+//  else
+//  if TInfo = TypeInfo(Double) then
+//    TypeCompareResult := AVarType = varDouble
+//  else
+//  if TInfo = TypeInfo(Variant) then
+//    TypeCompareResult := AVarType = varVariant
+//  else
+//  if TInfo = TypeInfo(Word) then
+//    TypeCompareResult := AVarType = varWord
+//  else
+//  if TInfo = TypeInfo(LongWord) then
+//    TypeCompareResult := AVarType = varLongWord
+//  else
+//  if TInfo = TypeInfo(Pointer) then
+//    TypeCompareResult := AVarType = varByRef
+//  else
+//  if TInfo = TypeInfo(Integer) then
+//    TypeCompareResult := AVarType = varInteger
+//  else
+//  if TInfo = TypeInfo(Int64) then
+//    TypeCompareResult := AVarType = varInt64
+//  else
+//  if TInfo = TypeInfo(Double) then
+//    TypeCompareResult := AVarType = varDouble
+////  else
+////  if TInfo = TypeInfo(Cardinal) then
+////    TypeCompareResult := AVarType = varUInt32
+//  else
+//  if TInfo = TypeInfo(Currency) then
+//    TypeCompareResult := AVarType = varCurrency
+//  else
+//  if TInfo = TypeInfo(Boolean) then
+//    TypeCompareResult := AVarType = varBoolean
+//  else
+//  if TInfo = TypeInfo(String) then
+//    TypeCompareResult := AVarType = varString
+//  else
+//  if TInfo = TypeInfo(TDateTime) then
+//    TypeCompareResult := AVarType = varDate
+//  else
+//    raise Exception.CreateFmt('%s.%s: Unknown type', [CLASS_NAME, METHOD]);
+//
+//  if not TypeCompareResult then
+//    raise Exception.CreateFmt('%s.%s: Type mismatch', [CLASS_NAME, METHOD]);
+//end;
 
 //constructor TParamsExt.Create(const AVars: array of Variant);
 //var
@@ -927,6 +949,8 @@ begin
 end;
 
 procedure TParamsExt.CheckDuplicateIdent(const AIdent: String);
+const
+  METHOD = 'CheckDuplicateIdent';
 var
   i: Integer;
 begin
@@ -940,8 +964,8 @@ begin
   begin
     if AIdent = FParams[i].Ident then
       raise Exception.CreateFmt(
-        'TParamsExt.CheckDuplicateIdent -> Duplicate names "%s" are not allowed',
-        [AIdent]);
+        '%s.%s: Duplicate names "%s" are not allowed',
+        [CLASS_NAME, METHOD, AIdent]);
   end;
 end;
 
@@ -993,9 +1017,6 @@ begin
   Param.Ident := AIdent;
 
   FParams.Add(Param);
-//  SetLength(FParams, System.Length(FParams) + 1);
-//  FParams[High(FParams)].v := Value;
-//  FParams[High(FParams)].Ident := AIdent;
 end;
 
 procedure TParamsExt.AddAsType(
@@ -1017,13 +1038,6 @@ function TParamsExt.Exists(const AIdent: String): Boolean;
 begin
   Result := TryGetIndexByIdent(AIdent) >= 0;
 end;
-
-//function TParamsExt.IndexOf(
-//  const AIdent: String;
-//  const AOffset: Integer = 0): Integer;
-//begin
-//  Result := GetIndexByIdent(AIdent, AOffset);
-//end;
 
 function TParamsExt.IndexBy(
   const AIdent: String;
@@ -1113,20 +1127,40 @@ begin
   Result := FParamsExtStreamer.TryGetParam(AParamIndex, AVal);
 end;
 
-function TParamsExt.TryGetVariant(
-  var AVal: Variant;
+//function TParamsExt.TryGetVariant(
+//  var AVal: Variant;
+//  const AParamIdent: String): Boolean;
+//var
+//  i: Integer;
+//begin
+//  Result := false;
+//  AVal := null;
+//
+//  i := TryGetIndexByIdent(AParamIdent);
+//  if i < 0 then
+//    Exit;
+//
+//  AVal := Params[i].v;
+//  Result := true;
+//end;
+
+function TParamsExt.TryGetParamRecord(
+  var AParamRecord: TParamRecord;
   const AParamIdent: String): Boolean;
 var
   i: Integer;
 begin
   Result := false;
-  AVal := null;
+
+  AParamRecord := Default(TParamRecord);
 
   i := TryGetIndexByIdent(AParamIdent);
   if i < 0 then
-    Exit(false);
+    Exit;
 
-  AVal := Params[i].v;
+  AParamRecord.v := Params[i].v;
+  AParamRecord.Ident := Params[i].Ident;
+
   Result := true;
 end;
 
@@ -1145,7 +1179,7 @@ begin
 
   Val := Params[i].v;
   VT := VarType(Val);
-  CheckType<T>(VT);
+  TTypesManager.CheckType<T>(VT);
 
   AVal := TValue.FromVariant(Val).AsType<T>;
 end;
@@ -1179,7 +1213,7 @@ begin
 
   Val := Params[i].v;
   VT := VarType(Val);
-  CheckType<T>(VT);
+  TTypesManager.CheckType<T>(VT);
 
   AVal := TValue.FromVariant(Val).AsType<T>;
 
@@ -1200,53 +1234,62 @@ begin
   Result := TryGet<T>(AVal, i);
 end;
 
-procedure TParamsExt.ObjectToParams(
-  const AObject: TObject;
-  const AAncestor: String = '');
+procedure TParamsExt.FromList<T>(
+  const AList: TList<T>;
+  const AName: String);
 var
-  RttiContext: TRttiContext;
-  RttiType: TRttiType;
-  RttiProp: TRttiProperty;
-  ClassName: String;
-  Value: TValue;
+  VarType: TVarType;
+  Count: Integer;
+  i: Integer;
+  v: Variant;
+  Val: Variant;
   RootName: String;
-  FullPropName: String;
-  Ancestor: String;
-  TypeKind: TTypeKind;
 begin
-  RttiContext := TRttiContext.Create;
-  try
-    Ancestor := '';
-    if AAncestor.Length > 0 then
-      Ancestor := AAncestor + '.';
+  RootName := AName + '.';
+  AddAsType(AName, varString, RootName + AName);
+  VarType := TTypesManager.TypeToVarType<T>;
+  AddAsType(VarType, varWord, RootName + 'VarType');
+  Count := AList.Count;
+  AddAsType(Count, varInteger, RootName + 'Count');
+  for i := 0 to Pred(Count) do
+  begin
+    v := TValue.From(AList[i]).AsVariant;
+    Val := VarAsType(v, VarType);
+    Add(Val, RootName + i.ToString);
+  end;
+end;
 
-    RttiType := RttiContext.GetType(AObject.ClassType);
-    ClassName := AObject.ClassName;
-    RootName := Ancestor + ClassName + '.';
-//    Add(ClassName, RootName + 'ClassName');
-
-    for RttiProp in RttiType.GetProperties do
-    begin
-      TypeKind := RttiProp.PropertyType.TypeKind;
-      if TypeKind in [tkMethod, tkInterface] then
-        Continue;
-
-      Value := RttiProp.GetValue(AObject);
-      FullPropName := RootName + RttiProp.Name;
-      Add(Value.AsVariant, FullPropName);
-
-      if Value.IsObject then
-        ObjectToParams(Value.AsObject, ClassName);
-    end;
-  finally
-    RttiContext.Free;
+procedure TParamsExt.ToList<T>(
+  const AList: TList<T>;
+  const AName: String);
+var
+  Name: String;
+  VarType: TVarType;
+  Count: Integer;
+  Index: Integer;
+  i: Integer;
+  v: T;
+  RootName: String;
+begin
+  RootName := AName + '.';
+  Index := IndexBy(RootName + AName);
+  Get<String>(Name, Index);
+  Inc(Index);
+  Get<Word>(VarType, Index);
+  Inc(Index);
+  Get<Integer>(Count, Index);
+  Inc(Index);
+  for i := 0 to Pred(Count) do
+  begin
+    Get<T>(v, i + Index);
+    AList.Add(TValue.From(v).AsType<T>);
   end;
 end;
 
 procedure TParamsExt.ObjectToParams(
-  const AObjectIdent: String;
   const AObject: TObject;
-  const AAncestor: String = '');
+  const AAncestor: String = '';
+  const AObjectIdent: String = '');
 var
   RttiContext: TRttiContext;
   RttiType: TRttiType;
@@ -1256,7 +1299,10 @@ var
   RootName: String;
   FullPropName: String;
   Ancestor: String;
+  ObjectIdent: String;
   TypeKind: TTypeKind;
+  FieldTypeName: TSymbolName;
+  VarType: TVarType;
 begin
   RttiContext := TRttiContext.Create;
   try
@@ -1264,9 +1310,13 @@ begin
     if AAncestor.Length > 0 then
       Ancestor := AAncestor + '.';
 
+    ObjectIdent := '';
+    if AObjectIdent.Length > 0 then
+      ObjectIdent := ObjectIdent + '.';
+
     RttiType := RttiContext.GetType(AObject.ClassType);
     ClassName := AObject.ClassName;
-    RootName := AObjectIdent + '.' + Ancestor + ClassName + '.';
+    RootName := ObjectIdent + Ancestor + ClassName + '.';
 
     for RttiProp in RttiType.GetProperties do
     begin
@@ -1275,11 +1325,25 @@ begin
         Continue;
 
       Value := RttiProp.GetValue(AObject);
-      FullPropName := RootName + RttiProp.Name;
-      Add(Value.AsVariant, FullPropName);
 
       if Value.IsObject then
-        ObjectToParams(AObjectIdent, Value.AsObject, ClassName);
+      begin
+        FieldTypeName := TTypeInfo(Value.TypeInfo^).Name;
+        if TTypesManager.IsTListType(FieldTypeName) then
+        begin
+          VarType := TTypesManager.GetVarTypeByName(FieldTypeName);
+          TTypesManager.ParamsFromList(Self, Value, VarType, FieldTypeName);
+        end
+        else
+        begin
+          ObjectToParams(Value.AsObject, ClassName, ObjectIdent)
+        end;
+      end
+      else
+      begin
+        FullPropName := RootName + RttiProp.Name;
+        Add(Value.AsVariant, FullPropName);
+      end;
     end;
   finally
     RttiContext.Free;
@@ -1288,7 +1352,8 @@ end;
 
 procedure TParamsExt.ParamsToObject(
   const AObject: TObject;
-  const AAncestor: String = '');
+  const AAncestor: String = '';
+  const AObjectIdent: String = '');
 var
   RttiContext: TRttiContext;
   RttiType: TRttiType;
@@ -1301,7 +1366,11 @@ var
   RootName: String;
   FullPropName: String;
   Ancestor: String;
+  ObjectIdent: String;
   TypeKind: TTypeKind;
+  FieldTypeName: TSymbolName;
+  VarType: TVarType;
+  ParamRecord: TParamRecord;
 begin
   RttiContext := TRttiContext.Create;
   try
@@ -1309,9 +1378,13 @@ begin
     if AAncestor.Length > 0 then
       Ancestor := AAncestor + '.';
 
+    ObjectIdent := '';
+    if AObjectIdent.Length > 0 then
+      ObjectIdent := ObjectIdent + '.';
+
     RttiType := RttiContext.GetType(AObject.ClassType);
     ClassName := AObject.ClassName;
-    RootName := Ancestor + ClassName + '.';
+    RootName := ObjectIdent + Ancestor + ClassName + '.';
 
     for RttiProp in RttiType.GetProperties do
     begin
@@ -1322,79 +1395,28 @@ begin
       ValueTmp := RttiProp.GetValue(AObject);
       if ValueTmp.IsObject then
       begin
-        ParamsToObject(ValueTmp.AsObject, ClassName);
-
-        Continue;
-      end;
-
-      PropName := RttiProp.Name;
-      V := null;
-      FullPropName := RootName + PropName;
-      TryGetVariant(V, FullPropName);
-
-      if V = null then
-        Continue;
-
-      Value := TValue.FromVariant(V);
-      RttiProp.SetValue(AObject, Value);
-    end;
-  finally
-    RttiContext.Free;
-  end;
-end;
-
-procedure TParamsExt.ParamsToObject(
-  const AObjectIdent: String;
-  const AObject: TObject;
-  const AAncestor: String = '');
-var
-  RttiContext: TRttiContext;
-  RttiType: TRttiType;
-  RttiProp: TRttiProperty;
-  PropName: String;
-  ClassName: String;
-  Value: TValue;
-  ValueTmp: TValue;
-  V: Variant;
-  RootName: String;
-  FullPropName: String;
-  Ancestor: String;
-  TypeKind: TTypeKind;
-begin
-  RttiContext := TRttiContext.Create;
-  try
-    Ancestor := '';
-    if AAncestor.Length > 0 then
-      Ancestor := AAncestor + '.';
-
-    RttiType := RttiContext.GetType(AObject.ClassType);
-    ClassName := AObject.ClassName;
-    RootName := AObjectIdent + '.' + Ancestor + ClassName + '.';
-
-    for RttiProp in RttiType.GetProperties do
-    begin
-      TypeKind := RttiProp.PropertyType.TypeKind;
-      if TypeKind in [tkMethod, tkInterface] then
-        Continue;
-
-      ValueTmp := RttiProp.GetValue(AObject);
-      if ValueTmp.IsObject then
+        FieldTypeName := TTypeInfo(ValueTmp.TypeInfo^).Name;
+        if TTypesManager.IsTListType(FieldTypeName) then
+        begin
+          VarType := TTypesManager.GetVarTypeByName(FieldTypeName);
+          TTypesManager.ParamsToList(Self, ValueTmp, VarType, FieldTypeName);
+        end
+        else
+        begin
+          ParamsToObject(ValueTmp.AsObject, ClassName, ObjectIdent);
+        end;
+      end
+      else
       begin
-        ParamsToObject(ValueTmp.AsObject, ClassName);
+        PropName := RttiProp.Name;
+        FullPropName := RootName + PropName;
+        if not TryGetParamRecord(ParamRecord, FullPropName) then
+          Continue;
 
-        Continue;
+        V := ParamRecord.v;
+        Value := TValue.FromVariant(V);
+        RttiProp.SetValue(AObject, Value);
       end;
-
-      PropName := RttiProp.Name;
-      V := null;
-      FullPropName := RootName + PropName;
-      TryGetVariant(V, FullPropName);
-
-      if V = null then
-        Continue;
-
-      Value := TValue.FromVariant(V);
-      RttiProp.SetValue(AObject, Value);
     end;
   finally
     RttiContext.Free;
@@ -1515,6 +1537,237 @@ begin
   OpenStream(AStream);
   FParamsExtStreamer.LoadFromStream;
   CloseStream;
+end;
+
+{ TypesManager }
+
+class function TTypesManager.GetVarTypeByName(
+  const AName: TSymbolName): TVarType;
+const
+  METHOD = 'GetVarTypeByName';
+var
+  i: Integer;
+  Len: Integer;
+  Name: String;
+  TypeName: String;
+begin
+  Name := String(AName);
+  TypeName := '';
+  Len := Length(Name);
+  i := Len - 1; // -1 - пропуск символа ">"
+  while i > 1 do
+  begin
+    if Name[i] = '.' then
+      Break;
+
+    TypeName := Name[i] + TypeName;
+
+    Dec(i);
+  end;
+
+  if TypeName = 'Byte' then
+    Result := varByte
+  else
+  if TypeName = 'Integer' then
+    Result := varInteger
+  else
+  if TypeName = 'Int64' then
+    Result := varInt64
+  else
+  if TypeName = 'Word' then
+    Result := varWord
+  else
+  if TypeName = 'Single' then
+    Result := varSingle
+  else
+  if TypeName = 'Cardinal' then
+    Result := varLongWord
+  else
+  if TypeName = 'LongWord' then
+    Result := varLongWord
+  else
+  if TypeName = 'Double' then
+    Result := varDouble
+  else
+  if TypeName = 'String' then
+    Result := varString
+  else
+  if TypeName = 'Pointer' then
+    Result := varByRef
+  else
+  if TypeName = 'Currency' then
+    Result := varCurrency
+  else
+  if TypeName = 'Boolean' then
+    Result := varBoolean
+  else
+  if TypeName = 'TDateTime' then
+    Result := varDate
+  else
+    raise Exception.CreateFmt('%s.%s: Unknown type', [CLASS_NAME, METHOD]);
+end;
+
+class procedure TTypesManager.CheckType<T>(const AVarType: TVarType);
+const
+  METHOD = 'CheckType<T>';
+var
+  TypeCompareResult: Boolean;
+begin
+  TypeCompareResult := TypeToVarType<T> = AVarType;
+
+  if not TypeCompareResult then
+    raise Exception.CreateFmt('%s.%s: Type mismatch', [CLASS_NAME, METHOD]);
+end;
+
+class function TTypesManager.TypeToVarType<T>: TVarType;
+const
+  METHOD = 'TypeToVarType';
+begin
+  Result := varUnknown;
+
+  if TypeInfo(T) = TypeInfo(Byte) then
+    Result := varByte
+  else
+  if TypeInfo(T) = TypeInfo(Integer) then
+    Result := varInteger
+  else
+  if TypeInfo(T) = TypeInfo(Int64) then
+    Result := varInt64
+  else
+  if TypeInfo(T) = TypeInfo(Word) then
+    Result := varWord
+  else
+  if TypeInfo(T) = TypeInfo(Single) then
+    Result := varSingle
+  else
+  if TypeInfo(T) = TypeInfo(Cardinal) then
+    Result := varLongWord
+  else
+  if TypeInfo(T) = TypeInfo(LongWord) then
+    Result := varLongWord
+  else
+  if TypeInfo(T) = TypeInfo(Double) then
+    Result := varDouble
+  else
+  if TypeInfo(T) = TypeInfo(String) then
+    Result := varString
+  else
+  if TypeInfo(T) = TypeInfo(Pointer) then
+    Result := varByRef
+  else
+  if TypeInfo(T) = TypeInfo(Currency) then
+    Result := varCurrency
+  else
+  if TypeInfo(T) = TypeInfo(Boolean) then
+    Result := varBoolean
+  else
+  if TypeInfo(T) = TypeInfo(TDateTime) then
+    Result := varDate
+  else
+    raise Exception.CreateFmt('%s.%s: Unknown type', [CLASS_NAME, METHOD]);
+end;
+
+class function TTypesManager.VarTypeToType(
+  const AVarType: TVarType): Pointer;
+const
+  METHOD = 'VarTypeToType';
+begin
+  case AVarType of
+    varByte: Result := TypeInfo(Byte);
+    varInteger: Result := TypeInfo(Integer);
+    varInt64: Result := TypeInfo(Int64);
+    varWord: Result := TypeInfo(Word);
+    varSingle: Result := TypeInfo(Single);
+    varLongWord: Result := TypeInfo(LongWord);
+    varDouble: Result := TypeInfo(Double);
+
+    varString: Result := TypeInfo(String);
+
+    varByRef: Result := TypeInfo(Pointer);
+
+    varCurrency: Result := TypeInfo(Currency);
+
+    varBoolean: Result := TypeInfo(Boolean);
+
+    varDate: Result := TypeInfo(TDateTime);
+//  if AVarType = varCardinal then
+//    Result := TypeInfo(Cardinal)
+//  else
+  else
+    raise Exception.CreateFmt('%s.%s: Unknown variant type',
+      [CLASS_NAME, METHOD]);
+  end;
+end;
+
+class function TTypesManager.IsTListType(
+  const AFieldTypeName: TSymbolName): Boolean;
+var
+  FieldTypeName: String;
+begin
+  FieldTypeName := String(AFieldTypeName);
+  Result := Pos('TList', FieldTypeName) > 0;
+end;
+
+class procedure TTypesManager.ParamsFromList(
+  const AParams: TParamsExt;
+  const AValue: TValue;
+  const AVarType: TVarType;
+  const AName: TSymbolName);
+const
+  METHOD = 'ParamsFromList';
+var
+  Name: String;
+begin
+  Name := String(AName);
+  case AVarType of
+    varByte: AParams.FromList<Byte>(AValue.AsType<TList<Byte>>, Name);
+    varInteger: AParams.FromList<Integer>(AValue.AsType<TList<Integer>>, Name);
+    varInt64: AParams.FromList<Int64>(AValue.AsType<TList<Int64>>, Name);
+    varWord: AParams.FromList<Word>(AValue.AsType<TList<Word>>, Name);
+    varSingle: AParams.FromList<Single>(AValue.AsType<TList<Single>>, Name);
+    varLongWord: AParams.FromList<LongWord>(AValue.AsType<TList<LongWord>>, Name);
+    varDouble: AParams.FromList<Double>(AValue.AsType<TList<Double>>, Name);
+    varString: AParams.FromList<String>(AValue.AsType<TList<String>>, Name);
+    varByRef: AParams.FromList<Pointer>(AValue.AsType<TList<Pointer>>, Name);
+    varCurrency: AParams.FromList<Currency>(AValue.AsType<TList<Currency>>, Name);
+    varBoolean: AParams.FromList<Boolean>(AValue.AsType<TList<Boolean>>, Name);
+    varDate: AParams.FromList<TDateTime>(AValue.AsType<TList<TDateTime>>, Name);
+//    varCardinal: AParams.FromList<Cardinal>(AValue.AsType<TList<Cardinal>, Name);
+  else
+    raise Exception.CreateFmt('%s.%s: Unknown variant type',
+      [CLASS_NAME, METHOD]);
+  end;
+end;
+
+class procedure TTypesManager.ParamsToList(
+  const AParams: TParamsExt;
+  const AValue: TValue;
+  const AVarType: TVarType;
+  const AName: TSymbolName);
+const
+  METHOD = 'ParamsToList';
+var
+  Name: String;
+begin
+  Name := String(AName);
+  case AVarType of
+    varByte: AParams.ToList<Byte>(AValue.AsType<TList<Byte>>, Name);
+    varInteger: AParams.ToList<Integer>(AValue.AsType<TList<Integer>>, Name);
+    varInt64: AParams.ToList<Int64>(AValue.AsType<TList<Int64>>, Name);
+    varWord: AParams.ToList<Word>(AValue.AsType<TList<Word>>, Name);
+    varSingle: AParams.ToList<Single>(AValue.AsType<TList<Single>>, Name);
+    varLongWord: AParams.ToList<LongWord>(AValue.AsType<TList<LongWord>>, Name);
+    varDouble: AParams.ToList<Double>(AValue.AsType<TList<Double>>, Name);
+    varString: AParams.ToList<String>(AValue.AsType<TList<String>>, Name);
+    varByRef: AParams.ToList<Pointer>(AValue.AsType<TList<Pointer>>, Name);
+    varCurrency: AParams.ToList<Currency>(AValue.AsType<TList<Currency>>, Name);
+    varBoolean: AParams.ToList<Boolean>(AValue.AsType<TList<Boolean>>, Name);
+    varDate: AParams.ToList<TDateTime>(AValue.AsType<TList<TDateTime>>, Name);
+//    varCardinal: AParams.ToList<Cardinal>(AValue.AsType<TList<Cardinal>, Name);
+  else
+    raise Exception.CreateFmt('%s.%s: Unknown variant type',
+      [CLASS_NAME, METHOD]);
+  end;
 end;
 
 end.
