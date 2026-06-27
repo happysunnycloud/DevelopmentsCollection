@@ -81,6 +81,8 @@ procedure TAddingFilesFrame.CloseButtonClick(Sender: TObject);
 begin
   inherited CloseFile;
 
+  FLabelOnClickHandlerProcRef := OuterOnClickHandler;
+
   Memo.Lines.Clear;
   Image.Bitmap.Clear(0);
 end;
@@ -138,26 +140,39 @@ end;
 procedure TAddingFilesFrame.OuterOnClickHandler(Sender: TObject);
 var
   PackedFileName: String;
-  Signature: String;
+  Signature: TBinFileSign;
+  ContentSignature: TBinFileSign;
 begin
   PackedFileName := TLabel(Sender).Text;
 
-  Signature := String(FilePacker.GetPackedFileSignature(PackedFileName));
-  if Signature = 'PACKFILE' then
+  Signature := FilePacker.GetPackedFileSignature(PackedFileName);
+
+  if not TBinFileHeader.IsSignExists(Signature) then
+  begin
+    ContentSignature := FilePacker.ContentSignature;
+    if not TBinFileHeader.IsSignExists(ContentSignature) then
+      raise Exception.Create('TAddingFilesFrame.OuterOnClickHandler -> ' +
+                             'Signature is not exists');
+
+    // Может быть несколько уровней вложенности для упакованных файлов
+    // По этому проверяем на сигнатуру упакованного файла
+    // Если не отвечает - значит вошли внутрь
+    FLabelOnClickHandlerProcRef := InnerOnClickHandler;
+    FLabelOnClickHandlerProcRef(Sender);
+
+    Exit;
+  end;
+
+  if Signature = PACK_FILE_SIGNATURE then
   begin
     FilePacker.GoIn(PackedFileName);
 
     ShowFileList(ScrollBox, FilePacker, LabelOnClickHandler);
   end
   else
-  if Signature = 'PARAMSFILE' then
+  if Signature = PARAMS_FILE_SIGNATURE then
   begin
     ExtractParams(PackedFileName);
-  end
-  else
-  begin
-    FLabelOnClickHandlerProcRef := InnerOnClickHandler;
-    FLabelOnClickHandlerProcRef(Sender);
   end;
 end;
 
