@@ -47,7 +47,7 @@ var
   V: Variant;
 begin
   // Читаем имя из блока данных
-  ParamIdent := FStream.ReadString;
+  ParamIdent := FStream.ReadUString;
 
   V := FStream.ReadVariant;
 
@@ -59,7 +59,7 @@ procedure TParamsExtStream.WriteDataBlock(
   const AParam: TParamRecord);
 begin
   // Пишем имя в блок с данными
-  FStream.WriteString(AParam.Ident);
+  FStream.WriteUString(AParam.Ident);
 
   FStream.WriteVariant(AParam.v);
 end;

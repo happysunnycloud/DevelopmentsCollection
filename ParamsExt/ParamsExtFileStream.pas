@@ -194,7 +194,7 @@ begin
   FIndex := TList<TParamIndexItem>.Create;
   for I := 0 to Count - 1 do
   begin
-    Item.Ident := Stream.ReadString;
+    Item.Ident := Stream.ReadUString;
     Stream.ReadBuffer(Item.Offset, BufferSize);
     FIndex.Add(Item);
   end;
@@ -234,7 +234,7 @@ begin
   SizeOffset := SizeOf(Int64);
   for I := 0 to High(Params) do
   begin
-    Stream.WriteString(Params[I].Ident);
+    Stream.WriteUString(Params[I].Ident);
     Zero := 0;
     Stream.WriteBuffer(Zero, SizeOffset); // offset placeholder
   end;
@@ -252,7 +252,7 @@ begin
 
   for I := 0 to High(Params) do
   begin
-    Stream.WriteString(Params[I].Ident);
+    Stream.WriteUString(Params[I].Ident);
     Stream.WriteBuffer(DataOffsets[I], SizeOf(Int64));
   end;
 end;
