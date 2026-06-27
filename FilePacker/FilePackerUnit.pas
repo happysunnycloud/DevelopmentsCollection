@@ -313,10 +313,6 @@ begin
     false);
   try
     StreamHandler.ReadBuffer(Result, SizeOf(TBinFileSign));
-
-    if not IsSignExists(Result) then
-      raise Exception.Create('TFilePacker.GetPackedFileSignature -> ' +
-                             'Signature is not exists');
   finally
     FreeAndNil(StreamHandler);
   end;
@@ -589,7 +585,7 @@ end;
 
 procedure TStreamHandlerExt.WriteFileName(const AStr: String);
 begin
-  WriteString(AStr);
+  WriteUString(AStr);
 end;
 
 procedure TStreamHandlerExt.WriteFilePos(const AVal: Int64);
@@ -604,7 +600,7 @@ end;
 
 procedure TStreamHandlerExt.WriteFat(const AVal: TFat);
 begin
-  WriteString(AVal.Name);
+  WriteUString(AVal.Name);
   WriteInt64(AVal.Pos);
   WriteInt64(AVal.Size);
 end;
@@ -672,7 +668,7 @@ end;
 
 function TStreamHandlerExt.ReadFileName: String;
 begin
-  Result := ReadString;
+  Result := ReadUString;
 end;
 
 function TStreamHandlerExt.ReadFilePos: Int64;
