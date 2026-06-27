@@ -13,6 +13,7 @@ type
     FStream: TStream;
     FStartOffset: Int64;
     FIsStreamOwner: Boolean;
+    FStoredStreamPosition: Int64;
 
     procedure CheckPosition(const APosition: Int64);
 
@@ -30,6 +31,9 @@ type
     function ReadDataSize(const ATypeOfVar: TVarType): Integer;
     function ReadValue<T>(const ATypeOfVar: TVarType): T;
     procedure WriteValue<T>(const ATypeOfVar: TVarType; const AValue: T);
+  protected
+    procedure StoreStreamPosition;
+    procedure RestoreStreamPosition;
   public
     constructor Create(
       const AStream: TStream;
@@ -44,8 +48,9 @@ type
     procedure WriteDateTime(const AVal: TDateTime);
     procedure WriteBoolean(const AVal: Boolean);
     procedure WriteSingle(const AVal: Single);
+    procedure WriteWord(const AVal: Word);
     procedure WriteLongWord(const AVal: LongWord);
-    procedure WriteString(const AVal: String);
+    procedure WriteUString(const AVal: String);
     procedure WriteVariant(const AVal: Variant);
     procedure WriteBuffer(const Buffer; Count: NativeInt);
 
@@ -56,8 +61,9 @@ type
     function ReadDateTime: TDateTime;
     function ReadBoolean: Boolean;
     function ReadSingle: Single;
+    function ReadWord: Word;
     function ReadLongWord: LongWord;
-    function ReadString: String;
+    function ReadUString: String;
     function ReadVariant: Variant;
     procedure ReadBuffer(var Buffer; Count: NativeInt);
 
@@ -143,6 +149,7 @@ begin
   FStream := AStream;
   FStartOffset := AStartOffset;
   FIsStreamOwner := AIsStreamOwner;
+  FStoredStreamPosition := 0;
 
   Position := 0;
 end;
@@ -195,6 +202,16 @@ begin
   FStream.WriteBuffer(AValue, DataSize);
 end;
 
+procedure TBaseStreamHandler.StoreStreamPosition;
+begin
+  FStoredStreamPosition := Position;
+end;
+
+procedure TBaseStreamHandler.RestoreStreamPosition;
+begin
+  Position := FStoredStreamPosition;
+end;
+
 // -------------------------
 // Методы записи через WriteValue<T>
 procedure TBaseStreamHandler.WriteByte(const AVal: Byte);
@@ -232,13 +249,18 @@ begin
   WriteValue<Single>(varSingle, AVal);
 end;
 
+procedure TBaseStreamHandler.WriteWord(const AVal: Word);
+begin
+  WriteValue<Word>(varWord, AVal);
+end;
+
 procedure TBaseStreamHandler.WriteLongWord(const AVal: LongWord);
 begin
   WriteValue<LongWord>(varLongWord, AVal);
 end;
 
 // Для строки — отдельная логика
-procedure TBaseStreamHandler.WriteString(const AVal: String);
+procedure TBaseStreamHandler.WriteUString(const AVal: String);
 var
   TypeOfVar: TVarType;
   DataSize: Integer;
@@ -267,8 +289,9 @@ begin
     varDate: WriteDateTime(TDateTime(AVal));
     varBoolean: WriteBoolean(Boolean(AVal));
     varSingle: WriteSingle(Single(AVal));
+    varWord: WriteWord(TVarData(AVal).VWord);
     varLongWord: WriteLongWord(TVarData(AVal).VLongWord);
-    varUString: WriteString(String(AVal));
+    varUString: WriteUString(String(AVal));
   else
     raise Exception.CreateFmt('Unsupported Variant type %d', [TypeOfVar]);
   end;
@@ -331,12 +354,17 @@ begin
   Result := ReadValue<Single>(varSingle);
 end;
 
+function TBaseStreamHandler.ReadWord: Word;
+begin
+  Result := ReadValue<Word>(varWord);
+end;
+
 function TBaseStreamHandler.ReadLongWord: LongWord;
 begin
   Result := ReadValue<LongWord>(varLongWord);
 end;
 
-function TBaseStreamHandler.ReadString: String;
+function TBaseStreamHandler.ReadUString: String;
 var
   TypeOfVar: TVarType;
   DataSize: Integer;
@@ -370,8 +398,9 @@ begin
     varDate: Result := ReadDateTime;
     varBoolean: Result := ReadBoolean;
     varSingle: Result := ReadSingle;
+    varWord: Result := ReadWord;
     varLongWord: Result := ReadLongWord;
-    varUString: Result := ReadString;
+    varUString: Result := ReadUString;
   else
     raise Exception.CreateFmt('Unsupported Variant type %d in file', [TypeOfVar]);
   end;
@@ -455,10 +484,14 @@ function TStreamHandler.ReadSignature: TBinFileSign;
 var
   Signature: TBinFileSign;
 begin
+  StoreStreamPosition;
+
   Signature := '';
 
   Position := 0;
   ReadBuffer(Signature, SizeOf(TBinFileSign));
+
+  RestoreStreamPosition;
 
   Result := Signature;
 end;
@@ -467,12 +500,18 @@ function TStreamHandler.ReadVersion: TBinFileVer;
 var
   Version: TBinFileVer;
 begin
+  StoreStreamPosition;
+
   Version.Major := 0;
   Version.Minor := 0;
 
-  ReadSignature;
+  Position :=
+    0 +
+    SizeOf(TBinFileSign);
 
   ReadBuffer(Version, SizeOf(TBinFileVer));
+
+  RestoreStreamPosition;
 
   Result := Version;
 end;
@@ -481,12 +520,18 @@ function TStreamHandler.ReadContentSignature: TBinFileSign;
 var
   ContentSignature: TBinFileSign;
 begin
+  StoreStreamPosition;
+
   ContentSignature := '';
 
-  ReadSignature;
-  ReadVersion;
+  Position :=
+    0 +
+    SizeOf(TBinFileSign) +
+    SizeOf(TBinFileVer);
 
   ReadBuffer(ContentSignature, SizeOf(TBinFileSign));
+
+  RestoreStreamPosition;
 
   Result := ContentSignature;
 end;
@@ -495,24 +540,32 @@ function TStreamHandler.ReadContentVersion: TBinFileVer;
 var
   Version: TBinFileVer;
 begin
+  StoreStreamPosition;
+
   Version.Major := 0;
   Version.Minor := 0;
 
-  ReadSignature;
-  ReadVersion;
-  ReadContentSignature;
+  Position :=
+    0 +
+    SizeOf(TBinFileSign) +
+    SizeOf(TBinFileVer) +
+    SizeOf(TBinFileSign);
 
   ReadBuffer(Version, SizeOf(TBinFileVer));
+
+  RestoreStreamPosition;
 
   Result := Version;
 end;
 
 procedure TStreamHandler.PassHeader;
 begin
-  ReadSignature;
-  ReadVersion;
-  ReadContentSignature;
-  ReadContentVersion;
+  Position :=
+    0 +
+    SizeOf(TBinFileSign) +
+    SizeOf(TBinFileVer) +
+    SizeOf(TBinFileSign) +
+    SizeOf(TBinFileVer);
 end;
 
 end.
