@@ -777,6 +777,18 @@ begin
     if not VisibleState then
       ShowWindow(ApplicationHwnd, SW_HIDE);
 
+    if Result in [
+      mrCancel, mrAbort,
+      mrRetry,  mrIgnore,
+      mrNo   ,  mrClose,
+      mrHelp ,  mrTryAgain,
+      mrNoToAll] then
+    begin
+      NoteForm.DontShowNextTimeCheckBox.IsChecked := false;
+
+      Exit;
+    end;
+
     ANoteIdent.ShowNextTime := not NoteForm.DontShowNextTimeCheckBox.IsChecked;
     if not ANoteIdent.ShowNextTime then
       ANoteIdent.DefaultResult := Result;
