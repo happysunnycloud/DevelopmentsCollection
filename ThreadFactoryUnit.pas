@@ -643,6 +643,9 @@ end;
 
 procedure TThreadExt.Terminate;
 begin
+  if Terminated then
+    Exit;
+
   FCriticalSection.Enter;
   try
     inherited Terminate;
