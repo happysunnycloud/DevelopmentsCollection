@@ -16,6 +16,9 @@ type
     FFileStreamObj: TObject;
     FMemoryStreamObj: TObject;
     FStreamKind: TStreamKind;
+
+    function GetContentSignature: TBinFileSign;
+    function GetContentVersion: TBinFileVer;
   public
     constructor Create(
       const AFileName: String;
@@ -41,6 +44,14 @@ type
     function TryGetParam(
       const AParamIndex: Integer;
       var AVal: Variant): Boolean; overload;
+
+    property ContentSignature: TBinFileSign read GetContentSignature;
+    property ContentVersion: TBinFileVer read GetContentVersion;
+
+    function IsContentSignatureEquals(
+      const AContentSignature: TBinFileSign): Boolean;
+    function IsContentVersionEquals(
+      const AContentVersion: TBinFileVer): Boolean;
   end;
 
 implementation
@@ -78,7 +89,6 @@ begin
       'Object is not a "%s" class', [TParamsExtFileStream.ClassName]);
 
   Result := Self as TParamsExtFileStream;
-
 end;
 
 function TParamsExtObjHelper.AsMemoryStream: TParamsExtMemoryStream;
@@ -181,6 +191,44 @@ begin
   else
   if FStreamKind = skMemory then
     FMemoryStreamObj.AsMemoryStream.LoadFromStream(FParamsExtObj.AsParamsExt)
+end;
+
+function TParamsExtStreamer.GetContentSignature: TBinFileSign;
+begin
+  if FStreamKind = skFile then
+    Result := FFileStreamObj.AsFileStream.ContentSignature
+  else
+  if FStreamKind = skMemory then
+    raise Exception.Create('Method not supported for memory stream');
+end;
+
+function TParamsExtStreamer.GetContentVersion: TBinFileVer;
+begin
+  if FStreamKind = skFile then
+    Result := FFileStreamObj.AsFileStream.ContentVersion
+  else
+  if FStreamKind = skMemory then
+    raise Exception.Create('Method not supported for memory stream');
+end;
+
+function TParamsExtStreamer.IsContentSignatureEquals(
+  const AContentSignature: TBinFileSign): Boolean;
+var
+  ContentSignature: TBinFileSign;
+begin
+  ContentSignature := GetContentSignature;
+  Result := ContentSignature = AContentSignature;
+end;
+
+function TParamsExtStreamer.IsContentVersionEquals(
+  const AContentVersion: TBinFileVer): Boolean;
+var
+  ContentVersion: TBinFileVer;
+begin
+  ContentVersion := GetContentVersion;
+  Result :=
+    (ContentVersion.Major = AContentVersion.Major) and
+    (ContentVersion.Minor = AContentVersion.Minor);
 end;
 
 function TParamsExtStreamer.TryGetParam(
