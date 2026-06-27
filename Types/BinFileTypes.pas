@@ -7,9 +7,14 @@ uses
 
 type
   TBinFileSign = array[0..9] of AnsiChar;
+
   TBinFileVer = packed record
     Major: Word;
     Minor: Word;
+
+    procedure Create(
+      const AMajor: Word;
+      const AMinor: Word);
   end;
 
   TBinFileHeader = packed record
@@ -17,9 +22,12 @@ type
     Version: TBinFileVer;
     ContentSignature: TBinFileSign;
     ContentVersion: TBinFileVer;
+
+    class function IsSignExists(const ASign: TBinFileSign): Boolean; static;
   end;
 
 const
+  NONE_SIGN_FILE_SIGNATURE: TBinFileSign = 'NONESIGN';
   // При добавлении новой сигнатуры добавить в проверку IsSignExists
   // Пак-файл - бинарный контейнер для любых файлов
   PACK_FILE_SIGNATURE: TBinFileSign = 'PACKFILE';
@@ -35,11 +43,24 @@ const
   // Пак-файл с пак-файлами
   ADD_FILE_CONTENT_SIGNATURE: TBinFileSign = 'ADDPACK';
 
-function IsSignExists(const ASign: TBinFileSign): Boolean;
-
 implementation
 
-function IsSignExists(const ASign: TBinFileSign): Boolean;
+uses
+    System.Math
+  ;
+
+{ TBinFileVer }
+procedure TBinFileVer.Create(
+  const AMajor: Word;
+  const AMinor: Word);
+begin
+  Self.Major := AMajor;
+  Self.Minor := AMinor;
+end;
+
+{ TBinFileHeader }
+
+class function TBinFileHeader.IsSignExists(const ASign: TBinFileSign): Boolean;
 begin
   Result := false;
 
