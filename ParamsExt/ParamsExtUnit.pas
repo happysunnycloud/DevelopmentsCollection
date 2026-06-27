@@ -4,7 +4,7 @@
 // Класс для упаковки/распаковки параметров
 // Упрощает передачу параметров, которые передаются как массив констант
 
-// Несохраняем и не читаем типа Pointer,
+// Несохраняем и не читаем тип Pointer,
 // Нет смысла хранить указатели, так как они имеют динамические значения
 
 unit ParamsExtUnit;
@@ -104,7 +104,6 @@ type
     // Важно для TryGetParam
     procedure CheckDuplicateIdent(const AIdent: String);
   public
-//    constructor Create(const AVars: array of Variant); overload;
     constructor Create; overload;
     destructor Destroy; override;
 
@@ -119,6 +118,7 @@ type
       const AVarType: TVarType;
       const AIdent: String = '');
 
+    // ***** Оставляем для обратной совместимости ***** //
     property  AsInt64    [const AIndex: Word]: Int64      read GetAsInt64;
     property  AsString   [const AIndex: Word]: String     read GetAsString;
     property  AsTime     [const AIndex: Word]: TTime      read GetAsTime;
@@ -169,10 +169,10 @@ type
 
     function  IfAsVariantByIdent   (const AIdent: String; const ADefVal: Variant):   Variant;
     function  IfAsTVarTypeByIdent  (const AIdent: String; const ADefVal: TVarType):  TVarType;
+    // ***** Оставляем для обратной совместимости ***** //
 
     function  Exists(const AIdent: String):  Boolean;
 
-    //function  IndexOf(const AIdent: String; const AOffset: Integer = 0): Integer;
     function  IndexBy(
       const AIdent: String;
       const AOffset: Integer = 0): Integer;
@@ -201,6 +201,14 @@ type
     procedure Get<T>(
       var AVal: T;
       const AParamIdent: String); overload;
+    procedure GetDef<T>(
+      var AVal: T;
+      const AParamIndex: Integer;
+      const ADefVal: T); overload;
+    procedure GetDef<T>(
+      var AVal: T;
+      const AParamIdent: String;
+      const ADefVal: T); overload;
     function TryGet<T>(
       var AVal: T;
       const AParamIndex: Integer): Boolean; overload;
@@ -243,6 +251,13 @@ type
     function TryGetParamFromStream(
       var AVal: Variant;
       const AParamIndex: Integer): Boolean; overload;
+
+    procedure SaveToFile(
+      const AFileName: String); overload;
+    procedure SaveToFile(
+      const AFileName: String;
+      const AContentSignature: TBinFileSign;
+      const AContentVersion: TBinFileVer); overload;
     // Сохраняет данные в стрим вместе с файловым заголовком
     // Сохраняет в физический файл на диске
     procedure SaveToStreamAsFile(
@@ -259,6 +274,12 @@ type
     procedure SaveToStream(
       const AStream: TStream); overload;
 
+    procedure LoadFromFile(
+      const AFileName: String); overload;
+    procedure LoadFromFile(
+      const AFileName: String;
+      const AContentSignature: TBinFileSign;
+      const AContentVersion: TBinFileVer); overload;
     // Читает данные из стрима вместе с файловым заголовком
     // Читает из физического файла на диске
     procedure LoadFromStreamAsFile(const AFileName: String); overload;
@@ -340,93 +361,6 @@ function TParamsExt.TryGetIndexByIdent(
 begin
   Result := GetIndexByIdent(AIdent, AOffset, false);
 end;
-
-//function TParamsExt.TypeCompare(
-//  const AVarTypeSource: TVarType;
-//  const AVarTypeDest: TVarType): Boolean;
-//begin
-//  Result := AVarTypeSource = AVarTypeDest;
-//end;
-
-//procedure TParamsExt.CheckType<T>(const AVarType: TVarType);
-//const
-//  METHOD = 'CheckType<T>';
-//var
-//  TInfo: Pointer;
-//  TypeCompareResult: Boolean;
-//begin
-//  TInfo := TypeInfo(T);
-//  if TInfo = TypeInfo(Byte) then
-//    TypeCompareResult := AVarType = varByte
-//  else
-//  if TInfo = TypeInfo(Single) then
-//    TypeCompareResult := AVarType = varSingle
-//  else
-//  if TInfo = TypeInfo(Double) then
-//    TypeCompareResult := AVarType = varDouble
-//  else
-//  if TInfo = TypeInfo(Variant) then
-//    TypeCompareResult := AVarType = varVariant
-//  else
-//  if TInfo = TypeInfo(Word) then
-//    TypeCompareResult := AVarType = varWord
-//  else
-//  if TInfo = TypeInfo(LongWord) then
-//    TypeCompareResult := AVarType = varLongWord
-//  else
-//  if TInfo = TypeInfo(Pointer) then
-//    TypeCompareResult := AVarType = varByRef
-//  else
-//  if TInfo = TypeInfo(Integer) then
-//    TypeCompareResult := AVarType = varInteger
-//  else
-//  if TInfo = TypeInfo(Int64) then
-//    TypeCompareResult := AVarType = varInt64
-//  else
-//  if TInfo = TypeInfo(Double) then
-//    TypeCompareResult := AVarType = varDouble
-////  else
-////  if TInfo = TypeInfo(Cardinal) then
-////    TypeCompareResult := AVarType = varUInt32
-//  else
-//  if TInfo = TypeInfo(Currency) then
-//    TypeCompareResult := AVarType = varCurrency
-//  else
-//  if TInfo = TypeInfo(Boolean) then
-//    TypeCompareResult := AVarType = varBoolean
-//  else
-//  if TInfo = TypeInfo(String) then
-//    TypeCompareResult := AVarType = varString
-//  else
-//  if TInfo = TypeInfo(TDateTime) then
-//    TypeCompareResult := AVarType = varDate
-//  else
-//    raise Exception.CreateFmt('%s.%s: Unknown type', [CLASS_NAME, METHOD]);
-//
-//  if not TypeCompareResult then
-//    raise Exception.CreateFmt('%s.%s: Type mismatch', [CLASS_NAME, METHOD]);
-//end;
-
-//constructor TParamsExt.Create(const AVars: array of Variant);
-//var
-//  i: Word;
-//  _Length: Word;
-//begin
-//  System.SetLength(FParams, 0);
-//
-//  _Length := System.Length(AVars);
-//  if _Length = 0 then
-//    raise Exception.Create(Format('%s.%s: AVars is empty', [CLASS_NAME, 'Create']));
-//
-//  for i := 0 to Pred(_Length) do
-//  begin
-//    Add(AVars[i]);
-//  end;
-//
-//  FParamsExtStreamer := nil;
-//
-//  inherited Create;
-//end;
 
 constructor TParamsExt.Create;
 begin
@@ -1127,23 +1061,6 @@ begin
   Result := FParamsExtStreamer.TryGetParam(AParamIndex, AVal);
 end;
 
-//function TParamsExt.TryGetVariant(
-//  var AVal: Variant;
-//  const AParamIdent: String): Boolean;
-//var
-//  i: Integer;
-//begin
-//  Result := false;
-//  AVal := null;
-//
-//  i := TryGetIndexByIdent(AParamIdent);
-//  if i < 0 then
-//    Exit;
-//
-//  AVal := Params[i].v;
-//  Result := true;
-//end;
-
 function TParamsExt.TryGetParamRecord(
   var AParamRecord: TParamRecord;
   const AParamIdent: String): Boolean;
@@ -1197,6 +1114,36 @@ begin
   Get<T>(AVal, i);
 end;
 
+procedure TParamsExt.GetDef<T>(
+  var AVal: T;
+  const AParamIndex: Integer;
+  const ADefVal: T);
+const
+  METHOD = 'GetDef';
+var
+  i: Integer;
+  Val: T;
+  VT: TVarType;
+begin
+  if not TryGet<T>(AVal, AParamIndex) then
+    AVal := ADefVal;
+end;
+
+procedure TParamsExt.GetDef<T>(
+  var AVal: T;
+  const AParamIdent: String;
+  const ADefVal: T);
+const
+  METHOD = 'GetDef';
+var
+  i: Integer;
+  Val: T;
+  VT: TVarType;
+begin
+  if not TryGet<T>(AVal, AParamIdent) then
+    AVal := ADefVal;
+end;
+
 function TParamsExt.TryGet<T>(
   var AVal: T;
   const AParamIndex: Integer): Boolean;
@@ -1246,7 +1193,7 @@ var
   RootName: String;
 begin
   RootName := AName + '.';
-  AddAsType(AName, varString, RootName + AName);
+  AddAsType(AName, varUString, RootName + 'Name');
   VarType := TTypesManager.TypeToVarType<T>;
   AddAsType(VarType, varWord, RootName + 'VarType');
   Count := AList.Count;
@@ -1272,7 +1219,7 @@ var
   RootName: String;
 begin
   RootName := AName + '.';
-  Index := IndexBy(RootName + AName);
+  Index := IndexBy(RootName + 'Name');
   Get<String>(Name, Index);
   Inc(Index);
   Get<Word>(VarType, Index);
@@ -1486,16 +1433,46 @@ begin
   FreeAndNil(FParamsExtStreamer);
 end;
 
+procedure TParamsExt.SaveToFile(
+  const AFileName: String);
+var
+  ContentSignature: TBinFileSign;
+  ContentVersion: TBinFileVer;
+begin
+  ContentSignature := NONE_SIGN_FILE_SIGNATURE;
+  ContentVersion.Create(0, 0);
+
+  SaveToFile(AFileName, ContentSignature, ContentVersion);
+end;
+
+procedure TParamsExt.SaveToFile(
+  const AFileName: String;
+  const AContentSignature: TBinFileSign;
+  const AContentVersion: TBinFileVer);
+begin
+  OpenStreamAsFile(AFileName, fmCreate);
+  try
+    FParamsExtStreamer.SaveToStream(
+      AContentSignature,
+      AContentVersion);
+  finally
+    CloseStream;
+  end;
+end;
+
 procedure TParamsExt.SaveToStreamAsFile(
   const AContentSignature: TBinFileSign;
   const AContentVersion: TBinFileVer;
   const AFileName: String);
 begin
   OpenStreamAsFile(AFileName, fmCreate);
-  FParamsExtStreamer.SaveToStream(
-    AContentSignature,
-    AContentVersion);
-  CloseStream;
+  try
+    FParamsExtStreamer.SaveToStream(
+      AContentSignature,
+      AContentVersion);
+  finally
+    CloseStream;
+  end;
 end;
 
 procedure TParamsExt.SaveToStreamAsFile(
@@ -1504,42 +1481,99 @@ procedure TParamsExt.SaveToStreamAsFile(
   const AStream: TStream);
 begin
   OpenStreamAsFile(AStream);
-  FParamsExtStreamer.SaveToStream(
-    AContentSignature,
-    AContentVersion);
-  CloseStream;
+  try
+    FParamsExtStreamer.SaveToStream(
+      AContentSignature,
+      AContentVersion);
+  finally
+    CloseStream;
+  end;
 end;
 
 procedure TParamsExt.SaveToStream(
   const AStream: TStream);
 begin
   OpenStream(AStream);
-  FParamsExtStreamer.SaveToStream;
-  CloseStream;
+  try
+    FParamsExtStreamer.SaveToStream;
+  finally
+    CloseStream;
+  end;
+end;
+
+procedure TParamsExt.LoadFromFile(
+  const AFileName: String);
+var
+  ContentSignature: TBinFileSign;
+  ContentVersion: TBinFileVer;
+begin
+  ContentSignature := NONE_SIGN_FILE_SIGNATURE;
+  ContentVersion.Create(0, 0);
+
+  LoadFromFile(AFileName, ContentSignature, ContentVersion);
+end;
+
+procedure TParamsExt.LoadFromFile(
+  const AFileName: String;
+  const AContentSignature: TBinFileSign;
+  const AContentVersion: TBinFileVer);
+begin
+  OpenStreamAsFile(AFileName, fmOpenRead);
+  try
+    if not FParamsExtStreamer.IsContentSignatureEquals(AContentSignature) then
+      raise Exception.Create('The content signature does not match');
+    if not FParamsExtStreamer.IsContentVersionEquals(AContentVersion) then
+      raise Exception.Create('The content version does not match');
+
+    FParamsExtStreamer.LoadFromStream;
+  finally
+    CloseStream;
+  end;
 end;
 
 procedure TParamsExt.LoadFromStreamAsFile(const AFileName: String);
 begin
   OpenStreamAsFile(AFileName, fmOpenRead);
-  FParamsExtStreamer.LoadFromStream;
-  CloseStream;
+  try
+    FParamsExtStreamer.LoadFromStream;
+  finally
+    CloseStream;
+  end;
 end;
 
 procedure TParamsExt.LoadFromStreamAsFile(const AStream: TStream);
 begin
   OpenStreamAsFile(AStream);
-  FParamsExtStreamer.LoadFromStream;
-  CloseStream;
+  try
+    FParamsExtStreamer.LoadFromStream;
+  finally
+    CloseStream;
+  end;
 end;
 
 procedure TParamsExt.LoadFromStream(const AStream: TStream);
 begin
   OpenStream(AStream);
-  FParamsExtStreamer.LoadFromStream;
-  CloseStream;
+  try
+    FParamsExtStreamer.LoadFromStream;
+  finally
+    CloseStream;
+  end;
 end;
 
 { TypesManager }
+
+class procedure TTypesManager.CheckType<T>(const AVarType: TVarType);
+const
+  METHOD = 'CheckType<T>';
+var
+  TypeCompareResult: Boolean;
+begin
+  TypeCompareResult := TypeToVarType<T> = AVarType;
+
+  if not TypeCompareResult then
+    raise Exception.CreateFmt('%s.%s: Type mismatch', [CLASS_NAME, METHOD]);
+end;
 
 class function TTypesManager.GetVarTypeByName(
   const AName: TSymbolName): TVarType;
@@ -1565,58 +1599,46 @@ begin
     Dec(i);
   end;
 
-  if TypeName = 'Byte' then
+  if TypeName.ToLower.Equals('Byte'.ToLower) then
     Result := varByte
   else
-  if TypeName = 'Integer' then
+  if TypeName.ToLower.Equals('Integer'.ToLower) then
     Result := varInteger
   else
-  if TypeName = 'Int64' then
+  if TypeName.ToLower.Equals('Int64'.ToLower) then
     Result := varInt64
   else
-  if TypeName = 'Word' then
+  if TypeName.ToLower.Equals('Word'.ToLower) then
     Result := varWord
   else
-  if TypeName = 'Single' then
+  if TypeName.ToLower.Equals('Single'.ToLower) then
     Result := varSingle
   else
-  if TypeName = 'Cardinal' then
+  if TypeName.ToLower.Equals('Cardinal'.ToLower) then
     Result := varLongWord
   else
-  if TypeName = 'LongWord' then
+  if TypeName.ToLower.Equals('LongWord'.ToLower) then
     Result := varLongWord
   else
-  if TypeName = 'Double' then
+  if TypeName.ToLower.Equals('Double'.ToLower) then
     Result := varDouble
   else
-  if TypeName = 'String' then
-    Result := varString
+  if TypeName.ToLower.Equals('String'.ToLower) then
+    Result := varUString
   else
-  if TypeName = 'Pointer' then
+  if TypeName.ToLower.Equals('Pointer'.ToLower) then
     Result := varByRef
   else
-  if TypeName = 'Currency' then
+  if TypeName.ToLower.Equals('Currency'.ToLower) then
     Result := varCurrency
   else
-  if TypeName = 'Boolean' then
+  if TypeName.ToLower.Equals('Boolean'.ToLower) then
     Result := varBoolean
   else
-  if TypeName = 'TDateTime' then
+  if TypeName.ToLower.Equals('TDateTime'.ToLower) then
     Result := varDate
   else
     raise Exception.CreateFmt('%s.%s: Unknown type', [CLASS_NAME, METHOD]);
-end;
-
-class procedure TTypesManager.CheckType<T>(const AVarType: TVarType);
-const
-  METHOD = 'CheckType<T>';
-var
-  TypeCompareResult: Boolean;
-begin
-  TypeCompareResult := TypeToVarType<T> = AVarType;
-
-  if not TypeCompareResult then
-    raise Exception.CreateFmt('%s.%s: Type mismatch', [CLASS_NAME, METHOD]);
 end;
 
 class function TTypesManager.TypeToVarType<T>: TVarType;
@@ -1650,7 +1672,7 @@ begin
     Result := varDouble
   else
   if TypeInfo(T) = TypeInfo(String) then
-    Result := varString
+    Result := varUString
   else
   if TypeInfo(T) = TypeInfo(Pointer) then
     Result := varByRef
@@ -1680,15 +1702,10 @@ begin
     varSingle: Result := TypeInfo(Single);
     varLongWord: Result := TypeInfo(LongWord);
     varDouble: Result := TypeInfo(Double);
-
-    varString: Result := TypeInfo(String);
-
+    varUString: Result := TypeInfo(String);
     varByRef: Result := TypeInfo(Pointer);
-
     varCurrency: Result := TypeInfo(Currency);
-
     varBoolean: Result := TypeInfo(Boolean);
-
     varDate: Result := TypeInfo(TDateTime);
 //  if AVarType = varCardinal then
 //    Result := TypeInfo(Cardinal)
@@ -1727,7 +1744,7 @@ begin
     varSingle: AParams.FromList<Single>(AValue.AsType<TList<Single>>, Name);
     varLongWord: AParams.FromList<LongWord>(AValue.AsType<TList<LongWord>>, Name);
     varDouble: AParams.FromList<Double>(AValue.AsType<TList<Double>>, Name);
-    varString: AParams.FromList<String>(AValue.AsType<TList<String>>, Name);
+    varUString: AParams.FromList<String>(AValue.AsType<TList<String>>, Name);
     varByRef: AParams.FromList<Pointer>(AValue.AsType<TList<Pointer>>, Name);
     varCurrency: AParams.FromList<Currency>(AValue.AsType<TList<Currency>>, Name);
     varBoolean: AParams.FromList<Boolean>(AValue.AsType<TList<Boolean>>, Name);
@@ -1758,7 +1775,7 @@ begin
     varSingle: AParams.ToList<Single>(AValue.AsType<TList<Single>>, Name);
     varLongWord: AParams.ToList<LongWord>(AValue.AsType<TList<LongWord>>, Name);
     varDouble: AParams.ToList<Double>(AValue.AsType<TList<Double>>, Name);
-    varString: AParams.ToList<String>(AValue.AsType<TList<String>>, Name);
+    varUString: AParams.ToList<String>(AValue.AsType<TList<String>>, Name);
     varByRef: AParams.ToList<Pointer>(AValue.AsType<TList<Pointer>>, Name);
     varCurrency: AParams.ToList<Currency>(AValue.AsType<TList<Currency>>, Name);
     varBoolean: AParams.ToList<Boolean>(AValue.AsType<TList<Boolean>>, Name);
