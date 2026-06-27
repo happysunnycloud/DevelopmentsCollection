@@ -62,8 +62,6 @@ type
     FVolume: Single;
 
     FOnGetDataExternalHandler: TDataProc;
-    FOnFinishedExternalHandler: TProc;
-
 
     procedure SetFileName(const AFileName: String);
     function GetFileName: String;
@@ -75,21 +73,16 @@ type
     function GetVolume: Single;
 
     function GetDuration: TMediaTime;
-
     function GetMediaState: TMediaState;
-
     procedure SaveLastValues;
-
     procedure OnGetDataInternalHandler;
-    procedure OnFinishedInternalHandler;
+    procedure SetOnFinishedProcRef(const AOnFinishedProcRef: TProc);
+    procedure SingleSoundThreadOnTerminateHandler(Sender: TObject);
 
     procedure ResetValues;
-
     procedure UpdateCache;
 
     procedure RaiseMainThreadOnlyException(const AMethod: String);
-//  private
-//    property MediaPlayer: TMediaPlayer read FMediaPlayer;
   public
     constructor Create(const AThreadFactory: TThreadFactory);
     destructor Destroy; override;
@@ -104,7 +97,7 @@ type
     property MediaState: TMediaState read GetMediaState;
 
     property OnGetData: TDataProc write FOnGetDataExternalHandler;
-    property OnFinished: TProc write FOnFinishedExternalHandler;
+    property OnFinishedProcRef: TProc write SetOnFinishedProcRef;
 
     procedure Play; overload;
     procedure Play(const ACurrentTime: TMediaTime); overload;
@@ -148,11 +141,14 @@ type
     property OnGetData: TProc read GetOnGetData write SetOnGetData;
     property OnFinished: TProc read GetOnFinished write SetOnFinished;
 
-    property GetDataEvent: TEvent read FGetDataEvent;
 //    property HoldEvent: TEvent read FHoldEvent;
   end;
 
 implementation
+
+//uses
+//    DebugUnit
+//  ;
 
 { TSingleSound }
 
@@ -220,6 +216,11 @@ begin
   end;
 end;
 
+procedure TSingleSound.SingleSoundThreadOnTerminateHandler(Sender: TObject);
+begin
+  FSingleSoundThread := nil;
+end;
+
 constructor TSingleSound.Create(const AThreadFactory: TThreadFactory);
 begin
   try
@@ -229,15 +230,14 @@ begin
     FCriticalSection := TCriticalSection.Create;
 
     FOnGetDataExternalHandler := nil;
-    FOnFinishedExternalHandler := nil;
 
     FMediaPlayer := TMediaPlayer.Create(nil);
     FSingleSoundThread := TSingleSoundThread.Create(AThreadFactory, Self);
     FSingleSoundThread.OnGetData := OnGetDataInternalHandler;
-    FSingleSoundThread.OnFinished := OnFinishedInternalHandler;
+    FSingleSoundThread.OnFinished := nil;
     FSingleSoundThread.UnHoldThread;
-//    FSingleSoundThread.HoldEvent.SetEvent;
     FSingleSoundThread.Start;
+    FSingleSoundThread.OnTerminate := SingleSoundThreadOnTerminateHandler;
 
     ResetValues;
   except
@@ -248,19 +248,11 @@ end;
 
 destructor TSingleSound.Destroy;
 begin
-//  if Assigned(FSingleSoundThread) then
-//  begin
-//    FSingleSoundThread.Terminate;
-//    FSingleSoundThread.GetDataEvent.SetEvent;
-//    FSingleSoundThread.HoldEvent.SetEvent;
-//    FSingleSoundThread.WaitForDone;
-//    FSingleSoundThread := nil;
-//  end;
-
+  if Assigned(FSingleSoundThread) then
+    FSingleSoundThread.Terminate;
   FSingleSoundThread := nil;
 
   FreeAndNil(FMediaPlayer);
-
   FreeAndNil(FCriticalSection);
 end;
 
@@ -407,8 +399,8 @@ begin
   {$IFDEF ANDROID}
   FMediaPlayer.FileName := FileName;
   {$ENDIF}
-  FMediaPlayer.Play;
   FMediaPlayer.CurrentTime := Time;
+  FMediaPlayer.Play;
   FMediaPlayer.Volume := Volume;
 
   UpdateCache;
@@ -513,14 +505,9 @@ begin
       end);
 end;
 
-procedure TSingleSound.OnFinishedInternalHandler;
+procedure TSingleSound.SetOnFinishedProcRef(const AOnFinishedProcRef: TProc);
 begin
-  if Assigned(FOnFinishedExternalHandler) then
-    TThread.Queue(nil,
-      procedure
-      begin
-        FOnFinishedExternalHandler;
-      end);
+  FSingleSoundThread.OnFinished := AOnFinishedProcRef;
 end;
 
 { TSingleSoundThread }
@@ -621,8 +608,6 @@ begin
   FDoneEvent.ResetEvent;
   HoldThread;
   ExecHold;
-//  FHoldEvent.ResetEvent;
-//  FHoldEvent.WaitFor(INFINITE);
   try
     while not Terminated do
     begin
@@ -649,7 +634,6 @@ begin
             if Assigned(OnFinished) then
             begin
               HoldThread;
-              //FHoldEvent.ResetEvent;
               OnFinished();
             end;
           end;
@@ -662,7 +646,6 @@ begin
 
       if not Terminated then
         ExecHold;
-        //FHoldEvent.WaitFor(INFINITE);
 
       if not Terminated then
         Sleep(100);
