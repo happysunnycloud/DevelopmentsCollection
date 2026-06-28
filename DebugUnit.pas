@@ -2,8 +2,10 @@ unit DebugUnit;
 
 interface
 
+{$IFDEF MSWINDOWS}
 uses
   Winapi.Windows;
+{$ENDIF}
 
 type
   TDebug = class
@@ -17,8 +19,10 @@ implementation
 
 class procedure TDebug.ODS(const Msg: String);
 begin
+{$IFDEF MSWINDOWS}
 {$IFDEF DEBUG}
   OutputDebugString(PChar(Msg));
+{$ENDIF}
 {$ENDIF}
 end;
 
