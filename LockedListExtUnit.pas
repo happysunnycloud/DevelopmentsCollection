@@ -1,4 +1,4 @@
-﻿{0.1}
+﻿{0.2}
 
 unit LockedListExtUnit;
 
@@ -17,6 +17,7 @@ type
 
     function GetItem(Index: Integer): T;
     function GetFirst: T;
+    function GetCount: Integer;
   public
     constructor Create;
     destructor Destroy; override;
@@ -30,15 +31,16 @@ type
     procedure RemoveItem(Item: T; Direction: TList.TDirection);
     procedure Delete(const AIndex: Integer);
 
-    function Count: Word;
-
     function Item(const AIndex: Integer): T; deprecated 'Use "Items" property';
 
     property Items[Index: Integer]: T read GetItem;
     property First: T read GetFirst;
+    property Count: Integer read GetCount;
   end;
 
 implementation
+
+{ TLockedListExt<T> }
 
 constructor TLockedListExt<T>.Create;
 begin
@@ -121,16 +123,6 @@ begin
   end;
 end;
 
-function TLockedListExt<T>.Count: Word;
-begin
-  LockList;
-  try
-    Result := FList.Count;
-  finally
-    UnlockList;
-  end;
-end;
-
 function TLockedListExt<T>.Item(const AIndex: Integer): T;
 const
   METHOD = 'TLockedListExt<T>.Item';
@@ -175,6 +167,16 @@ begin
       raise Exception.Create(METHOD + ' ' + 'List is empty');
 
     Result := FList.Items[0];
+  finally
+    UnlockList;
+  end;
+end;
+
+function TLockedListExt<T>.GetCount: Integer;
+begin
+  LockList;
+  try
+    Result := FList.Count;
   finally
     UnlockList;
   end;
