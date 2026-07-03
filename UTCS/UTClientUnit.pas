@@ -853,7 +853,8 @@ begin
       begin
         FHeartBeatThread := THeartBeatThread.Create(Self);
         Sleep(1000);
-        FPingTimeoutThread := TPingTimeoutThread.ActivatePingTimeoutThread(Self, PING_TIMEOUT, FOnPingTimeout);
+        FPingTimeoutThread := TPingTimeoutThread.ActivatePingTimeoutThread(
+          Self, PING_TIMEOUT, FOnPingTimeout);
       end
       else
       if ServerCommand = scPingReply.ToInteger then

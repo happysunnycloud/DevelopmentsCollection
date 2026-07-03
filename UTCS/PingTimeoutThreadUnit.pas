@@ -149,7 +149,7 @@ begin
 
           if Assigned(FPingTimeoutHandler) then
           begin
-            TThread.Queue(nil,
+            TThread.ForceQueue(nil,
               procedure
               begin
                 FPingTimeoutHandler(FOwner);
