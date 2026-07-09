@@ -12,34 +12,49 @@ uses
   ;
 
 type
+  TTryHandleFuncRef = reference to
+    procedure (const AE: Exception; var AIsExceptionHandled: Boolean);
+
   TExceptionRaiser = class
   strict private
+    procedure CreateException(const AExceptionMessage: String);
   public
-    class procedure RaiseException(
+    constructor Create;
+
+    procedure RaiseException(
       const AClassName: String;
       const AMethod: String;
       const AE: Exception); overload;
-    class procedure RaiseException(
+    /// <summary>
+    ///  Пробует обработать исключение через вызов ATryHandleFuncRef.
+    ///  Если ATryHandleFuncRef вернет false, тогда поднимется само исключение
+    /// </summary>
+    procedure RaiseException(
+      const AClassName: String;
+      const AMethod: String;
+      const AE: Exception;
+      const ATryHandleFuncRef: TTryHandleFuncRef); overload;
+    procedure RaiseException(
       const AClassName: String;
       const AMethod: String;
       const AMessage: String); overload;
 
-    class procedure TryExcept(
+    procedure TryExcept(
       const AClassName: String;
       const AMethod: String;
       const AProc: TProc);
 
-    class procedure RaiseIfNil(
+    procedure RaiseIfNil(
       const AClassName: String;
       const AMethod: String;
       const ARef: Pointer;
       const AMessage: String);
-    class procedure RaiseIfEmpty(
+    procedure RaiseIfEmpty(
       const AClassName: String;
       const AMethod: String;
       const AStrVal: String;
       const AMessage: String);
-    class procedure RaiseIfFalse(
+    procedure RaiseIfFalse(
       const AClassName: String;
       const AMethod: String;
       const ABoolVal: Boolean;
@@ -50,7 +65,12 @@ implementation
 
 { TExceptionRaiser }
 
-procedure CreateException(const AExceptionMessage: String);
+constructor TExceptionRaiser.Create;
+begin
+// void
+end;
+
+procedure TExceptionRaiser.CreateException(const AExceptionMessage: String);
 begin
   TThread.Queue(nil,
     procedure
@@ -59,19 +79,32 @@ begin
     end);
 end;
 
-class procedure TExceptionRaiser.RaiseException(
+procedure TExceptionRaiser.RaiseException(
   const AClassName: String;
   const AMethod: String;
   const AE: Exception);
-var
-  ExceptionMessage: String;
 begin
-  ExceptionMessage := AClassName + '.' + AMethod + ' -> ' + AE.Message;
-
-  CreateException(ExceptionMessage);
+  RaiseException(AClassName, AMethod, AE.Message);
 end;
 
-class procedure TExceptionRaiser.RaiseException(
+procedure TExceptionRaiser.RaiseException(
+  const AClassName: String;
+  const AMethod: String;
+  const AE: Exception;
+  const ATryHandleFuncRef: TTryHandleFuncRef);
+var
+  Handled: Boolean;
+begin
+  Handled := false;
+
+  if Assigned(ATryHandleFuncRef) then
+    ATryHandleFuncRef(AE, {out} Handled);
+
+  if not Handled then
+    RaiseException(AClassName, AMethod, AE.Message);
+end;
+
+procedure TExceptionRaiser.RaiseException(
   const AClassName: String;
   const AMethod: String;
   const AMessage: String);
@@ -83,7 +116,7 @@ begin
   CreateException(ExceptionMessage);
 end;
 
-class procedure TExceptionRaiser.TryExcept(
+procedure TExceptionRaiser.TryExcept(
   const AClassName: String;
   const AMethod: String;
   const AProc: TProc);
@@ -96,7 +129,7 @@ begin
   end;
 end;
 
-class procedure TExceptionRaiser.RaiseIfNil(
+procedure TExceptionRaiser.RaiseIfNil(
   const AClassName: String;
   const AMethod: String;
   const ARef: Pointer;
@@ -106,7 +139,7 @@ begin
     RaiseException(AClassName, AMethod, AMessage);
 end;
 
-class procedure TExceptionRaiser.RaiseIfEmpty(
+procedure TExceptionRaiser.RaiseIfEmpty(
   const AClassName: String;
   const AMethod: String;
   const AStrVal: String;
@@ -116,7 +149,7 @@ begin
     RaiseException(AClassName, AMethod, AMessage);
 end;
 
-class procedure TExceptionRaiser.RaiseIfFalse(
+procedure TExceptionRaiser.RaiseIfFalse(
   const AClassName: String;
   const AMethod: String;
   const ABoolVal: Boolean;
