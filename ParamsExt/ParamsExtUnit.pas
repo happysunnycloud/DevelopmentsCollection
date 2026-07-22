@@ -109,6 +109,7 @@ type
 
     function  Length: Word;
     function  Count: Word; deprecated 'Use Length';
+    procedure SetNewLength(const ANewLength: Word);
     procedure Clear; virtual;
     procedure Add(const AValue: Variant; const AIdent: String = ''); overload; virtual;
     procedure Add(const AValue: Pointer; const AIdent: String = ''); overload; virtual;
@@ -219,14 +220,30 @@ type
     procedure FromList<T>(
       const AList: TList<T>;
       const AName: String);
+    procedure FromObjectList(
+      const AList: TObject;
+      const AName: String);
     procedure ToList<T>(
       const AList: TList<T>;
       const AName: String);
+    procedure ToObjectList<T>(
+      const AList: TList<T>;
+      const AName: String);
+    { TODO: сделать depricate на ObjectToParams и перевести на новое имя FromObject }
     procedure ObjectToParams(
       const AObject: TObject;
       const AAncestor: String = '';
+      const AObjectIdent: String = ''); deprecated 'Use FromObject';
+    procedure FromObject(
+      const AObject: TObject;
+      const AAncestor: String = '';
       const AObjectIdent: String = '');
+    { TODO: сделать depricate на ParamsToObject и перевести на новое имя ToObject }
     procedure ParamsToObject(
+      const AObject: TObject;
+      const AAncestor: String = '';
+      const AObjectIdent: String = ''); deprecated 'Use ToObject';
+    procedure ToObject(
       const AObject: TObject;
       const AAncestor: String = '';
       const AObjectIdent: String = '');
@@ -913,6 +930,11 @@ begin
   Result := System.Length(FParams);
 end;
 
+procedure TParamsExt.SetNewLength(const ANewLength: Word);
+begin
+  SetLength(FParams, ANewLength);
+end;
+
 procedure TParamsExt.Clear;
 begin
   SetLength(FParams, 0);
@@ -1206,6 +1228,53 @@ begin
   end;
 end;
 
+procedure TParamsExt.FromObjectList(
+  const AList: TObject;
+  const AName: String);
+var
+  Ctx: TRttiContext;
+  ListType: TRttiType;
+  ItemsProp: TRttiIndexedProperty;
+  CountProp: TRttiProperty;
+  I: Integer;
+  Params: TParamsExt;
+  Obj: TObject;
+  RootName: String;
+  VarType: TVarType;
+  Count: Integer;
+begin
+  ListType := Ctx.GetType(AList.ClassType);
+
+  CountProp := ListType.GetProperty('Count');
+  if CountProp = nil then
+    raise Exception.Create('List has no Count property');
+
+  ItemsProp := ListType.GetIndexedProperty('Items');
+  if ItemsProp = nil then
+    raise Exception.Create('List has no indexed Items property');
+
+  RootName := AName + '.';
+  AddAsType(AName, varUString, RootName + 'Name');
+  VarType := varEmpty;
+  AddAsType(VarType, varWord, RootName + 'VarType');
+  Count := CountProp.GetValue(AList).AsInteger;
+  AddAsType(Count, varInteger, RootName + 'Count');
+
+  Params := TParamsExt.Create;
+  try
+    for I := 0 to Pred(Count) do
+    begin
+      Params.Clear;
+      Obj := ItemsProp.GetValue(AList, [I]).AsObject;
+      Params.FromObject(Obj);
+
+      AddFrom(Params);
+    end;
+  finally
+    FreeAndNil(Params);
+  end;
+end;
+
 procedure TParamsExt.ToList<T>(
   const AList: TList<T>;
   const AName: String);
@@ -1230,6 +1299,58 @@ begin
   begin
     Get<T>(v, i + Index);
     AList.Add(TValue.From(v).AsType<T>);
+  end;
+end;
+
+procedure TParamsExt.ToObjectList<T>(
+  const AList: TList<T>;
+  const AName: String);
+var
+  Name: String;
+  VarType: TVarType;
+  Count: Integer;
+  Index: Integer;
+  i, j: Integer;
+  v: T;
+  RootName: String;
+  PropsCount: Integer;
+  Ctx: TRttiContext;
+  RttiType: TRttiInstanceType;
+  Obj: TObject;
+  Params: TParamsExt;
+begin
+  RootName := AName + '.';
+  Index := IndexBy(RootName + 'Name');
+  Get<String>(Name, Index);
+  Inc(Index);
+  Get<Word>(VarType, Index);
+  Inc(Index);
+  Get<Integer>(Count, Index);
+  Inc(Index);
+
+  PropsCount := (Length - Index {header}) div Count;
+
+  RttiType := Ctx.GetType(TypeInfo(T)) as TRttiInstanceType;
+
+  Params := TParamsExt.Create;
+  try
+    for i := 0 to Pred(Count) do
+    begin
+      Obj := RttiType.MetaclassType.Create;
+      Params.Clear;
+      Params.SetNewLength(PropsCount);
+      for j := 0 to Pred(PropsCount) do
+      begin
+        Params.Params[j] := Self.Params[Index];
+
+        Inc(Index);
+      end;
+
+      Params.ToObject(Obj);
+      AList.Add(TValue.From(Obj).AsType<T>);
+    end;
+  finally
+    FreeAndNil(Params);
   end;
 end;
 
@@ -1283,7 +1404,71 @@ begin
         end
         else
         begin
-          ObjectToParams(Value.AsObject, ClassName, ObjectIdent)
+          FromObject(Value.AsObject, ClassName, ObjectIdent)
+        end;
+      end
+      else
+      begin
+        FullPropName := RootName + RttiProp.Name;
+        Add(Value.AsVariant, FullPropName);
+      end;
+    end;
+  finally
+    RttiContext.Free;
+  end;
+end;
+
+procedure TParamsExt.FromObject(
+  const AObject: TObject;
+  const AAncestor: String = '';
+  const AObjectIdent: String = '');
+var
+  RttiContext: TRttiContext;
+  RttiType: TRttiType;
+  RttiProp: TRttiProperty;
+  ClassName: String;
+  Value: TValue;
+  RootName: String;
+  FullPropName: String;
+  Ancestor: String;
+  ObjectIdent: String;
+  TypeKind: TTypeKind;
+  FieldTypeName: TSymbolName;
+  VarType: TVarType;
+begin
+  RttiContext := TRttiContext.Create;
+  try
+    Ancestor := '';
+    if AAncestor.Length > 0 then
+      Ancestor := AAncestor + '.';
+
+    ObjectIdent := '';
+    if AObjectIdent.Length > 0 then
+      ObjectIdent := ObjectIdent + '.';
+
+    RttiType := RttiContext.GetType(AObject.ClassType);
+    ClassName := AObject.ClassName;
+    RootName := ObjectIdent + Ancestor + ClassName + '.';
+
+    for RttiProp in RttiType.GetProperties do
+    begin
+      TypeKind := RttiProp.PropertyType.TypeKind;
+      if TypeKind in [tkMethod, tkInterface] then
+        Continue;
+
+      Value := RttiProp.GetValue(AObject);
+
+      if Value.IsObject then
+      begin
+        FieldTypeName := TTypeInfo(Value.TypeInfo^).Name;
+        if TTypesManager.IsTListType(FieldTypeName) then
+        begin
+          VarType := TTypesManager.GetVarTypeByName(FieldTypeName);
+          TTypesManager.ParamsFromList(Self, Value, VarType, FieldTypeName);
+        end
+        else
+        begin
+          FromObject(Value.AsObject, ClassName, ObjectIdent)
         end;
       end
       else
@@ -1350,7 +1535,80 @@ begin
         end
         else
         begin
-          ParamsToObject(ValueTmp.AsObject, ClassName, ObjectIdent);
+          ToObject(ValueTmp.AsObject, ClassName, ObjectIdent);
+        end;
+      end
+      else
+      begin
+        PropName := RttiProp.Name;
+        FullPropName := RootName + PropName;
+        if not TryGetParamRecord(ParamRecord, FullPropName) then
+          Continue;
+
+        V := ParamRecord.v;
+        Value := TValue.FromVariant(V);
+        RttiProp.SetValue(AObject, Value);
+      end;
+    end;
+  finally
+    RttiContext.Free;
+  end;
+end;
+
+procedure TParamsExt.ToObject(
+  const AObject: TObject;
+  const AAncestor: String = '';
+  const AObjectIdent: String = '');
+var
+  RttiContext: TRttiContext;
+  RttiType: TRttiType;
+  RttiProp: TRttiProperty;
+  PropName: String;
+  ClassName: String;
+  Value: TValue;
+  ValueTmp: TValue;
+  V: Variant;
+  RootName: String;
+  FullPropName: String;
+  Ancestor: String;
+  ObjectIdent: String;
+  TypeKind: TTypeKind;
+  FieldTypeName: TSymbolName;
+  VarType: TVarType;
+  ParamRecord: TParamRecord;
+begin
+  RttiContext := TRttiContext.Create;
+  try
+    Ancestor := '';
+    if AAncestor.Length > 0 then
+      Ancestor := AAncestor + '.';
+
+    ObjectIdent := '';
+    if AObjectIdent.Length > 0 then
+      ObjectIdent := ObjectIdent + '.';
+
+    RttiType := RttiContext.GetType(AObject.ClassType);
+    ClassName := AObject.ClassName;
+    RootName := ObjectIdent + Ancestor + ClassName + '.';
+
+    for RttiProp in RttiType.GetProperties do
+    begin
+      TypeKind := RttiProp.PropertyType.TypeKind;
+      if TypeKind in [tkMethod, tkInterface] then
+        Continue;
+
+      ValueTmp := RttiProp.GetValue(AObject);
+      if ValueTmp.IsObject then
+      begin
+        FieldTypeName := TTypeInfo(ValueTmp.TypeInfo^).Name;
+        if TTypesManager.IsTListType(FieldTypeName) then
+        begin
+          VarType := TTypesManager.GetVarTypeByName(FieldTypeName);
+          TTypesManager.ParamsToList(Self, ValueTmp, VarType, FieldTypeName);
+        end
+        else
+        begin
+          ToObject(ValueTmp.AsObject, ClassName, ObjectIdent);
         end;
       end
       else
