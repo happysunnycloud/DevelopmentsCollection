@@ -15,9 +15,14 @@ type
     FLock: TObject;
     FList: TList<T>;
 
-    function GetItem(Index: Integer): T;
+    function GetItem(const AIndex: Integer): T;
     function GetFirst: T;
     function GetCount: Integer;
+
+    procedure CheckIndexRange(
+      const AMethod: String;
+      const AList: TList<T>;
+      const AIndex: Integer);
   public
     constructor Create;
     destructor Destroy; override;
@@ -29,11 +34,11 @@ type
     procedure Clear;
     procedure Remove(Item: T); inline;
     procedure RemoveItem(Item: T; Direction: TList.TDirection);
-    procedure Delete(const AIndex: Integer);
+    function Delete(const AIndex: Integer): T;
 
     function Item(const AIndex: Integer): T; deprecated 'Use "Items" property';
 
-    property Items[Index: Integer]: T read GetItem;
+    property Items[const Index: Integer]: T read GetItem;
     property First: T read GetFirst;
     property Count: Integer read GetCount;
   end;
@@ -106,17 +111,26 @@ begin
   end;
 end;
 
-procedure TLockedListExt<T>.Delete(const AIndex: Integer);
+procedure TLockedListExt<T>.CheckIndexRange(
+  const AMethod: String;
+  const AList: TList<T>;
+  const AIndex: Integer);
+begin
+  if (AIndex < 0) or
+     (AIndex >= FList.Count)
+  then
+    raise Exception.Create(AMethod + ' ' + 'Index out of range');
+end;
+
+function TLockedListExt<T>.Delete(const AIndex: Integer): T;
 const
   METHOD = 'TLockedListExt<T>.Delete';
 begin
   LockList;
   try
-    if (AIndex < 0) or
-       (AIndex > FList.Count)
-    then
-      raise Exception.Create(METHOD + ' ' + 'Index out of range');
+    CheckIndexRange(METHOD, FList, AIndex);
 
+    Result := FList.Items[AIndex];
     FList.Delete(AIndex);
   finally
     UnlockList;
@@ -129,10 +143,7 @@ const
 begin
   LockList;
   try
-    if (AIndex < 0) or
-       (AIndex > FList.Count)
-    then
-      raise Exception.Create(METHOD + ' ' + 'Index out of range');
+    CheckIndexRange(METHOD, FList, AIndex);
 
     Result := FList.Items[AIndex];
   finally
@@ -140,18 +151,15 @@ begin
   end;
 end;
 
-function TLockedListExt<T>.GetItem(Index: Integer): T;
+function TLockedListExt<T>.GetItem(const AIndex: Integer): T;
 const
   METHOD = 'TLockedListExt<T>.GetItem';
 begin
   LockList;
   try
-    if (Index < 0) or
-       (Index > FList.Count)
-    then
-      raise Exception.Create(METHOD + ' ' + 'Index out of range');
+    CheckIndexRange(METHOD, FList, AIndex);
 
-    Result := FList.Items[Index];
+    Result := FList.Items[AIndex];
   finally
     UnlockList;
   end;

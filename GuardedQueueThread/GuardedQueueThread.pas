@@ -12,11 +12,11 @@ type
   TGuardedQueueThread = class(TThread)
   strict private
     FThreadSignal: IThreadSignal;
+
+    procedure DeactivateThreadQueue;
   public
     constructor Create(CreateSuspended: Boolean);
     destructor Destroy; override;
-
-    procedure Terminate;
 
     procedure GuardedForceQueue(const AProc: TProc); overload;
 
@@ -29,6 +29,11 @@ implementation
 
 { TGuardedQueueThread }
 
+procedure TGuardedQueueThread.DeactivateThreadQueue;
+begin
+  FThreadSignal.Deactivate;
+end;
+
 constructor TGuardedQueueThread.Create(CreateSuspended: Boolean);
 begin
   FThreadSignal := TThreadSignal.Create;
@@ -38,19 +43,14 @@ end;
 
 destructor TGuardedQueueThread.Destroy;
 begin
+  DeactivateThreadQueue;
+
   //  Просто нилим интерфейсный объект,
   //  он освободится автоматически
 
   FThreadSignal := nil;
 
   inherited;
-end;
-
-procedure TGuardedQueueThread.Terminate;
-begin
-  FThreadSignal.Deactivate;
-
-  inherited Terminate;
 end;
 
 procedure TGuardedQueueThread.GuardedForceQueue(const AProc: TProc);
@@ -61,17 +61,6 @@ begin
   ThreadSignal := FThreadSignal;
   Proc := AProc;
   GuardedForceQueue(ThreadSignal, Proc);
-
-//  ThreadSignal := FThreadSignal;
-//  Proc := AProc;
-//  TThread.ForceQueue(nil,
-//    procedure
-//    begin
-//      if not ThreadSignal.IsActive then
-//        Exit;
-//
-//      Proc;
-//    end);
 end;
 
 class procedure TGuardedQueueThread.GuardedForceQueue(

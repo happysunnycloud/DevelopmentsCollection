@@ -144,8 +144,7 @@ begin
     else
       raise Exception.Create('TSQLTEmplates.Create -> TTemplatesKind not defined');
   except
-    FreeAndNil(FAccessCriticalSection);
-    FreeAndNil(FTemplateList);
+    raise;
   end;
 end;
 
@@ -153,13 +152,15 @@ destructor TSQLTEmplates.Destroy;
 var
   Template: TSQLTEmplate;
 begin
-  for Template in FTemplateList do
-    Template.Free;
+  if Assigned(FTemplateList) then
+  begin
+    for Template in FTemplateList do
+      Template.Free;
+  end;
+
   FreeAndNil(FTemplateList);
   FreeAndNil(FAccessCriticalSection);
-
-  if Assigned(FFilePacker) then
-    FreeAndNil(FFilePacker);
+  FreeAndNil(FFilePacker);
 
   inherited;
 end;
