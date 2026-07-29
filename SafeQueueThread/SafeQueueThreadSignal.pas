@@ -1,4 +1,4 @@
-﻿unit ThreadSignal;
+﻿unit SafeQueueThreadSignal;
 
 interface
 
@@ -7,13 +7,13 @@ uses
   ;
 
 type
-  IThreadSignal = interface
+  ISafeQueueThreadSignal = interface
     ['{7B4A6A5E-DB56-4C4E-BD6B-69EDE9A2F123}']
     function IsActive: Boolean;
     procedure Deactivate;
   end;
 
-  TThreadSignal = class(TInterfacedObject, IThreadSignal)
+  TSafeQueueThreadSignal = class(TInterfacedObject, ISafeQueueThreadSignal)
   private
     FActive: Integer;
   public
@@ -24,19 +24,19 @@ type
 
 implementation
 
-constructor TThreadSignal.Create;
+constructor TSafeQueueThreadSignal.Create;
 begin
   inherited;
 
   FActive := 1;
 end;
 
-procedure TThreadSignal.Deactivate;
+procedure TSafeQueueThreadSignal.Deactivate;
 begin
   TInterlocked.Exchange(FActive, 0);
 end;
 
-function TThreadSignal.IsActive: Boolean;
+function TSafeQueueThreadSignal.IsActive: Boolean;
 begin
   Result := TInterlocked.CompareExchange(FActive, 0, 0) <> 0;
 end;

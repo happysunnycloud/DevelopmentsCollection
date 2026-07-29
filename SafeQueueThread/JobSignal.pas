@@ -27,8 +27,6 @@ type
 
 implementation
 
-
-
 constructor TJobSignal.Create;
 begin
   inherited Create;
