@@ -51,7 +51,6 @@ begin
 
   //  Просто нилим интерфейсный объект,
   //  он освободится автоматически
-
   FSafeQueueThreadSignal := nil;
 
   inherited;
