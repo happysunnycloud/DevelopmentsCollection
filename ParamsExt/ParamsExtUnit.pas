@@ -27,6 +27,8 @@ type
     cieEmptyParams = 1,
     cieOutOfRange = 2);
 
+  TExclidingPropNames = array of String;
+
 type
   TBinFileSign = BinFileTypes.TBinFileSign;
   TBinFileVer = BinFileTypes.TBinFileVer;
@@ -57,6 +59,11 @@ type
       const AOffset: Integer = 0): Integer;
 
     function TryCheckIndex(const AIndex: Integer): TCheckIndexError;
+
+    function CheckExcludedPropNames(
+      const AExclidingPropNames: TExclidingPropNames;
+      const APropName: String): Boolean;
+    function IsBuiltInEnumerationType(const ATypeInfo: PTypeInfo): Boolean;
   private
     function GetAsInt64    (const AIndex: Word): Int64;         overload;
     function GetAsBoolean  (const AIndex: Word): Boolean;       overload;
@@ -229,7 +236,6 @@ type
     procedure ToObjectList<T>(
       const AList: TList<T>;
       const AName: String);
-    { TODO: сделать depricate на ObjectToParams и перевести на новое имя FromObject }
     procedure ObjectToParams(
       const AObject: TObject;
       const AAncestor: String = '';
@@ -237,8 +243,8 @@ type
     procedure FromObject(
       const AObject: TObject;
       const AAncestor: String = '';
-      const AObjectIdent: String = '');
-    { TODO: сделать depricate на ParamsToObject и перевести на новое имя ToObject }
+      const AObjectIdent: String = '';
+      const AExcludingPropNames: TExclidingPropNames = []);
     procedure ParamsToObject(
       const AObject: TObject;
       const AAncestor: String = '';
@@ -246,7 +252,8 @@ type
     procedure ToObject(
       const AObject: TObject;
       const AAncestor: String = '';
-      const AObjectIdent: String = '');
+      const AObjectIdent: String = '';
+      const AExcludingPropNames: TExclidingPropNames = []);
 
     procedure ChangeValue(const AValue: Variant; const AIdent: String); overload;
     procedure ChangeValue(const AValue: Pointer; const AIdent: String); overload;
@@ -338,6 +345,7 @@ implementation
 
 uses
     System.Variants
+  , System.StrUtils
   ;
 
 { TVarsHelper }
@@ -850,6 +858,23 @@ begin
   CheckIndex('IfAsTVarTypeByIdent', i);
 
   Result := TVarData(FParams[i].v).VType;
+end;
+
+function TParamsExt.CheckExcludedPropNames(
+  const AExclidingPropNames: TExclidingPropNames;
+  const APropName: String): Boolean;
+begin
+  Result := not MatchText(APropName, AExclidingPropNames);
+end;
+
+function TParamsExt.IsBuiltInEnumerationType(
+  const ATypeInfo: PTypeInfo): Boolean;
+begin
+  Result :=
+    (ATypeInfo = TypeInfo(Boolean))  or
+    (ATypeInfo = TypeInfo(ByteBool)) or
+    (ATypeInfo = TypeInfo(WordBool)) or
+    (ATypeInfo = TypeInfo(LongBool));
 end;
 
 function TParamsExt.TryCheckIndex(const AIndex: Integer): TCheckIndexError;
@@ -1421,11 +1446,13 @@ end;
 procedure TParamsExt.FromObject(
   const AObject: TObject;
   const AAncestor: String = '';
-  const AObjectIdent: String = '');
+  const AObjectIdent: String = '';
+  const AExcludingPropNames: TExclidingPropNames = []);
 var
   RttiContext: TRttiContext;
   RttiType: TRttiType;
   RttiProp: TRttiProperty;
+  PropName: String;
   ClassName: String;
   Value: TValue;
   RootName: String;
@@ -1456,8 +1483,12 @@ begin
       if TypeKind in [tkMethod, tkInterface] then
         Continue;
 
-      Value := RttiProp.GetValue(AObject);
+      PropName := RttiProp.Name;
+      if System.Length(AExcludingPropNames) > 0 then
+        if not CheckExcludedPropNames(AExcludingPropNames, PropName) then
+          Continue;
 
+      Value := RttiProp.GetValue(AObject);
       if Value.IsObject then
       begin
         FieldTypeName := TTypeInfo(Value.TypeInfo^).Name;
@@ -1473,7 +1504,7 @@ begin
       end
       else
       begin
-        FullPropName := RootName + RttiProp.Name;
+        FullPropName := RootName + PropName;
         Add(Value.AsVariant, FullPropName);
       end;
     end;
@@ -1558,7 +1589,8 @@ end;
 procedure TParamsExt.ToObject(
   const AObject: TObject;
   const AAncestor: String = '';
-  const AObjectIdent: String = '');
+  const AObjectIdent: String = '';
+  const AExcludingPropNames: TExclidingPropNames = []);
 var
   RttiContext: TRttiContext;
   RttiType: TRttiType;
@@ -1597,6 +1629,11 @@ begin
       if TypeKind in [tkMethod, tkInterface] then
         Continue;
 
+      PropName := RttiProp.Name;
+      if System.Length(AExcludingPropNames) > 0 then
+        if not CheckExcludedPropNames(AExcludingPropNames, PropName) then
+          Continue;
+
       ValueTmp := RttiProp.GetValue(AObject);
       if ValueTmp.IsObject then
       begin
@@ -1613,14 +1650,44 @@ begin
       end
       else
       begin
-        PropName := RttiProp.Name;
-        FullPropName := RootName + PropName;
-        if not TryGetParamRecord(ParamRecord, FullPropName) then
-          Continue;
+        { TODO: зесь много повторного кода, нужно рефакторить }
+        if TypeKind = tkEnumeration then
+        begin
+          // Если тип перечислиммый, то обрабатываем так
+          // Проверяем на стантартный перечислимый тип
+          if IsBuiltInEnumerationType(RttiProp.PropertyType.Handle) then
+          begin
+            FullPropName := RootName + PropName;
+            if not TryGetParamRecord(ParamRecord, FullPropName) then
+              Continue;
 
-        V := ParamRecord.v;
-        Value := TValue.FromVariant(V);
-        RttiProp.SetValue(AObject, Value);
+            V := ParamRecord.v;
+            Value := TValue.FromVariant(V);
+            RttiProp.SetValue(AObject, Value);
+          end
+          else
+          // Если перечислимый тип кастомный
+          begin
+            FullPropName := RootName + PropName;
+            if not TryGetParamRecord(ParamRecord, FullPropName) then
+              Continue;
+
+            V := ParamRecord.v;
+            Value := TValue.FromOrdinal(RttiProp.PropertyType.Handle, V);
+            RttiProp.SetValue(AObject, Value);
+          end;
+        end
+        else
+        // Если тип не перечислиммый, то обрабатываем так
+        begin
+          FullPropName := RootName + PropName;
+          if not TryGetParamRecord(ParamRecord, FullPropName) then
+            Continue;
+
+          V := ParamRecord.v;
+          Value := TValue.FromVariant(V);
+          RttiProp.SetValue(AObject, Value);
+        end;
       end;
     end;
   finally
