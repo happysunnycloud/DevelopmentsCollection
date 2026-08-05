@@ -12,16 +12,17 @@ uses
 
 type
   TBorderFrameKind = (
-    bfkNone       = -1,
-    bfkNormal     = 0,
-    bfkSingle     = 1,
-    bfkNoCaption  = 2,
-    bfkFullScreen = 3
+    bfkNone,
+    bfkNormal,
+    bfkSingle,
+    bfkNoCaption,
+    bfkFullScreen
   );
 
   TBorderFrameKindHelper = record helper for TBorderFrameKind
   public
     function ToInteger: Integer;
+    function ToString: String;
   end;
 
 type
@@ -257,6 +258,19 @@ end;
 function TBorderFrameKindHelper.ToInteger: Integer;
 begin
   Result := Integer(Self);
+end;
+
+function TBorderFrameKindHelper.ToString: String;
+begin
+  case Self of
+    bfkNone: Result := 'None';
+    bfkNormal: Result := 'Normal';
+    bfkSingle: Result := 'Single';
+    bfkNoCaption: Result := 'No caption';
+    bfkFullScreen: Result := 'Full screen';
+    else
+      raise Exception.Create('Unkown type');
+  end;
 end;
 
 { TBorderFrame }
