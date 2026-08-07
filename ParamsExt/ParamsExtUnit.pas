@@ -1,5 +1,52 @@
 ﻿{0.3}
 
+//  Важно:
+//  Для корректной работы RTTI перечисления должны иметь
+//  естественные ordinal-значения (0..N).
+//  Перечисления с произвольными значениями (например -1, 5, 10)
+//  Delphi 10.4 не включает в RTTI published-свойств.
+//  При нарушении правила перечислитель RttiType.GetProperties
+//  не увидит свойство объекта
+//
+//  Как пример:
+//    Не сработает, такак значения начинаются не с 0
+//    TBorderFrameKind = (
+//      bfkNone = -1,
+//      bfkNormal = 0,
+//      bfkSingle = 1,
+//      bfkNoCaption = 2,
+//      bfkFullScreen = 3
+//    );
+//
+//    Так же не сработает, такак значения не последовательны от 0 до n+1 c шагом 1
+//    TBorderFrameKind = (
+//      bfkNone = 0,
+//      bfkNormal = 1,
+//      bfkSingle = 3,
+//      bfkNoCaption = 4,
+//      bfkFullScreen = 5
+//    );
+//
+//    Дорлжна быть строгая последовательность
+//    TBorderFrameKind = (
+//      bfkNone = 0,
+//      bfkNormal = 1,
+//      bfkSingle = 2,
+//      bfkNoCaption = 3,
+//      bfkFullScreen = 4
+//    );
+//
+//    Либо не объявлять значения, компилятор сам назначит последовательность
+//    от 0 до n+1 c шагом 1
+//    TBorderFrameKind = (
+//      bfkNone,
+//      bfkNormal,
+//      bfkSingle,
+//      bfkNoCaption,
+//      bfkFullScreen
+//    );
+
+
 // Нужно переехать на этот модуль с ParamsClassUnit
 // Класс для упаковки/распаковки параметров
 // Упрощает передачу параметров, которые передаются как массив констант
@@ -22,6 +69,10 @@ uses
   ;
 
 type
+  TObjectAncestor = String;
+  TObjectIdent = String;
+
+type
   TCheckIndexError = (
     cieNoErrors = 0,
     cieEmptyParams = 1,
@@ -41,6 +92,8 @@ type
   TVars = array of TParamRecord;
 
   TParamsExt = class
+  strict private
+    function GetClassType(const AClassName: String): TClass;
   strict private
     const
       CLASS_NAME = 'TParamsExt';
@@ -224,35 +277,77 @@ type
       var AVal: T;
       const AParamIdent: String): Boolean; overload;
 
+    /// <summary>
+    ///  Применяется к стандартным(плоским/необъектным) типам,
+    ///  например Integer/String), и, пользовательским(кастомным)
+    ///  перечислимым(enumerated) типам
+    /// </summary>
     procedure FromList<T>(
       const AList: TList<T>;
       const AName: String);
+    /// <summary>
+    ///  Применяется к спискам объектов
+    ///  Объект может содержать свойста со стандартными простыми или
+    ///  пользовательскими перечислимыми типами.
+    ///  Сложные объектные типы, например TBitmap, не поддерживаются
+    /// </summary>
     procedure FromObjectList(
       const AList: TObject;
       const AName: String);
+    /// <summary>
+    ///  Применяется к стандартным(плоским/необъектным) типам,
+    ///  например Integer/String), и, пользовательским(кастомным)
+    ///  перечислимым(enumerated) типам
+    /// </summary>
     procedure ToList<T>(
       const AList: TList<T>;
       const AName: String);
+
+    { TODO: для списков олбъектом нужно предусмотреть исключения полей объекта, как это сделано для FromObject}
+    /// <summary>
+    ///  Применяется к спискам объектов
+    ///  Объект может содержать свойста со стандартными простыми или
+    ///  пользовательскими перечислимыми типами.
+    ///  Сложные объектные типы, например TBitmap, не поддерживаются
+    /// </summary>
     procedure ToObjectList<T>(
       const AList: TList<T>;
-      const AName: String);
-    procedure ObjectToParams(
-      const AObject: TObject;
-      const AAncestor: String = '';
-      const AObjectIdent: String = ''); deprecated 'Use FromObject';
+      const AName: String); overload;
+    /// <summary>
+    ///  Применяется к спискам объектов
+    ///  Объект может содержать свойста со стандартными простыми или
+    ///  пользовательскими перечислимыми типами.
+    ///  Сложные объектные типы, например TBitmap, не поддерживаются
+    /// </summary>
+    procedure ToObjectList(
+      const AClassType: TClass;
+      const AList: TObject;
+      const AName: String); overload;
+    /// <summary>
+    ///  Применяется к объектам содержащим стандартные типы.
+    ///  Допустимы поля с типизированными списками.
+    ///  Сложные объектные типы, например TBitmap, не поддерживаются
+    ///  Свойства объекта с типами tkMethod, tkInterface игнорируются
+    ///  Через AExcludingPropNames можно перечислить имена свойств,
+    ///  исключаемые из обработки
+    /// </summary>
     procedure FromObject(
       const AObject: TObject;
-      const AAncestor: String = '';
-      const AObjectIdent: String = '';
+      const AObjectIdent: TObjectIdent = '';
+      const AAncestor: TObjectAncestor = '';
       const AExcludingPropNames: TExclidingPropNames = []);
-    procedure ParamsToObject(
-      const AObject: TObject;
-      const AAncestor: String = '';
-      const AObjectIdent: String = ''); deprecated 'Use ToObject';
+    /// <summary>
+    ///  Применяется к объектам содержащим стандартные типы.
+    ///  Допустимы поля с типизированными списками.
+    ///  Сложные объектные типы, например TBitmap, не поддерживаются
+    ///  Свойства объекта с типами tkMethod, tkInterface игнорируются
+    ///  Через AExcludingPropNames можно перечислить имена свойств,
+    ///  исключаемые из обработки
+    /// </summary>
     procedure ToObject(
       const AObject: TObject;
-      const AAncestor: String = '';
-      const AObjectIdent: String = '';
+      const AObjectIdent: TObjectIdent = '';
+      const AAncestor: TObjectAncestor = '';
       const AExcludingPropNames: TExclidingPropNames = []);
 
     procedure ChangeValue(const AValue: Variant; const AIdent: String); overload;
@@ -328,6 +423,8 @@ type
     class function TypeToVarType<T>: TVarType;
     class function VarTypeToType(const AVarType: TVarType): Pointer;
     class function IsTListType(const AFieldTypeName: TSymbolName): Boolean;
+    class function IsComplexListType(const AFieldTypeName: TSymbolName): Boolean;
+    class function GetClassName(const AFieldTypeName: String): String;
 
     class procedure ParamsFromList(
       const AParams: TParamsExt;
@@ -358,6 +455,20 @@ begin
 end;
 
 { TParamsExt }
+
+function TParamsExt.GetClassType(const AClassName: String): TClass;
+var
+  Context: TRttiContext;
+  RttiType: TRttiType;
+begin
+  Result := nil;
+
+  Context := TRttiContext.Create;
+  RttiType := Context.FindType(AClassName);
+
+  if (RttiType <> nil) and (RttiType is TRttiInstanceType) then
+    Result := TRttiInstanceType(RttiType).MetaclassType;
+end;
 
 function TParamsExt.GetIndexByIdent(
   const AIdent: String;
@@ -1336,7 +1447,6 @@ var
   Count: Integer;
   Index: Integer;
   i, j: Integer;
-  v: T;
   RootName: String;
   PropsCount: Integer;
   Ctx: TRttiContext;
@@ -1379,74 +1489,70 @@ begin
   end;
 end;
 
-procedure TParamsExt.ObjectToParams(
-  const AObject: TObject;
-  const AAncestor: String = '';
-  const AObjectIdent: String = '');
+procedure TParamsExt.ToObjectList(
+  const AClassType: TClass;
+  const AList: TObject;
+  const AName: String);
 var
-  RttiContext: TRttiContext;
-  RttiType: TRttiType;
-  RttiProp: TRttiProperty;
-  ClassName: String;
-  Value: TValue;
-  RootName: String;
-  FullPropName: String;
-  Ancestor: String;
-  ObjectIdent: String;
-  TypeKind: TTypeKind;
-  FieldTypeName: TSymbolName;
+  Context: TRttiContext;
+  _Type: TRttiType;
+  Method: TRttiMethod;
+var
+  Name: String;
   VarType: TVarType;
+  Count: Integer;
+  Index: Integer;
+  i, j: Integer;
+  RootName: String;
+  PropsCount: Integer;
+  Obj: TObject;
+  Params: TParamsExt;
+  ClassType: TClass;
 begin
-  RttiContext := TRttiContext.Create;
+  _Type := Context.GetType(AList.ClassType);
+  Method := _Type.GetMethod('Add');
+  if not Assigned(Method) then
+    raise Exception.CreateFmt('%s does not have Add method', [AList.ClassName]);
+
+  RootName := AName + '.';
+  Index := IndexBy(RootName + 'Name');
+  Get<String>(Name, Index);
+  Inc(Index);
+  Get<Word>(VarType, Index);
+  Inc(Index);
+  Get<Integer>(Count, Index);
+  Inc(Index);
+
+  PropsCount := (Length - Index {header}) div Count;
+
+  ClassType := AClassType;
+
+  Params := TParamsExt.Create;
   try
-    Ancestor := '';
-    if AAncestor.Length > 0 then
-      Ancestor := AAncestor + '.';
-
-    ObjectIdent := '';
-    if AObjectIdent.Length > 0 then
-      ObjectIdent := ObjectIdent + '.';
-
-    RttiType := RttiContext.GetType(AObject.ClassType);
-    ClassName := AObject.ClassName;
-    RootName := ObjectIdent + Ancestor + ClassName + '.';
-
-    for RttiProp in RttiType.GetProperties do
+    for i := 0 to Pred(Count) do
     begin
-      TypeKind := RttiProp.PropertyType.TypeKind;
-      if TypeKind in [tkMethod, tkInterface] then
-        Continue;
-
-      Value := RttiProp.GetValue(AObject);
-
-      if Value.IsObject then
+      Obj := ClassType.Create;
+      Params.Clear;
+      Params.SetNewLength(PropsCount);
+      for j := 0 to Pred(PropsCount) do
       begin
-        FieldTypeName := TTypeInfo(Value.TypeInfo^).Name;
-        if TTypesManager.IsTListType(FieldTypeName) then
-        begin
-          VarType := TTypesManager.GetVarTypeByName(FieldTypeName);
-          TTypesManager.ParamsFromList(Self, Value, VarType, FieldTypeName);
-        end
-        else
-        begin
-          FromObject(Value.AsObject, ClassName, ObjectIdent)
-        end;
-      end
-      else
-      begin
-        FullPropName := RootName + RttiProp.Name;
-        Add(Value.AsVariant, FullPropName);
+        Params.Params[j] := Self.Params[Index];
+
+        Inc(Index);
       end;
+
+      Params.ToObject(Obj);
+      Method.Invoke(AList, [Obj]);
     end;
   finally
-    RttiContext.Free;
+    FreeAndNil(Params);
   end;
 end;
 
 procedure TParamsExt.FromObject(
   const AObject: TObject;
-  const AAncestor: String = '';
-  const AObjectIdent: String = '';
+  const AObjectIdent: TObjectIdent = '';
+  const AAncestor: TObjectAncestor = '';
   const AExcludingPropNames: TExclidingPropNames = []);
 var
   RttiContext: TRttiContext;
@@ -1462,16 +1568,18 @@ var
   TypeKind: TTypeKind;
   FieldTypeName: TSymbolName;
   VarType: TVarType;
+
+  ParamsFromList: TParamsExt;
 begin
   RttiContext := TRttiContext.Create;
   try
+    ObjectIdent := '';
+    if AObjectIdent.Length > 0 then
+      ObjectIdent := AObjectIdent + '.';
+
     Ancestor := '';
     if AAncestor.Length > 0 then
       Ancestor := AAncestor + '.';
-
-    ObjectIdent := '';
-    if AObjectIdent.Length > 0 then
-      ObjectIdent := ObjectIdent + '.';
 
     RttiType := RttiContext.GetType(AObject.ClassType);
     ClassName := AObject.ClassName;
@@ -1492,93 +1600,35 @@ begin
       if Value.IsObject then
       begin
         FieldTypeName := TTypeInfo(Value.TypeInfo^).Name;
+        // Если это список
         if TTypesManager.IsTListType(FieldTypeName) then
         begin
           VarType := TTypesManager.GetVarTypeByName(FieldTypeName);
-          TTypesManager.ParamsFromList(Self, Value, VarType, FieldTypeName);
+          // Если это не стандартный тип, а кастомный
+          if VarType = varEmpty then
+          begin
+            ParamsFromList := TParamsExt.Create;
+            ParamsFromList.AllowIdentDuplicates := FAllowIdentDuplicates;
+            try
+              ParamsFromList.FromObjectList(Value.AsObject, String(FieldTypeName));
+
+              AddFrom(ParamsFromList);
+            finally
+              FreeAndNil(ParamsFromList);
+            end;
+          end
+          else
+          // Если это стандартный тип
+            TTypesManager.ParamsFromList(Self, Value, VarType, FieldTypeName);
         end
         else
-        begin
-          FromObject(Value.AsObject, ClassName, ObjectIdent)
-        end;
+        // Если это объект
+          FromObject(Value.AsObject, ObjectIdent, ClassName, AExcludingPropNames);
       end
       else
       begin
         FullPropName := RootName + PropName;
         Add(Value.AsVariant, FullPropName);
-      end;
-    end;
-  finally
-    RttiContext.Free;
-  end;
-end;
-
-procedure TParamsExt.ParamsToObject(
-  const AObject: TObject;
-  const AAncestor: String = '';
-  const AObjectIdent: String = '');
-var
-  RttiContext: TRttiContext;
-  RttiType: TRttiType;
-  RttiProp: TRttiProperty;
-  PropName: String;
-  ClassName: String;
-  Value: TValue;
-  ValueTmp: TValue;
-  V: Variant;
-  RootName: String;
-  FullPropName: String;
-  Ancestor: String;
-  ObjectIdent: String;
-  TypeKind: TTypeKind;
-  FieldTypeName: TSymbolName;
-  VarType: TVarType;
-  ParamRecord: TParamRecord;
-begin
-  RttiContext := TRttiContext.Create;
-  try
-    Ancestor := '';
-    if AAncestor.Length > 0 then
-      Ancestor := AAncestor + '.';
-
-    ObjectIdent := '';
-    if AObjectIdent.Length > 0 then
-      ObjectIdent := ObjectIdent + '.';
-
-    RttiType := RttiContext.GetType(AObject.ClassType);
-    ClassName := AObject.ClassName;
-    RootName := ObjectIdent + Ancestor + ClassName + '.';
-
-    for RttiProp in RttiType.GetProperties do
-    begin
-      TypeKind := RttiProp.PropertyType.TypeKind;
-      if TypeKind in [tkMethod, tkInterface] then
-        Continue;
-
-      ValueTmp := RttiProp.GetValue(AObject);
-      if ValueTmp.IsObject then
-      begin
-        FieldTypeName := TTypeInfo(ValueTmp.TypeInfo^).Name;
-        if TTypesManager.IsTListType(FieldTypeName) then
-        begin
-          VarType := TTypesManager.GetVarTypeByName(FieldTypeName);
-          TTypesManager.ParamsToList(Self, ValueTmp, VarType, FieldTypeName);
-        end
-        else
-        begin
-          ToObject(ValueTmp.AsObject, ClassName, ObjectIdent);
-        end;
-      end
-      else
-      begin
-        PropName := RttiProp.Name;
-        FullPropName := RootName + PropName;
-        if not TryGetParamRecord(ParamRecord, FullPropName) then
-          Continue;
-
-        V := ParamRecord.v;
-        Value := TValue.FromVariant(V);
-        RttiProp.SetValue(AObject, Value);
       end;
     end;
   finally
@@ -1588,8 +1638,8 @@ end;
 
 procedure TParamsExt.ToObject(
   const AObject: TObject;
-  const AAncestor: String = '';
-  const AObjectIdent: String = '';
+  const AObjectIdent: TObjectIdent = '';
+  const AAncestor: TObjectAncestor = '';
   const AExcludingPropNames: TExclidingPropNames = []);
 var
   RttiContext: TRttiContext;
@@ -1608,16 +1658,18 @@ var
   FieldTypeName: TSymbolName;
   VarType: TVarType;
   ParamRecord: TParamRecord;
+  ObjectList: TList;
+  ListItemClassName: String;
 begin
   RttiContext := TRttiContext.Create;
   try
+    ObjectIdent := '';
+    if AObjectIdent.Length > 0 then
+      ObjectIdent := AObjectIdent + '.';
+
     Ancestor := '';
     if AAncestor.Length > 0 then
       Ancestor := AAncestor + '.';
-
-    ObjectIdent := '';
-    if AObjectIdent.Length > 0 then
-      ObjectIdent := ObjectIdent + '.';
 
     RttiType := RttiContext.GetType(AObject.ClassType);
     ClassName := AObject.ClassName;
@@ -1638,56 +1690,48 @@ begin
       if ValueTmp.IsObject then
       begin
         FieldTypeName := TTypeInfo(ValueTmp.TypeInfo^).Name;
+        // Если это список
         if TTypesManager.IsTListType(FieldTypeName) then
         begin
           VarType := TTypesManager.GetVarTypeByName(FieldTypeName);
-          TTypesManager.ParamsToList(Self, ValueTmp, VarType, FieldTypeName);
+          // Если это кастомный список
+          if VarType = varEmpty then
+          begin
+            ObjectList := TList.Create;
+            try
+              ListItemClassName := TTypesManager.GetClassName(String(FieldTypeName));
+              ToObjectList(GetClassType(ListItemClassName), ValueTmp.AsObject, String(FieldTypeName));
+            finally
+              FreeAndNil(ObjectList);
+            end;
+          end
+          else
+            // Если это список стандартного типа
+            TTypesManager.ParamsToList(Self, ValueTmp, VarType, FieldTypeName);
         end
         else
         begin
-          ToObject(ValueTmp.AsObject, ClassName, ObjectIdent);
+          ToObject(ValueTmp.AsObject, ObjectIdent, ClassName, AExcludingPropNames);
         end;
       end
       else
       begin
-        { TODO: зесь много повторного кода, нужно рефакторить }
-        if TypeKind = tkEnumeration then
-        begin
-          // Если тип перечислиммый, то обрабатываем так
-          // Проверяем на стантартный перечислимый тип
-          if IsBuiltInEnumerationType(RttiProp.PropertyType.Handle) then
-          begin
-            FullPropName := RootName + PropName;
-            if not TryGetParamRecord(ParamRecord, FullPropName) then
-              Continue;
+        FullPropName := RootName + PropName;
+        if not TryGetParamRecord({var} ParamRecord, FullPropName) then
+          Continue;
 
-            V := ParamRecord.v;
-            Value := TValue.FromVariant(V);
-            RttiProp.SetValue(AObject, Value);
-          end
-          else
-          // Если перечислимый тип кастомный
-          begin
-            FullPropName := RootName + PropName;
-            if not TryGetParamRecord(ParamRecord, FullPropName) then
-              Continue;
+        V := ParamRecord.v;
 
-            V := ParamRecord.v;
-            Value := TValue.FromOrdinal(RttiProp.PropertyType.Handle, V);
-            RttiProp.SetValue(AObject, Value);
-          end;
-        end
+        // Если тип перечислиммый, но нестандартный, а кастомный
+        // Тогда получаем Value через TValue.FromOrdinal
+        if (TypeKind = tkEnumeration) and
+           not (IsBuiltInEnumerationType(RttiProp.PropertyType.Handle))
+        then
+          Value := TValue.FromOrdinal(RttiProp.PropertyType.Handle, V)
         else
-        // Если тип не перечислиммый, то обрабатываем так
-        begin
-          FullPropName := RootName + PropName;
-          if not TryGetParamRecord(ParamRecord, FullPropName) then
-            Continue;
-
-          V := ParamRecord.v;
           Value := TValue.FromVariant(V);
-          RttiProp.SetValue(AObject, Value);
-        end;
+
+        RttiProp.SetValue(AObject, Value);
       end;
     end;
   finally
@@ -1963,7 +2007,8 @@ begin
   if TypeName.ToLower.Equals('TDateTime'.ToLower) then
     Result := varDate
   else
-    raise Exception.CreateFmt('%s.%s: Unknown type', [CLASS_NAME, METHOD]);
+    Result := varEmpty;
+//    raise Exception.CreateFmt('%s.%s: Unknown type', [CLASS_NAME, METHOD]);
 end;
 
 class function TTypesManager.TypeToVarType<T>: TVarType;
@@ -2048,6 +2093,26 @@ var
 begin
   FieldTypeName := String(AFieldTypeName);
   Result := Pos('TList', FieldTypeName) > 0;
+end;
+
+class function TTypesManager.IsComplexListType(
+  const AFieldTypeName: TSymbolName): Boolean;
+var
+  FieldTypeName: String;
+begin
+  FieldTypeName := String(AFieldTypeName);
+  Result := Pos('TList<', FieldTypeName) > 0;
+end;
+
+class function TTypesManager.GetClassName(const AFieldTypeName: String): String;
+var
+  StartPos: Integer;
+  FinishPos: Integer;
+begin
+  StartPos := Pos('<', AFieldTypeName) + 1;
+  FinishPos := Pos('>', AFieldTypeName, StartPos);
+
+  Result := Copy(AFieldTypeName, StartPos, FinishPos - StartPos);
 end;
 
 class procedure TTypesManager.ParamsFromList(

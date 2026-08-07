@@ -25,8 +25,6 @@ uses
 
 const
   DEFAUL_FONT_FAMILY = '(Default)';
-//  EXCLUDED_PROP_NAMES: array [0..0] of string = ('Container');
-//  EXCLUDED_PROP_NAMES: TExclidingPropNames = ('Container');
 
 type
   TCommonSettings = class;
@@ -98,8 +96,6 @@ type
 
     FBackgroundColor: TAlphaColor;
     FCustomTextSettings: TCustomTextSettings;
-
-//    function CheckExcludedPropNames(const APropName: String): Boolean;
   public
     constructor Create(const AIdent: String);
     destructor Destroy; override;
@@ -487,11 +483,6 @@ begin
   inherited;
 end;
 
-//function TBaseSettings.CheckExcludedPropNames(const APropName: String): Boolean;
-//begin
-//  Result := not MatchText(APropName, EXCLUDED_PROP_NAMES);
-//end;
-
 procedure TBaseSettings.CopyFrom(
   const ABaseSettings: TBaseSettings);
 begin
@@ -501,150 +492,15 @@ begin
 end;
 
 procedure TBaseSettings.ToParams(const AParams: TParamsExt);
-
-//  procedure ObjectToParams(
-//    const AIdent: String;
-//    const AObject: TObject;
-//    const AAncestor: String = '');
-//  var
-//    RttiContext: TRttiContext;
-//    RttiType: TRttiType;
-//    RttiProp: TRttiProperty;
-//    PropName: String;
-//    ClassName: String;
-//    Value: TValue;
-//    RootName: String;
-//    FullPropName: String;
-//    Ancestor: String;
-//    TypeKind: TTypeKind;
-//  begin
-//    RttiContext := TRttiContext.Create;
-//    try
-//      Ancestor := '';
-//      if AAncestor.Length > 0 then
-//        Ancestor := AAncestor + '.';
-//
-//      RttiType := RttiContext.GetType(AObject.ClassType);
-//      ClassName := AObject.ClassName;
-//      RootName := AIdent + '.' + Ancestor + ClassName + '.';
-//
-//      for RttiProp in RttiType.GetProperties do
-//      begin
-//        TypeKind := RttiProp.PropertyType.TypeKind;
-//        if TypeKind in [tkMethod, tkInterface] then
-//          Continue;
-//
-//        Value := RttiProp.GetValue(AObject);
-//        PropName := RttiProp.Name;
-//        FullPropName := RootName + PropName;
-//
-//        //asd debug
-//        if PropName = 'BorderFrameColor' then
-//          PropName := PropName;
-//        //asd debug
-//
-//        if not CheckExcludedPropNames(PropName) then
-//          Continue;
-//
-//        AParams.Add(Value.AsVariant, FullPropName);
-//
-//        if Value.IsObject then
-//          ObjectToParams(AIdent, Value.AsObject, ClassName);
-//      end;
-//    finally
-//      RttiContext.Free;
-//    end;
-//  end;
-
 begin
   AParams.Clear;
 
-  AParams.FromObject(Self, '', ClassName, EXCLUDED_PROP_NAMES);
-
-//  ObjectToParams(ClassName, Self, '');
+  AParams.FromObject(Self, ClassName, '', EXCLUDED_PROP_NAMES);
 end;
 
 procedure TBaseSettings.FromParams(const AParams: TParamsExt);
-
-//  procedure ParamsToObject(
-//    const AIdent: String;
-//    const AObject: TObject;
-//    const AParams: TParamsExt;
-//    const AAncestor: String = '');
-//  var
-//    RttiContext: TRttiContext;
-//    RttiType: TRttiType;
-//    RttiProp: TRttiProperty;
-//    PropName: String;
-//    ClassName: String;
-//    Value: TValue;
-//    ValueTmp: TValue;
-//    V: Variant;
-//    RootName: String;
-//    FullPropName: String;
-//    Ancestor: String;
-//    TypeKind: TTypeKind;
-//    ParamRecord: TParamRecord;
-//    TypeOfVar: TVarType;
-//  begin
-//    RttiContext := TRttiContext.Create;
-//    try
-//      Ancestor := '';
-//      if AAncestor.Length > 0 then
-//        Ancestor := AAncestor + '.';
-//
-//      RttiType := RttiContext.GetType(AObject.ClassType);
-//      ClassName := AObject.ClassName;
-//      RootName := AIdent + '.' + Ancestor + ClassName + '.';
-//
-//      for RttiProp in RttiType.GetProperties do
-//      begin
-//        TypeKind := RttiProp.PropertyType.TypeKind;
-//        if TypeKind in [tkMethod, tkInterface] then
-//          Continue;
-//
-//        PropName := RttiProp.Name;
-//        if not CheckExcludedPropNames(PropName) then
-//          Continue;
-//
-//        ValueTmp := RttiProp.GetValue(AObject);
-//        if ValueTmp.IsObject then
-//        begin
-//          ParamsToObject(AIdent, ValueTmp.AsObject, AParams, ClassName);
-//
-//          Continue;
-//        end;
-//
-//        FullPropName := RootName + PropName;
-//        if not AParams.TryGetParamRecord(ParamRecord, FullPropName) then
-//          Continue;
-//
-//        if TypeKind = tkEnumeration then    aaa
-//        begin
-//          V := ParamRecord.v;
-//          TypeOfVar := VarType(V);
-//          Value := TValue.FromOrdinal(RttiProp.PropertyType.Handle, V);
-//          RttiProp.SetValue(AObject, Value);
-//        end
-//        else
-//        begin
-//          V := ParamRecord.v;
-//          Value := TValue.FromVariant(V);
-//          RttiProp.SetValue(AObject, Value);
-//        end;
-//      end;
-//    finally
-//      RttiContext.Free;
-//    end;
-//  end;
-
 begin
-  { TODO: Проверить нужен ли отдельный метод ParamsToObject
-    здесь или вызывать стандартный из TParamxExt }
-
-  AParams.ToObject(Self, '', ClassName, EXCLUDED_PROP_NAMES);
-
-//  ParamsToObject(ClassName, Self, AParams);
+  AParams.ToObject(Self, ClassName, '', EXCLUDED_PROP_NAMES);
 end;
 
 { TFormSettings }

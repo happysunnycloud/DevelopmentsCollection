@@ -479,10 +479,11 @@ begin
       AComponentEnumeratorCallbackProc);
   end;
 end;
-{TODO: Проверить релевантность, при необходимости отрефакторить}
+
 class procedure TControlTools.ComponentEnumerator(
   const AFmxObject: TFmxObject;
-  const ABreakingComponentEnumeratorCallbackProc: TBreakingComponentEnumeratorCallbackProc);
+  const ABreakingComponentEnumeratorCallbackProc:
+    TBreakingComponentEnumeratorCallbackProc);
 
   procedure _ComponentEnumerator(
     const AObject: TFmxObject;
@@ -490,6 +491,7 @@ class procedure TControlTools.ComponentEnumerator(
     var ABreak: Boolean);
   var
     _Component: TComponent;
+
     i: Word;
   begin
     if AObject is TComponent then
@@ -505,10 +507,12 @@ class procedure TControlTools.ComponentEnumerator(
     begin
       Dec(i);
 
-      _ComponentEnumerator(
-        TFmxObject(AObject.Components[i]),
-        ACallbackProc,
-        ABreak);
+      _Component := AObject.Components[i];
+      if _Component is TFmxObject then
+        _ComponentEnumerator(
+          TFmxObject(_Component),
+          ACallbackProc,
+          ABreak);
     end;
   end;
 
