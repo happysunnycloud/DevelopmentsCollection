@@ -13,6 +13,9 @@ uses
   ;
 
 type
+  ISafeQueueThreadSignal = SafeQueueThreadSignal.ISafeQueueThreadSignal;
+  TSafeQueueThreadSignal = SafeQueueThreadSignal.TSafeQueueThreadSignal;
+
   TSafeQueueThread = class(TThread)
   strict private
     FSafeQueueThreadSignal: ISafeQueueThreadSignal;
