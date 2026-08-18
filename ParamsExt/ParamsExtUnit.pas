@@ -246,7 +246,11 @@ type
     property  AllowIdentDuplicates: Boolean
       read FAllowIdentDuplicates write FAllowIdentDuplicates;
 
-    procedure CopyFrom(const AParamsObj: TParamsExt); virtual;
+    procedure CopyFrom(const AParamsObj: TParamsExt); overload; virtual;
+    procedure CopyFrom(
+      const AParamsObj: TParamsExt;
+      const AStartIndex: Integer;
+      const ACount: Integer); overload; virtual;
     procedure AddFrom(const AParamsObj: TParamsExt); virtual;
 
     // Пробует получить "сырое" значение по айденту,
@@ -1154,6 +1158,7 @@ procedure TParamsExt.CopyFrom(const AParamsObj: TParamsExt);
 var
   i: Word;
   ParamsObj: TParamsExt absolute AParamsObj;
+  Len: Integer;
 begin
   if not Assigned(Self) then
     raise Exception.CreateFmt('%s.%s: Params not initialized', [CLASS_NAME, 'CopyFrom']);
@@ -1161,14 +1166,54 @@ begin
   if not Assigned(AParamsObj) then
     raise Exception.CreateFmt('%s.%s: AParamsObj is nil', [CLASS_NAME, 'CopyFrom']);
 
-  if System.Length(ParamsObj.Params) = 0 then
+  Len := ParamsObj.Length;
+  if Len = 0 then
     Exit;
 
-  SetLength(FParams, 0);
-  for i := 0 to Pred(System.Length(ParamsObj.Params)) do
+  SetLength(FParams, Len);
+  for i := 0 to Pred(Len) do
   begin
-    SetLength(FParams, System.Length(FParams) + 1);
-    FParams[System.Length(FParams) - 1] := ParamsObj.Params[i];
+    FParams[i] := ParamsObj.Params[i];
+  end;
+end;
+
+procedure TParamsExt.CopyFrom(
+  const AParamsObj: TParamsExt;
+  const AStartIndex: Integer;
+  const ACount: Integer);
+var
+  i, j: Word;
+  ParamsObj: TParamsExt absolute AParamsObj;
+  FinishIndex: Integer;
+  Len: Integer;
+begin
+  if not Assigned(Self) then
+    raise Exception.CreateFmt('%s.%s: Params not initialized', [CLASS_NAME, 'CopyFrom']);
+
+  if not Assigned(AParamsObj) then
+    raise Exception.CreateFmt('%s.%s: AParamsObj is nil', [CLASS_NAME, 'CopyFrom']);
+
+  if (AStartIndex >= ParamsObj.Length) or (AStartIndex < 0) then
+    raise Exception.CreateFmt('%s.%s: AStartIndex out of range', [CLASS_NAME, 'CopyFrom']);
+
+  if ACount < 0 then
+    raise Exception.CreateFmt('%s.%s: ACount value less than zero', [CLASS_NAME, 'CopyFrom']);
+
+  Len := ParamsObj.Length;
+  if  Len = 0 then
+    Exit;
+
+  FinishIndex := AStartIndex + ACount;
+  if FinishIndex >= ParamsObj.Length then
+    FinishIndex := Pred(ParamsObj.Length);
+
+  SetLength(FParams, FinishIndex - AStartIndex + 1);
+  j := 0;
+  for i := AStartIndex to FinishIndex do
+  begin
+    FParams[j] := ParamsObj.Params[i];
+
+    Inc(j);
   end;
 end;
 
@@ -2178,3 +2223,4 @@ begin
 end;
 
 end.
+
