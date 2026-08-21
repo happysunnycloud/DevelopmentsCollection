@@ -278,7 +278,8 @@ end;
 
 procedure TNetBaseClient.DoException(const AExceptionCode: TNetExceptionCode);
 begin
-
+  if Assigned(FOnException) then
+    FOnException(AExceptionCode);
 end;
 
 
