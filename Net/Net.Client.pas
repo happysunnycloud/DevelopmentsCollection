@@ -18,7 +18,8 @@ uses
   Net.Types,
   Net.PingClient,
   Net.DataClient,
-  Net.Exceptions
+  Net.Exceptions,
+  Net.BaseClient
   ;
 
 type
@@ -67,6 +68,17 @@ type
     procedure DoDataClientAuthorized(const ACredential: TCredential);
     procedure DoDataClientDisconnected;
     procedure DoException(const AExceptionCode: TNetExceptionCode);
+
+  strict private
+    FIsOnDisconnectedHandled: Integer;
+
+    procedure HandleClientDisconnected(
+      const ANetPingClient0: TNetBaseClient;
+      const ANetPingClient1: TNetBaseClient);
+
+    function GetIsOnDisconnectedHandled: Boolean;
+
+    property IsOnDisconnectedHandled: Boolean read GetIsOnDisconnectedHandled;
   public
     constructor Create(
       const AHostName: String;
@@ -120,6 +132,8 @@ begin
   FPingClient := TNetPingClient.Create(FHostName, FIP, FPort);
   FDataClient := TNetDataClient.Create(FHostName, FIP, FPort);
 
+  FIsOnDisconnectedHandled      := 0;
+
   { Events }
 
   FOnDataClientConnected        := nil;
@@ -141,6 +155,8 @@ end;
 
 procedure TNetClient.Connect;
 begin
+  TInterlocked.Exchange(FIsOnDisconnectedHandled, 0);
+
   FPingClient.OnDisconnected := DoPingClientDisconnected;
   FPingClient.OnAuthorized := DoPingClientAuthorized;
   FPingClient.OnException := DoException;
@@ -252,29 +268,46 @@ end;
 
 procedure TNetClient.DoPingClientDisconnected;
 begin
-  FPingClient.OnConnected := nil;
-  FPingClient.OnDisconnected := nil;
-  FPingClient.OnAuthorized := nil;
-  //FPingClient.OnException := nil;
-  FPingClient.OnRead := nil;
+  HandleClientDisconnected(FPingClient, FDataClient);
 
-  if Assigned(FDataClient) then
-    FDataClient.Disconnect;
+//  FPingClient.OnConnected := nil;
+//  FPingClient.OnDisconnected := nil;
+//  FPingClient.OnAuthorized := nil;
+//  //FPingClient.OnException := nil;
+//  FPingClient.OnRead := nil;
+//
+//  { TODO: Протестировать дополнительно,
+//    возможно проверка Assigned(FDataClient) - анахронизм }
+//  if Assigned(FDataClient) then
+//    FDataClient.Disconnect;
+//
+//  if not IsOnDisconnectedHandled then
+//    if Assigned(FOnDataClientDisconnected) then
+//      FOnDataClientDisconnected();
+//
+//  TInterlocked.Exchange(FIsOnDisconnectedHandled, 1);
 end;
 
 procedure TNetClient.DoDataClientDisconnected;
 begin
-  FDataClient.OnConnected := nil;
-  FDataClient.OnDisconnected := nil;
-  FDataClient.OnAuthorized := nil;
-  //FDataClient.OnException := nil;
-  FDataClient.OnRead := nil;
+  HandleClientDisconnected(FDataClient, FPingClient);
 
-  if Assigned(FPingClient) then
-    FPingClient.Disconnect;
-
-  if Assigned(FOnDataClientDisconnected) then
-    FOnDataClientDisconnected();
+//  FDataClient.OnConnected := nil;
+//  FDataClient.OnDisconnected := nil;
+//  FDataClient.OnAuthorized := nil;
+//  //FDataClient.OnException := nil;
+//  FDataClient.OnRead := nil;
+//
+//  { TODO: Протестировать дополнительно,
+//    возможно проверка Assigned(FPingClient) - анахронизм }
+//  if Assigned(FPingClient) then
+//    FPingClient.Disconnect;
+//
+//  if not IsOnDisconnectedHandled then
+//    if Assigned(FOnDataClientDisconnected) then
+//      FOnDataClientDisconnected();
+//
+//  TInterlocked.Exchange(FIsOnDisconnectedHandled, 1);
 end;
 
 procedure TNetClient.DoException(const AExceptionCode: TNetExceptionCode);
@@ -286,6 +319,33 @@ end;
 procedure TNetClient.DisconnectDataClient;
 begin
   FDataClient.Disconnect;
+end;
+
+procedure TNetClient.HandleClientDisconnected(
+  const ANetPingClient0: TNetBaseClient;
+  const ANetPingClient1: TNetBaseClient);
+begin
+  ANetPingClient0.OnConnected := nil;
+  ANetPingClient0.OnDisconnected := nil;
+  ANetPingClient0.OnAuthorized := nil;
+  //ANetPingClient0.OnException := nil;
+  ANetPingClient0.OnRead := nil;
+
+  { TODO: Протестировать дополнительно,
+    возможно проверка Assigned(FPingClient) - анахронизм }
+  if Assigned(ANetPingClient1) then
+    ANetPingClient1.Disconnect;
+
+  if not IsOnDisconnectedHandled then
+    if Assigned(FOnDataClientDisconnected) then
+      FOnDataClientDisconnected();
+
+  TInterlocked.Exchange(FIsOnDisconnectedHandled, 1);
+end;
+
+function TNetClient.GetIsOnDisconnectedHandled: Boolean;
+begin
+  Result := TInterlocked.CompareExchange(FIsOnDisconnectedHandled, 1, 1) = 1;
 end;
 
 end.

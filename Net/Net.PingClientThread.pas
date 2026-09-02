@@ -266,7 +266,11 @@ begin
               Request.AddAsType(
                 USER_LOGIN,
                 varUString,
-                srqLogin.Ident);
+                'Login');
+              Request.AddAsType(
+                USER_PASSWORD,
+                varUString,
+                'Password');
 
               FRequestStack.Add(Request);
             finally
@@ -306,9 +310,6 @@ const
 var
   ExceptionCode: TNetExceptionCode;
   IsExceptionHandled: Boolean;
-  //asd debug
-  debug: String;
-  //asd debug
 begin
   try
     // На случай, если хоста вообще нет в сети
@@ -326,18 +327,12 @@ begin
         ParseIncomingData;
 
         if not GetIsConnected or Terminated then
-        begin
-          debug := '';
           Break;
-        end;
 
         WaitForRequest;
 
         if not GetIsConnected or Terminated then
-        begin
-          debug := '';
           Break;
-        end;
 
         SendRequestToServer;
       end;

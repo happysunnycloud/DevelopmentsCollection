@@ -26,6 +26,8 @@ type
   TNetServer = class;
 
   TReadDataEvent = procedure (const ASID: TSID) of object;
+  TCheckLoginFuncRef = reference to
+    function (const ALogin: String; const APassword: String): Boolean;
 
   { Events}
 
@@ -42,9 +44,13 @@ type
 
     FConnection:                  TIdTCPServer;
     FReadTimeOut:                 Word;
-//    FResponseStack:               TResponseStack;
+
+    // Дефолтное значение = 0 - без ограничений
+    FAllowedConnectionCount:      Integer;
 
     FUserList:                    TNetUserList;
+
+    FCheckLoginFuncRef:           TCheckLoginFuncRef;
 
     { Events }
 
@@ -62,6 +68,8 @@ type
 
     function GetActive: Boolean;
     procedure SetActive(const AActive: Boolean);
+
+    function CheckLogin(const ALogin: String; const APassword: String): Boolean;
 
     { Do }
 
@@ -84,6 +92,8 @@ type
     destructor  Destroy; override;
 
     property Active: Boolean read GetActive write SetActive;
+    property AllowedConnectionCount: Integer
+      read FAllowedConnectionCount write FAllowedConnectionCount;
 
     // Тестовый метод, возможно и в будущем понадобится
     function GetFirstContext: TIdContext;
@@ -102,6 +112,8 @@ type
       read FOnReadData write FOnReadData;
     property OnException: TServerExceptionEvent
       read FOnException write FOnException;
+
+    property CheckLoginFuncRef: TCheckLoginFuncRef write FCheckLoginFuncRef;
   end;
 
   TNetServerHelpmate = class
@@ -157,10 +169,12 @@ begin
   FConnection.OnExecute         := DoExecute;
   FConnection.OnDisconnect      := DoDisconnect;
 
-//  FResponseStack                := TResponseStack.Create;
+  FAllowedConnectionCount       := 0;
 
   FReadTimeOut                  := AReadTimeOut;
   FUserList                     := TNetUserList.Create;
+
+  FCheckLoginFuncRef            := CheckLogin;
 
   { Events }
 
@@ -376,6 +390,15 @@ var
   ClientPort: Word;
 begin
   Context := AContext;
+
+  if FAllowedConnectionCount > 0 then
+    if FConnection.Contexts.Count > FAllowedConnectionCount then
+    begin
+      TNetServerHelpmate.CloseContext(Context);
+
+      Exit;
+    end;
+
   ClientIP := Context.Connection.Socket.Binding.IP;
   ClientPort := Context.Connection.Socket.Binding.Port;
 
@@ -430,21 +453,24 @@ begin
   end;
 end;
 
+function TNetServer.CheckLogin(
+  const ALogin: String;
+  const APassword: String): Boolean;
+begin
+  Result := false;
+
+  if (ALogin = USER_LOGIN) and
+     (APassword = USER_PASSWORD)
+  then
+    Result := true;
+end;
+
 procedure TNetServer.ParseIncomingData(const AContext: TIdContext);
 
-  function _CheckLogin(
-    const ALogin: String;
-    var ACredential: TCredential): Boolean;
+  function _GenCredential: String;
   begin
-    Result := false;
-    ACredential := '';
-
-    if ALogin = USER_LOGIN then
-    begin
-      Result := true;
-      ACredential := Format('cred_%s_%s',
-        [TStringTools.GenIdent, DateToStr(Now)]);
-    end;
+    Result := Format('cred_%s_%s',
+      [TStringTools.GenIdent, DateToStr(Now)]);
   end;
 
   function _ClientAuthorized(
@@ -487,6 +513,7 @@ var
   RequestHeader: TServiceRequestHeader;
   MemoryStream: TMemoryStream;
   Login: String;
+  Password: String;
   Credential: TCredential;
   Context: TIdContext absolute AContext;
   UserIsAuthorized: Boolean;
@@ -514,8 +541,8 @@ begin
       end;
 
       RequestCode := Request.GetDataCode;
-      // RequestCode < 0 = Сервисные запросы
-      // RequestCode >= 0 Пользовательские запросы
+      // RequestCode < 0 - Сервисные запросы
+      // RequestCode >= 0 - Пользовательские запросы
       if RequestCode < 0 then
       begin
         RequestHeader.FromInteger(RequestCode);
@@ -538,8 +565,11 @@ begin
             Credential := '';
 
             Request.Get<String>(Login, 'Login');
-            if not _CheckLogin(Login, {out} Credential) then
+            Request.Get<String>(Password, 'Password');
+            if not FCheckLoginFuncRef(Login, Password) then
               Exit;
+
+            Credential := _GenCredential;
 
             if not _ClientAuthorized(Context, Credential) then
               raise ENetClientWasDisconnected.Create;

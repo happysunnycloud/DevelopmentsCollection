@@ -12,7 +12,7 @@ const
   DISCONNECT_TIMEOUT = 2000;
   HEART_BEAT_INTERVAL = 1000;
   USER_LOGIN = 'User0123';
-
+  USER_PASSWORD = 'Password';
 
 implementation
 
