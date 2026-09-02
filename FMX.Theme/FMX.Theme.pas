@@ -31,6 +31,7 @@ type
   TItemSettings = class;
   TPopUpMenuSettings = class;
   THintSettings = class;
+  TButtonSettings = class;
 
   TCommonSettingsApplyProcRef = reference to
     procedure (const AControl: TControl; const ACommonSettings: TCommonSettings);
@@ -40,6 +41,8 @@ type
     procedure (const AControl: TControl; const APopUpMenuSettings: TPopUpMenuSettings);
   THintSettingsApplyProcRef = reference to
     procedure (const AHintSettings: THintSettings);
+  TButtonSettingsApplyProcRef = reference to
+    procedure (const AControl: TControl; const AButtonSettings: TButtonSettings);
 
   TCommonProperties = class
   strict private
@@ -235,6 +238,20 @@ type
     procedure Apply; override;
   end;
 
+  TButtonSettings = class(TCommonSettings)
+  strict private
+    FOnApplyProcRef: TButtonSettingsApplyProcRef;
+  public
+    constructor Create;
+
+    procedure CopyFrom(const AButtonSettings: TButtonSettings); reintroduce;
+
+    property OnApplyProcRef: TButtonSettingsApplyProcRef
+      read FOnApplyProcRef write FOnApplyProcRef;
+
+    procedure Apply; override;
+  end;
+
   TTheme = class
   strict private
     FStyleBookMemoryStream: TMemoryStream;
@@ -249,6 +266,7 @@ type
     FItemSettings: TItemSettings;
     FPopUpMenuSettings: TPopUpMenuSettings;
     FHintSettings: THintSettings;
+    FButtonSettings: TButtonSettings;
 
     FOnApply: TNotifyEvent;
     FOnApplyProcRef: TProc;
@@ -280,6 +298,7 @@ type
     property ItemSettings: TItemSettings read FItemSettings;
     property HintTheme: THintSettings read FHintSettings;
     property PopUpMenuTheme: TPopUpMenuSettings read FPopUpMenuSettings;
+    property ButtonSettings: TButtonSettings read FButtonSettings;
 
     property OnApply: TNotifyEvent read FOnApply write FOnApply;
     property OnApplyProcRef: TProc read FOnApplyProcRef write FOnApplyProcRef;
@@ -757,6 +776,42 @@ begin
   end;
 end;
 
+{ TButtonSettings }
+
+constructor TButtonSettings.Create;
+begin
+  inherited Create(ClassName);
+
+  FOnApplyProcRef := nil;
+end;
+
+procedure TButtonSettings.CopyFrom(
+  const AButtonSettings: TButtonSettings);
+begin
+  inherited CopyFrom(AButtonSettings);
+end;
+
+procedure TButtonSettings.Apply;
+var
+  Control: TControl;
+begin
+  if not Assigned(FOnApplyProcRef) then
+    Exit;
+
+  if not Assigned(FContainer) then
+    Exit;
+
+  CollectObjects;
+
+  if FControlsCollection.Count = 0 then
+    Exit;
+
+  for Control in FControlsCollection do
+  begin
+    FOnApplyProcRef(Control, Self);
+  end;
+end;
+
 { TTheme }
 
 procedure TTheme.ParamsToSettings(const AParams: TParamsExt);
@@ -807,6 +862,7 @@ begin
   FItemSettings := TItemSettings.Create;
   FPopUpMenuSettings := TPopUpMenuSettings.Create;
   FHintSettings := THintSettings.Create;
+  FButtonSettings := TButtonSettings.Create;
 
   FStyleBookMemoryStream := TMemoryStream.Create;
 
@@ -823,6 +879,7 @@ begin
   FreeAndNil(FFormSettings);
   FreeAndNil(FCommonSettings);
   FreeAndNil(FStyleBookMemoryStream);
+  FreeAndNil(FButtonSettings);
 end;
 
 procedure TTheme.LoadStyleBookFrom(const AStyleBook: TStyleBook);
@@ -882,6 +939,7 @@ begin
     FItemSettings.CopyFrom(ATheme.ItemSettings);
     FHintSettings.CopyFrom(ATheme.HintTheme);
     FPopUpMenuSettings.CopyFrom(ATheme.PopUpMenuTheme);
+    FButtonSettings.CopyFrom(ATheme.ButtonSettings);
   except
     on e: Exception do
       raise Exception.CreateFmt('%s -> %s', [METHOD, e.Message]);
@@ -900,6 +958,8 @@ begin
     FItemSettings.Apply;
   if Assigned(FPopUpMenuSettings.Container) then
     FPopUpMenuSettings.Apply;
+  if Assigned(FButtonSettings.Container) then
+    FButtonSettings.Apply;
 end;
 
 procedure TTheme.LoadFromFile(const AFileName: String);
