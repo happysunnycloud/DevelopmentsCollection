@@ -285,7 +285,9 @@ type
 
     procedure LoadFromFile(const AFileName: String);
     procedure SaveToFile(const AFileName: String);
-
+  public
+    class procedure DecorateButton(const AButton: TButton);
+  public
     property DarkBackgroundColor: TAlphaColor
       read FDarkBackgroundColor write FDarkBackgroundColor;
     property LightBackgroundColor: TAlphaColor
@@ -313,6 +315,7 @@ uses
   , BinFileTypes
   , FMX.Styles
   , FMX.FormExtUnit
+  , FMX.ButtonDecorator
   ;
 
 var
@@ -996,6 +999,11 @@ begin
   finally
     Params.Free;
   end;
+end;
+
+class procedure TTheme.DecorateButton(const AButton: TButton);
+begin
+  TButtonDecorator.Decorate(AButton);
 end;
 
 initialization
