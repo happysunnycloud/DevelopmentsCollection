@@ -1,4 +1,4 @@
-unit FMX.ButtonDecorator;
+﻿unit FMX.ButtonDecorator;
 
 interface
 
@@ -10,6 +10,12 @@ uses
   , FMX.StdCtrls
   ;
 
+const
+  NORMAL_BACKGOUND_COLOR = $FFE1E1E1;
+  FOCUSED_BACKGOUND_COLOR = $FFE5F1FB;
+  NORMAL_FRAME_COLOR = $FFADADAD;
+  FOCUSED_FRAME_COLOR = $FF0078D7;
+
 type
   TButtonDecorator = class (TFmxObject)
   strict private
@@ -19,16 +25,24 @@ type
 
     FNormalBackgroundColor: TAlphaColor;
     FFocusedBackgroundColor: TAlphaColor;
-    FMouseOverBackgroundColor: TAlphaColor;
+    FNormalFrameColor: TAlphaColor;
+    FFocusedFrameColor: TAlphaColor;
 
-    FOnMouseMove: TMouseMoveEvent;
+    FOnEnter: TNotifyEvent;
+    FOnExit: TNotifyEvent;
+    FOnMouseEnter: TNotifyEvent;
     FOnMouseLeave: TNotifyEvent;
 
-    procedure DoMouseMove(
-      Sender: TObject; Shift: TShiftState; X, Y: Single);
+    procedure DoEnter(Sender: TObject);
+    procedure DoExit(Sender: TObject);
+
+    procedure DoMouseEnter(Sender: TObject);
     procedure DoMouseLeave(Sender: TObject);
 
     procedure SetNormalBackgroundColor(const ANormalBackgroundColor: TAlphaColor);
+    procedure SetFocusedBackgroundColor(const AFocusedBackgroundColor: TAlphaColor);
+    procedure SetNormalFrameColor(const ANormalFrameColor: TAlphaColor);
+    procedure SetFocusedFrameColor(const AFocusedFrameColor: TAlphaColor);
   public
     class procedure Decorate(const AButton: TButton);
     class function GetDecorator(const AButton: TButton): TButtonDecorator;
@@ -40,6 +54,12 @@ type
 
     property NormalBackgroundColor: TAlphaColor
       read FNormalBackgroundColor write SetNormalBackgroundColor;
+    property FocusedBackgroundColor: TAlphaColor
+      read FFocusedBackgroundColor write SetFocusedBackgroundColor;
+    property NormalFrameColor: TAlphaColor
+      read FNormalFrameColor write SetNormalFrameColor;
+    property FocusedFrameColor: TAlphaColor
+      read FFocusedFrameColor write SetFocusedFrameColor;
   end;
 
 implementation
@@ -103,18 +123,66 @@ begin
   FBackgroundRectangle.Fill.Color := FNormalBackgroundColor;
 end;
 
-procedure TButtonDecorator.DoMouseMove(
-  Sender: TObject; Shift: TShiftState; X, Y: Single);
+procedure TButtonDecorator.SetFocusedBackgroundColor(
+  const AFocusedBackgroundColor: TAlphaColor);
 begin
-  FBackgroundRectangle.Fill.Color := FMouseOverBackgroundColor;
+  FFocusedBackgroundColor := AFocusedBackgroundColor;
+  FBackgroundRectangle.Fill.Color := FFocusedBackgroundColor;
+end;
 
-  if Assigned(FOnMouseMove) then
-    FOnMouseMove(Sender, Shift, X, Y);
+procedure TButtonDecorator.SetNormalFrameColor(
+  const ANormalFrameColor: TAlphaColor);
+begin
+  FNormalFrameColor := ANormalFrameColor;
+  FBackgroundRectangle.Fill.Color := FNormalFrameColor;
+end;
+
+procedure TButtonDecorator.SetFocusedFrameColor(
+  const AFocusedFrameColor: TAlphaColor);
+begin
+  FFocusedFrameColor := AFocusedFrameColor;
+  FBackgroundRectangle.Fill.Color := FFocusedFrameColor;
+end;
+
+procedure TButtonDecorator.DoEnter(Sender: TObject);
+begin
+  FBackgroundRectangle.Stroke.Thickness := 2;
+  FBackgroundRectangle.Stroke.Color := FFocusedFrameColor;
+
+  if Assigned(FOnEnter) then
+    FOnEnter(Sender);
+end;
+
+procedure TButtonDecorator.DoExit(Sender: TObject);
+begin
+  FBackgroundRectangle.Stroke.Thickness := 1;
+  FBackgroundRectangle.Stroke.Color := FNormalFrameColor;
+
+  if Assigned(FOnExit) then
+    FOnExit(Sender);
+end;
+
+procedure TButtonDecorator.DoMouseEnter(Sender: TObject);
+begin
+  FBackgroundRectangle.Fill.Color := FFocusedBackgroundColor;
+  FBackgroundRectangle.Stroke.Thickness := 1;
+  FBackgroundRectangle.Stroke.Color := FFocusedFrameColor;
+
+  if Assigned(FOnMouseEnter) then
+    FOnMouseEnter(Sender);
 end;
 
 procedure TButtonDecorator.DoMouseLeave(Sender: TObject);
 begin
   FBackgroundRectangle.Fill.Color := FNormalBackgroundColor;
+  FBackgroundRectangle.Stroke.Thickness := 1;
+  FBackgroundRectangle.Stroke.Color := FNormalFrameColor;
+
+  if FOwner.IsFocused then
+  begin
+    FBackgroundRectangle.Stroke.Thickness := 2;
+    FBackgroundRectangle.Stroke.Color := FFocusedFrameColor;
+  end;
 
   if Assigned(FOnMouseLeave) then
     FOnMouseLeave(Sender);
@@ -125,9 +193,10 @@ constructor TButtonDecorator.Create(
 begin
   FOwner := AOwner;
 
-  FNormalBackgroundColor := TAlphaColorRec.Lightgray;
-  FFocusedBackgroundColor := TAlphaColorRec.Darkgray;
-  FMouseOverBackgroundColor := TAlphaColorRec.Lightblue;
+  FNormalBackgroundColor := NORMAL_BACKGOUND_COLOR;
+  FFocusedBackgroundColor := FOCUSED_BACKGOUND_COLOR;
+  FNormalFrameColor := NORMAL_FRAME_COLOR;
+  FFocusedFrameColor := FOCUSED_FRAME_COLOR;
 
   FBackgroundRectangle := TRectangle.Create(FOwner);
   FBackgroundRectangle.Parent := FOwner;
@@ -135,11 +204,9 @@ begin
   FBackgroundRectangle.Fill.Color := FNormalBackgroundColor;
   FBackgroundRectangle.Visible := true;
   FBackgroundRectangle.HitTest := false;
-  FBackgroundRectangle.Stroke.Kind := TBrushKind.None;
-  FBackgroundRectangle.Margins.Top := 1;
-  FBackgroundRectangle.Margins.Bottom := 1;
-  FBackgroundRectangle.Margins.Left := 1;
-  FBackgroundRectangle.Margins.Right := 1;
+  FBackgroundRectangle.Stroke.Kind := TBrushKind.Solid;
+  FBackgroundRectangle.Stroke.Thickness := 1;
+  FBackgroundRectangle.Stroke.Color := FNormalFrameColor;
 
   FTextLabel := TLabel.Create(FOwner);
   FTextLabel.Text := AOwner.Text;
@@ -148,11 +215,17 @@ begin
   FTextLabel.TextAlign := TTextAlign.Center;
   FTextLabel.Visible := true;
 
-  FOnMouseMove := AOwner.OnMouseMove;
+  FOnEnter := AOwner.OnEnter;
+  FOnExit := AOwner.OnExit;
+  FOnMouseEnter := AOwner.OnMouseEnter;
   FOnMouseLeave := AOwner.OnMouseLeave;
 
-  AOwner.OnMouseMove := DoMouseMove;
+  AOwner.OnEnter := DoEnter;
+  AOwner.OnExit := DoExit;
+  AOwner.OnMouseEnter := DoMouseEnter;
   AOwner.OnMouseLeave := DoMouseLeave;
+
+  AOwner.DisableFocusEffect := true;
 
   inherited Create(FOwner);
 end;
