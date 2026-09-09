@@ -21,7 +21,6 @@ type
 
   TNetUser = class
   strict private
-  strict private
     FCriticalSection: TCriticalSection;
 
     FLogin: String;

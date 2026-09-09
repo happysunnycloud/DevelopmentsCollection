@@ -572,7 +572,7 @@ begin
             Credential := _GenCredential;
 
             if not _ClientAuthorized(Context, Credential) then
-              raise ENetClientWasDisconnected.Create;
+              raise ENetAuthorizationFailure.Create;
           end
           else
           // Дата-клиент отвечает rqCredential на rpHello
@@ -585,7 +585,7 @@ begin
               Exit;
 
             if not _ClientAuthorized(Context, Credential) then
-              raise ENetClientWasDisconnected.Create;
+              raise ENetAuthorizationFailure.Create;
           end
           else
             raise ENetUnknownServiceRequest.Create;
@@ -603,7 +603,7 @@ begin
 
                 Response := TResponse.Create;
                 try
-                  Response.AddDataCode(TServiceResponseHeader.SrpHeartBeat.Code);
+                  Response.AddDataCode(TServiceResponseHeader.srpHeartBeat.Code);
                   Reply(Context, Response);
                 finally
                   FreeAndNil(Response);

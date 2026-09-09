@@ -1094,15 +1094,15 @@ end;
 
 procedure TControlsCollection.CollectFrom(const AParent: TFmxObject);
 var
-  I: Integer;
+  i: Integer;
   Obj: TFmxObject;
 begin
   if AParent is TControl then
     FControls.Add(TControl(AParent));
 
-  for I := 0 to AParent.ChildrenCount - 1 do
+  for i := 0 to AParent.ChildrenCount - 1 do
   begin
-    Obj := AParent.Children[I];
+    Obj := AParent.Children[i];
     CollectFrom(Obj);
   end;
 end;

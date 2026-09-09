@@ -11,10 +11,10 @@ uses
   ;
 
 const
-  NORMAL_BACKGOUND_COLOR = $FFE1E1E1;
-  FOCUSED_BACKGOUND_COLOR = $FFE5F1FB;
-  NORMAL_FRAME_COLOR = $FFADADAD;
-  FOCUSED_FRAME_COLOR = $FF0078D7;
+  NORMAL_BUTTON_BACKGOUND_COLOR = $FFE1E1E1;
+  FOCUSED_BUTTON_BACKGOUND_COLOR = $FFE5F1FB;
+  NORMAL_BUTTON_FRAME_COLOR = $FFADADAD;
+  FOCUSED_BUTTON_FRAME_COLOR = $FF0078D7;
 
 type
   TButtonDecorator = class (TFmxObject)
@@ -60,6 +60,11 @@ type
       read FNormalFrameColor write SetNormalFrameColor;
     property FocusedFrameColor: TAlphaColor
       read FFocusedFrameColor write SetFocusedFrameColor;
+
+    property TextLabel: TLabel
+      read FTextLabel;
+
+    procedure Apply;
   end;
 
 implementation
@@ -120,28 +125,32 @@ procedure TButtonDecorator.SetNormalBackgroundColor(
   const ANormalBackgroundColor: TAlphaColor);
 begin
   FNormalBackgroundColor := ANormalBackgroundColor;
-  FBackgroundRectangle.Fill.Color := FNormalBackgroundColor;
+
+  Apply;
 end;
 
 procedure TButtonDecorator.SetFocusedBackgroundColor(
   const AFocusedBackgroundColor: TAlphaColor);
 begin
   FFocusedBackgroundColor := AFocusedBackgroundColor;
-  FBackgroundRectangle.Fill.Color := FFocusedBackgroundColor;
+
+  Apply;
 end;
 
 procedure TButtonDecorator.SetNormalFrameColor(
   const ANormalFrameColor: TAlphaColor);
 begin
   FNormalFrameColor := ANormalFrameColor;
-  FBackgroundRectangle.Fill.Color := FNormalFrameColor;
+
+  Apply;
 end;
 
 procedure TButtonDecorator.SetFocusedFrameColor(
   const AFocusedFrameColor: TAlphaColor);
 begin
   FFocusedFrameColor := AFocusedFrameColor;
-  FBackgroundRectangle.Fill.Color := FFocusedFrameColor;
+
+  Apply;
 end;
 
 procedure TButtonDecorator.DoEnter(Sender: TObject);
@@ -193,10 +202,10 @@ constructor TButtonDecorator.Create(
 begin
   FOwner := AOwner;
 
-  FNormalBackgroundColor := NORMAL_BACKGOUND_COLOR;
-  FFocusedBackgroundColor := FOCUSED_BACKGOUND_COLOR;
-  FNormalFrameColor := NORMAL_FRAME_COLOR;
-  FFocusedFrameColor := FOCUSED_FRAME_COLOR;
+  FNormalBackgroundColor := NORMAL_BUTTON_BACKGOUND_COLOR;
+  FFocusedBackgroundColor := FOCUSED_BUTTON_BACKGOUND_COLOR;
+  FNormalFrameColor := NORMAL_BUTTON_FRAME_COLOR;
+  FFocusedFrameColor := FOCUSED_BUTTON_FRAME_COLOR;
 
   FBackgroundRectangle := TRectangle.Create(FOwner);
   FBackgroundRectangle.Parent := FOwner;
@@ -213,6 +222,8 @@ begin
   FTextLabel.Parent := FBackgroundRectangle;
   FTextLabel.Align := TAlignLayout.Contents;
   FTextLabel.TextAlign := TTextAlign.Center;
+  FTextLabel.TextSettings.VertAlign := TTextAlign.Center;
+  FTextLabel.TextSettings.HorzAlign := TTextAlign.Center;
   FTextLabel.Visible := true;
 
   FOnEnter := AOwner.OnEnter;
@@ -230,5 +241,9 @@ begin
   inherited Create(FOwner);
 end;
 
+procedure TButtonDecorator.Apply;
+begin
+  DoMouseLeave(FOwner);
+end;
 
 end.
