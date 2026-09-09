@@ -57,7 +57,9 @@ type
       const APort: Word);
     destructor Destroy; override;
 
-    procedure Connect;
+    procedure Connect(
+      const ALogin: String;
+      const APassword: String);
 
     { External events }
 
@@ -98,11 +100,13 @@ begin
   inherited;
 end;
 
-procedure TNetPingClient.Connect;
+procedure TNetPingClient.Connect(
+  const ALogin: String;
+  const APassword: String);
 begin
   Disconnect;
 
-  inherited Connect(TNetPingClientThread, '');
+  inherited Connect(TNetPingClientThread, ALogin, APassword);
 end;
 
 procedure TNetPingClient.AddToStack(const ARequest: TRequest);

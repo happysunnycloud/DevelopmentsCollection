@@ -72,7 +72,11 @@ type
 
     procedure Connect(
       const AClass: TBaseClientThreadClass;
-      const ACredential: String);
+      const ACredential: String); overload;
+    procedure Connect(
+      const AClass: TBaseClientThreadClass;
+      const ALogin: String;
+      const APassword: String); overload;
     procedure Disconnect; virtual;
     procedure AddToStack(const ARequest: TRequest); virtual;
     procedure UnsubscribeFromEvents;
@@ -147,6 +151,35 @@ begin
       FResponseStack,
       READ_TIMEOUT,
       ACredential);
+
+    FClientThread.OnConnected := FOnConnected;
+    FClientThread.OnDisconnected := DoDisconnected;
+    FClientThread.OnAuthorized := DoAuthorized;
+    FClientThread.OnRead := FOnRead;
+    FClientThread.OnException := DoException;
+
+    FClientThread.Start;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
+procedure TNetBaseClient.Connect(
+  const AClass: TBaseClientThreadClass;
+  const ALogin: String;
+  const APassword: String);
+begin
+  FCriticalSection.Enter;
+  try
+    FClientThread := AClass.Create(
+      FHostName,
+      FIP,
+      FPort,
+      FRequestStack,
+      FResponseStack,
+      READ_TIMEOUT,
+      ALogin,
+      APassword);
 
     FClientThread.OnConnected := FOnConnected;
     FClientThread.OnDisconnected := DoDisconnected;

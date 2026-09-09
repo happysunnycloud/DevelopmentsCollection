@@ -20,7 +20,8 @@ type
     ecPingTimeOut = 7,
     ecTooManyRequests = 8,
     ecUnknownServiceRequest = 9,
-    ecTheClientWasDisconnected = 10);
+    ecTheClientWasDisconnected = 10,
+    ecAuthorizationFailure = 11);
 
   ENetException = class(Exception)
   strict private
@@ -66,6 +67,13 @@ type
     constructor Create;
   end;
 
+  ENetAuthorizationFailure = class(ENetException)
+  public
+    const Code = ecAuthorizationFailure;
+
+    constructor Create;
+  end;
+
   TNetExceptionCodeHelper = record helper for TNetExceptionCode
   public
     function ToString: String;
@@ -107,6 +115,7 @@ begin
       'Too many requests';
     ecUnknownServiceRequest: Result := 'Unknown service request';
     ecTheClientWasDisconnected: Result := 'The client was disconnected';
+    ecAuthorizationFailure: Result := 'Authorization failure';
     else
       raise Exception.Create(
         'TNetExceptionCodeHelper.ToString -> Unknown exception code');
@@ -158,6 +167,13 @@ begin
   inherited Create(Code.ToString, Code);
 end;
 
+{ ENetAuthorizationFailure }
+
+constructor ENetAuthorizationFailure.Create;
+begin
+  inherited Create(Code.ToString, Code);
+end;
+
 { TNetExceptionHelper }
 
 class function TNetExceptionHelper.TryHandle(
@@ -199,6 +215,9 @@ begin
     else
     if AE.ClassType = ENetClientWasDisconnected then
       ExceptionCode := ecTheClientWasDisconnected
+    else
+    if AE.ClassType = ENetAuthorizationFailure then
+      ExceptionCode := ecAuthorizationFailure
     else
       raise Exception.Create('TNetExceptionHelper.TryHandle -> Unknown error');
 

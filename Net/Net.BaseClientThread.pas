@@ -66,6 +66,14 @@ type
     FCredential: TCredential;
     FRequestSentEvent: TEvent;
     FOnException: TClientExceptionEvent;
+
+    procedure Init(
+      const AHostName: String;
+      const AIP: String;
+      const APort: Word;
+      const ARequestStack: TRequestStack;
+      const AResponseStack: TResponseStack;
+      const AReadTimeout: Integer);
   protected
     function  SendRequestToServer: TRequestSentState;
     procedure ParseIncomingData; virtual;
@@ -88,6 +96,16 @@ type
       const AResponseStack: TResponseStack;
       const AReadTimeout: Integer;
       const ACredential: TCredential); overload; virtual;
+    constructor Create(
+      const AHostName: String;
+      const AIP: String;
+      const APort: Word;
+      const ARequestStack: TRequestStack;
+      const AResponseStack: TResponseStack;
+      const AReadTimeout: Integer;
+      const ALogin: String;
+      const APassword: String); overload; virtual;
+
     procedure Terminate;
 
     procedure Disconnect;
@@ -121,14 +139,13 @@ uses
 
 { TNetBaseClientThread }
 
-constructor TNetBaseClientThread.Create(
+procedure TNetBaseClientThread.Init(
   const AHostName: String;
   const AIP: String;
   const APort: Word;
   const ARequestStack: TRequestStack;
   const AResponseStack: TResponseStack;
-  const AReadTimeout: Integer;
-  const ACredential: TCredential);
+  const AReadTimeout: Integer);
 begin
   FCriticalSection := TCriticalSection.Create;
   FClientConnectCriticalSection     := TCriticalSection.Create;
@@ -161,6 +178,45 @@ begin
   FOnAuthorized                     := nil;
   //FOnPingTimeout                    := nil;
   FOnException                      := nil;
+end;
+
+constructor TNetBaseClientThread.Create(
+  const AHostName: String;
+  const AIP: String;
+  const APort: Word;
+  const ARequestStack: TRequestStack;
+  const AResponseStack: TResponseStack;
+  const AReadTimeout: Integer;
+  const ACredential: TCredential);
+begin
+  Init(
+    AHostName,
+    AIP,
+    APort,
+    ARequestStack,
+    AResponseStack,
+    AReadTimeout);
+
+  inherited Create(true);
+end;
+
+constructor TNetBaseClientThread.Create(
+  const AHostName: String;
+  const AIP: String;
+  const APort: Word;
+  const ARequestStack: TRequestStack;
+  const AResponseStack: TResponseStack;
+  const AReadTimeout: Integer;
+  const ALogin: String;
+  const APassword: String);
+begin
+  Init(
+    AHostName,
+    AIP,
+    APort,
+    ARequestStack,
+    AResponseStack,
+    AReadTimeout);
 
   inherited Create(true);
 end;

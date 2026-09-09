@@ -32,6 +32,9 @@ type
     FPingTimeoutThread:                 TNetPingTimeoutThread;
     FIsPingTimeout:                     Integer;
 
+    FLogin: String;
+    FPassword: String;
+
     { Events }
 
     function GetIsConnected:            Boolean;
@@ -69,7 +72,8 @@ type
       const ARequestStack: TRequestStack;
       const AResponseStack: TResponseStack;
       const AReadTimeout: Integer;
-      const ACredential: TCredential); override;
+      const ALogin: String;
+      const APassword: String); override;
     destructor Destroy; override;
 
     function IsPingTimeout: Boolean;
@@ -123,13 +127,17 @@ constructor TNetPingClientThread.Create(
   const ARequestStack: TRequestStack;
   const AResponseStack: TResponseStack;
   const AReadTimeout: Integer;
-  const ACredential: TCredential);
+  const ALogin: String;
+  const APassword: String);
 begin
   FThreadName := 'TNetPingClientThread';
 
   FHeartBeatThread := nil;
   FPingTimeoutThread := nil;
   FIsPingTimeout := 0;
+
+  FLogin := ALogin;
+  FPassword := APassword;
 
   inherited Create(
     AHostName,
@@ -138,6 +146,7 @@ begin
     ARequestStack,
     AResponseStack,
     AReadTimeout,
+    '',
     '');
 end;
 
@@ -264,11 +273,11 @@ begin
               Request.AddDataCode(
                 srqLogin.Code);
               Request.AddAsType(
-                USER_LOGIN,
+                FLogin,
                 varUString,
                 'Login');
               Request.AddAsType(
-                USER_PASSWORD,
+                FPassword,
                 varUString,
                 'Password');
 

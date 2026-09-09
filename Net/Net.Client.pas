@@ -39,6 +39,8 @@ type
     FHostName:                    String;
     FIP:                          String;
     FPort:                        Word;
+    FLogin:                       String;
+    FPassword:                    String;
 
     function GetResponseStack: TResponseStack;
 
@@ -109,6 +111,11 @@ type
     //asd debug
     procedure DisconnectDataClient;
     //asd debug
+  public
+    property Login: String
+      write FLogin;
+    property Password: String
+      write FPassword;
   end;
 
 implementation
@@ -133,6 +140,9 @@ begin
   FDataClient := TNetDataClient.Create(FHostName, FIP, FPort);
 
   FIsOnDisconnectedHandled      := 0;
+
+  FLogin := 'User';
+  FPassword := 'Password';
 
   { Events }
 
@@ -167,7 +177,7 @@ begin
   FDataClient.OnRead := FOnDataClientRead;
   FDataClient.OnException := DoException;
 
-  FPingClient.Connect;
+  FPingClient.Connect(FLogin, FPassword);
 end;
 
 procedure TNetClient.Disconnect;

@@ -74,11 +74,12 @@ constructor TNetDataClientThread.Create(
   const ARequestStack: TRequestStack;
   const AResponseStack: TResponseStack;
   const AReadTimeout: Integer;
- const ACredential: TCredential);
+  const ACredential: TCredential);
 begin
   FThreadName := 'TNetDataClientThread';
 
   FCredential := ACredential;
+
   inherited Create(
     AHostName,
     AIP,
@@ -86,7 +87,7 @@ begin
     ARequestStack,
     AResponseStack,
     AReadTimeout,
-    ACredential);
+    '');
 end;
 
 function TNetDataClientThread.GetIsConnected: Boolean;
