@@ -27,12 +27,15 @@ const
   DEFAUL_FONT_FAMILY = '(Default)';
 
 type
+  TCustomTextSettings = class;
   TCommonSettings = class;
   TItemSettings = class;
   TPopUpMenuSettings = class;
   THintSettings = class;
   TButtonSettings = class;
 
+  TCustomTextSettingsApplyProcRef = reference to
+    procedure (const AControl: TControl; const ACustomTextSettings: TCustomTextSettings);
   TCommonSettingsApplyProcRef = reference to
     procedure (const AControl: TControl; const ACommonSettings: TCommonSettings);
   TItemSettingsApplyProcRef = reference to
@@ -68,7 +71,29 @@ type
     procedure ApplyTo(const AControl: TControl);
   end;
 
-  TCustomTextSettings = class
+  // Контейнер (форма/контрол) сорержащий контролы,
+  // на коротые будет распространена Тема
+  TContainer = class
+  protected
+    FControlsCollection: TControlsCollection;
+    // Контейнер (форма/контрол) сорержащий контролы,
+    // на коротые будет распространена Тема
+    FContainer: TFmxObject;
+
+    procedure SetContainer(const AFmxObject: TFmxObject); virtual;
+  public
+    constructor Create;
+    destructor Destroy; override;
+
+    property Container: TFmxObject
+      read FContainer write SetContainer;
+
+    procedure CollectObjects;
+
+    procedure Apply; virtual; abstract;
+  end;
+
+  TCustomTextSettings = class (TContainer)
   strict private
     FFontSize: Single;
     FFontColor: TAlphaColor;
@@ -77,12 +102,16 @@ type
     FItalic: Boolean;
     FUnderline: Boolean;
     FStrikeOut: Boolean;
+
+    FOnApplyProcRef: TCustomTextSettingsApplyProcRef;
   public
     constructor Create;
+    destructor Destroy; override;
 
     procedure CopyFrom(const ACustomTextSettings: TCustomTextSettings);
     procedure Assign(const ATextSettings: TTextSettings);
     procedure ApplyTo(const AControl: TControl);
+    procedure Apply; override;
 
     property FontSize: Single read FFontSize write FFontSize;
     property FontColor: TAlphaColor read FFontColor write FFontColor;
@@ -91,9 +120,12 @@ type
     property Italic: Boolean read FItalic write FItalic;
     property Underline: Boolean read FUnderline write FUnderline;
     property StrikeOut: Boolean read FStrikeOut write FStrikeOut;
+
+    property OnApplyProcRef: TCustomTextSettingsApplyProcRef
+      read FOnApplyProcRef write FOnApplyProcRef;
   end;
 
-  TBaseSettings = class
+  TBaseSettings = class (TContainer)
   strict private
     FIdent: String;
 
@@ -116,24 +148,12 @@ type
     procedure FromParams(const AParams: TParamsExt);
   end;
 
+  { TODO: Проверить и размонтировать класс, так как в нем нет необходимости }
   TBaseControlSettings = class(TBaseSettings)
   protected
-    FControlsCollection: TControlsCollection;
-    // Контейнер (форма/контрол) сорержащий контролы,
-    // на коротые будет распространена Тема
-    FContainer: TFmxObject;
-
-    procedure SetContainer(const AFmxObject: TFmxObject); virtual;
   public
     constructor Create(const AIdent: String);
     destructor Destroy; override;
-
-    property Container: TFmxObject
-      read FContainer write SetContainer;
-
-    procedure CollectObjects;
-
-    procedure Apply; virtual; abstract;
   end;
 
   TFormSettings = class(TBaseControlSettings)
@@ -238,13 +258,27 @@ type
     procedure Apply; override;
   end;
 
-  TButtonSettings = class(TCommonSettings)
+  TButtonSettings = class(TBaseControlSettings)
   strict private
+    FNormalBackgroundColor: TAlphaColor;
+    FFocusedBackgroundColor: TAlphaColor;
+    FNormalFrameColor: TAlphaColor;
+    FFocusedFrameColor: TAlphaColor;
+
     FOnApplyProcRef: TButtonSettingsApplyProcRef;
   public
     constructor Create;
 
     procedure CopyFrom(const AButtonSettings: TButtonSettings); reintroduce;
+
+    property NormalBackgroundColor: TAlphaColor
+      read FNormalBackgroundColor write FNormalBackgroundColor;
+    property FocusedBackgroundColor: TAlphaColor
+      read FFocusedBackgroundColor write FFocusedBackgroundColor;
+    property NormalFrameColor: TAlphaColor
+      read FNormalFrameColor write FNormalFrameColor;
+    property FocusedFrameColor: TAlphaColor
+      read FFocusedFrameColor write FFocusedFrameColor;
 
     property OnApplyProcRef: TButtonSettingsApplyProcRef
       read FOnApplyProcRef write FOnApplyProcRef;
@@ -286,7 +320,7 @@ type
     procedure LoadFromFile(const AFileName: String);
     procedure SaveToFile(const AFileName: String);
   public
-    class procedure DecorateButton(const AButton: TButton);
+    procedure DecorateButton(const AButton: TButton);
   public
     property DarkBackgroundColor: TAlphaColor
       read FDarkBackgroundColor write FDarkBackgroundColor;
@@ -364,12 +398,45 @@ begin
     raise Exception.Create('Unknown control class');
 end;
 
+{ TContainer }
+
+constructor TContainer.Create;
+begin
+  FContainer := nil;
+  FControlsCollection := TControlsCollection.Create(nil);
+end;
+
+destructor TContainer.Destroy;
+begin
+  FreeAndNil(FControlsCollection);
+
+  inherited;
+end;
+
+procedure TContainer.SetContainer(const AFmxObject: TFmxObject);
+begin
+  FContainer := AFmxObject;
+end;
+
+procedure TContainer.CollectObjects;
+begin
+  if not Assigned(FContainer) then
+    Exit;
+
+  FControlsCollection.Clear;
+  FControlsCollection.CollectFrom(FContainer);
+end;
+
 { TCustomTextSettings }
 
 constructor TCustomTextSettings.Create;
 var
   DefaultTextSettings: TTextSettings;
 begin
+  inherited Create;
+
+  FOnApplyProcRef := nil;
+
   // Создаем временный объект, что бы установить дефолтные значения
   DefaultTextSettings := TTextSettings.Create(nil);
   try
@@ -383,6 +450,11 @@ begin
   finally
     FreeAndNil(DefaultTextSettings);
   end;
+end;
+
+destructor TCustomTextSettings.Destroy;
+begin
+  inherited;
 end;
 
 procedure TCustomTextSettings.CopyFrom(const ACustomTextSettings: TCustomTextSettings);
@@ -460,6 +532,41 @@ begin
     TextSettings.Font.Style := TextSettings.Font.Style - [TFontStyle.fsStrikeOut];
 end;
 
+procedure TCustomTextSettings.Apply;
+var
+  Control: TControl;
+begin
+  if Assigned(FOnApplyProcRef) then
+  begin
+    if not Assigned(FContainer) then
+      raise Exception.Create('Container is nil');
+
+    CollectObjects;
+
+    if FControlsCollection.Count = 0 then
+      Exit;
+
+    for Control in FControlsCollection do
+      FOnApplyProcRef(Control, Self);
+  end
+  else
+  begin
+    if not Assigned(FContainer) then
+      raise Exception.Create('Container is nil');
+
+    CollectObjects;
+
+    if FControlsCollection.Count = 0 then
+      Exit;
+
+    for Control in FControlsCollection do
+    begin
+      if TControlTools.HasProperty(Control, TProperties.TextSettings) then
+        ApplyTo(Control);
+    end;
+  end;
+end;
+
 { TCommonProperties }
 
 constructor TCommonProperties.Create;
@@ -491,6 +598,8 @@ end;
 
 constructor TBaseSettings.Create(const AIdent: String);
 begin
+  inherited Create;
+
   FIdent := AIdent;
 
   FBackgroundColor := $FF2A001A;
@@ -502,7 +611,7 @@ destructor TBaseSettings.Destroy;
 begin
   FreeAndNil(FCustomTextSettings);
 
-  inherited;
+  inherited Destroy;
 end;
 
 procedure TBaseSettings.CopyFrom(
@@ -629,30 +738,30 @@ constructor TBaseControlSettings.Create(const AIdent: String);
 begin
   inherited Create(AIdent);
 
-  FContainer := nil;
-  FControlsCollection := TControlsCollection.Create(nil);
+//  FContainer := nil;
+//  FControlsCollection := TControlsCollection.Create(nil);
 end;
 
 destructor TBaseControlSettings.Destroy;
 begin
   FreeAndNil(FControlsCollection);
 
-  inherited;
+  inherited Destroy;
 end;
 
-procedure TBaseControlSettings.SetContainer(const AFmxObject: TFmxObject);
-begin
-  FContainer := AFmxObject;
-end;
+//procedure TBaseControlSettings.SetContainer(const AFmxObject: TFmxObject);
+//begin
+//  FContainer := AFmxObject;
+//end;
 
-procedure TBaseControlSettings.CollectObjects;
-begin
-  if not Assigned(FContainer) then
-    Exit;
-
-  FControlsCollection.Clear;
-  FControlsCollection.CollectFrom(FContainer);
-end;
+//procedure TBaseControlSettings.CollectObjects;
+//begin
+//  if not Assigned(FContainer) then
+//    Exit;
+//
+//  FControlsCollection.Clear;
+//  FControlsCollection.CollectFrom(FContainer);
+//end;
 
 { TCommonSettings }
 
@@ -786,21 +895,32 @@ begin
   inherited Create(ClassName);
 
   FOnApplyProcRef := nil;
+
+  FNormalBackgroundColor := NORMAL_BUTTON_BACKGOUND_COLOR;
+  FFocusedBackgroundColor := FOCUSED_BUTTON_BACKGOUND_COLOR;
+
+  FNormalFrameColor := NORMAL_BUTTON_FRAME_COLOR;
+  FFocusedFrameColor := FOCUSED_BUTTON_FRAME_COLOR;
 end;
 
 procedure TButtonSettings.CopyFrom(
   const AButtonSettings: TButtonSettings);
 begin
   inherited CopyFrom(AButtonSettings);
+
+  FNormalBackgroundColor := AButtonSettings.NormalBackgroundColor;
+  FFocusedBackgroundColor := AButtonSettings.FocusedBackgroundColor;
+
+  FNormalFrameColor := AButtonSettings.NormalFrameColor;
+  FFocusedFrameColor := AButtonSettings.FFocusedBackgroundColor;
 end;
 
 procedure TButtonSettings.Apply;
 var
   Control: TControl;
+  Button: TButton;
+  Decorator: TButtonDecorator;
 begin
-  if not Assigned(FOnApplyProcRef) then
-    Exit;
-
   if not Assigned(FContainer) then
     Exit;
 
@@ -811,7 +931,20 @@ begin
 
   for Control in FControlsCollection do
   begin
-    FOnApplyProcRef(Control, Self);
+    if Control is TButton then
+    begin
+      Button := TButton(Control);
+      TButtonDecorator.TryGetDecorator(Button, Decorator);
+      if Assigned(Decorator) then
+      begin
+        Decorator.NormalBackgroundColor := FNormalBackgroundColor;
+        Decorator.FocusedBackgroundColor := FFocusedBackgroundColor;
+        Decorator.NormalFrameColor := FNormalFrameColor;
+        Decorator.FocusedFrameColor := FFocusedFrameColor;
+
+        CustomTextSettings.ApplyTo(Decorator.TextLabel);
+      end;
+    end;
   end;
 end;
 
@@ -824,6 +957,7 @@ begin
   ItemSettings.FromParams(AParams);
   PopUpMenuTheme.FromParams(AParams);
   HintTheme.FromParams(AParams);
+  ButtonSettings.FromParams(AParams);
 end;
 
 procedure TTheme.SettingsToParams(const AParams: TParamsExt);
@@ -845,6 +979,9 @@ begin
     AParams.AddFrom(ParamsTmp);
 
     HintTheme.ToParams(ParamsTmp);
+    AParams.AddFrom(ParamsTmp);
+
+    ButtonSettings.ToParams(ParamsTmp);
     AParams.AddFrom(ParamsTmp);
   finally
     FreeAndNil(ParamsTmp);
@@ -1001,7 +1138,7 @@ begin
   end;
 end;
 
-class procedure TTheme.DecorateButton(const AButton: TButton);
+procedure TTheme.DecorateButton(const AButton: TButton);
 begin
   TButtonDecorator.Decorate(AButton);
 end;
