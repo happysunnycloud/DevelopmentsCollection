@@ -196,7 +196,9 @@ type
     procedure ControlsEnumerator(
       const ABreakingControlEnumeratorCallbackProc:
         TBreakingControlEnumeratorCallbackProc); overload;
-
+    procedure Rebuild(
+      const ASpacing: Single); overload;
+    procedure Rebuild; overload;
     procedure Clear;
   end;
 
@@ -336,6 +338,36 @@ begin
 
     Content.Controls[i].Free;
   end;
+end;
+
+procedure TScrollBoxHelper.Rebuild(
+  const ASpacing: Single);
+var
+  i: Integer;
+  Y: Single;
+  Control: TControl;
+begin
+  BeginUpdate;
+  try
+    Y := 0;
+
+    for i := 0 to Content.ControlsCount - 1 do
+    begin
+      Control := Content.Controls[i];
+
+      Control.Position.Y := Y;
+
+      Y := Y + Control.Height + ASpacing;
+    end;
+  finally
+    EndUpdate;
+  end;
+  RealignContent;
+end;
+
+procedure TScrollBoxHelper.Rebuild;
+begin
+  Rebuild(0);
 end;
 
 { TComboBoxHelper }
