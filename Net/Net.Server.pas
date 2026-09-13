@@ -85,11 +85,17 @@ type
 
     procedure DoClientAuthorized(const AContext: TIdContext);
     procedure DoExecute(AContext: TIdContext);
+  strict private
+    function GetPort: Word;
+    procedure SetPort(const APort: Word);
   public
     constructor Create(
       const APort: Word = SERVER_PORT;
       const AReadTimeOut: Integer = READ_TIMEOUT);
     destructor  Destroy; override;
+
+    property Port: Word
+      read GetPort write SetPort;
 
     property Active: Boolean read GetActive write SetActive;
     property AllowedConnectionCount: Integer
@@ -235,6 +241,16 @@ begin
   inherited;
 end;
 
+function TNetServer.GetPort: Word;
+begin
+  Result := FConnection.DefaultPort;
+end;
+
+procedure TNetServer.SetPort(const APort: Word);
+begin
+  FConnection.DefaultPort := APort;
+end;
+
 procedure TNetServer.Reply(
   const AContext: TIdContext;
   const ADataContainer: TDataContainer);
@@ -273,7 +289,27 @@ begin
 end;
 
 procedure TNetServer.SetActive(const AActive: Boolean);
+var
+  ContextList: TList;
+  Context: TIdContext;
 begin
+  if not AActive then
+  begin
+    ContextList := FConnection.Contexts.LockList;
+    try
+      for Context in ContextList do
+      begin
+        if Context.Connection.Connected then
+        begin
+          Context.Connection.IOHandler.InputBuffer.Clear;
+          Context.Connection.Disconnect(false);
+        end
+      end;
+    finally
+      FConnection.Contexts.UnlockList;
+    end;
+  end;
+
   FConnection.Active := AActive;
 end;
 
