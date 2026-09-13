@@ -1092,6 +1092,8 @@ begin
     FFormSettings.Apply;
   if Assigned(FCommonSettings.Container) then
     FCommonSettings.Apply;
+  if Assigned(CommonSettings.CustomTextSettings.Container) then
+    CommonSettings.CustomTextSettings.Apply;
   if Assigned(FHintSettings.Container) then
     FHintSettings.Apply;
   if Assigned(FItemSettings.Container) then

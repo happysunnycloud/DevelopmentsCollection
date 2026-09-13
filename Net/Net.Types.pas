@@ -38,7 +38,7 @@ type
   TServerExceptionEvent = procedure (
     const AExceptionCode: TNetExceptionCode;
     const AIP: String;
-    const APorn: Word) of object;
+    const APort: Word) of object;
   TClientExceptionEvent = procedure (
     const AExceptionCode: TNetExceptionCode) of object;
 

@@ -1110,13 +1110,13 @@ begin
       begin
         Thread := AThread;
 
+        ActivateThreadIsDeadEvent(Thread, AThreadIsDeadEvent);
+
         ABreak := true;
       end;
     end);
 
-  if Assigned(Thread) then
-    ActivateThreadIsDeadEvent(Thread, AThreadIsDeadEvent)
-  else
+  if not Assigned(Thread) then
     AThreadIsDeadEvent.SetEvent;
 end;
 
