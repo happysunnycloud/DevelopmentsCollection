@@ -44,6 +44,7 @@ implementation
 uses
     System.SysUtils
   , System.SyncObjs
+  , System.Classes
   ;
 
 { TStringTools }
@@ -90,8 +91,8 @@ end;
 class function TStringTools.IsIP4(AString: String): Boolean;
 var
   i: Word;
-  StringArray: TArray<String>;
   _Char: Char;
+  Parts: TArray<String>;
 begin
   Result := true;
 
@@ -109,19 +110,9 @@ begin
     Inc(i);
   end;
 
-  StringArray := AString.Split(['.']);
-  i := 0;
-  while i < Length(StringArray) do
-  begin
-    if not ((Length(StringArray[i]) >= 1) and (Length(StringArray[i]) <= 3)) then
-    begin
-      Result := false;
-
-      Exit;
-    end;
-
-    Inc(i);
-  end;
+  Parts := AString.Split(['.']);
+  if (Length(Parts) <> 4) or (AString[AString.Length] = '.') then
+    Result := false;
 end;
 
 class function TStringTools.GetHumanTime(
