@@ -307,7 +307,9 @@ type
       const AList: TList<T>;
       const AName: String);
 
-    { TODO: для списков олбъектом нужно предусмотреть исключения полей объекта, как это сделано для FromObject}
+    { TODO: для списков объектов нужно предусмотреть исключения полей объекта,
+    как это сделано для FromObject}
+
     /// <summary>
     ///  Применяется к спискам объектов
     ///  Объект может содержать свойста со стандартными простыми или
@@ -1424,6 +1426,8 @@ var
   VarType: TVarType;
   Count: Integer;
 begin
+  AllowIdentDuplicates := true;
+
   ListType := Ctx.GetType(AList.ClassType);
 
   CountProp := ListType.GetProperty('Count');
