@@ -1,0 +1,54 @@
+object MessageBoxForm: TMessageBoxForm
+  Left = 0
+  Top = 0
+  Caption = 'Message box'
+  ClientHeight = 259
+  ClientWidth = 447
+  Fill.Color = xFFF0F0F0
+  Fill.Kind = Solid
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  OnClose = FormClose
+  OnKeyUp = FormKeyUp
+  DesignerMasterStyle = 0
+  object ButtonsLayout: TLayout
+    Align = Bottom
+    Position.Y = 197.000000000000000000
+    Size.Width = 447.000000000000000000
+    Size.Height = 62.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 0
+    object OkButton: TButton
+      Align = Center
+      Size.Width = 80.000000000000000000
+      Size.Height = 30.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 0
+      Text = 'Ok'
+      OnClick = OkButtonClick
+    end
+  end
+  object MessageLayout: TLayout
+    Align = Client
+    Size.Width = 447.000000000000000000
+    Size.Height = 197.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 1
+    object MessageLabel: TLabel
+      Align = Contents
+      StyledSettings = [Family, Style, FontColor]
+      Margins.Left = 5.000000000000000000
+      Margins.Top = 5.000000000000000000
+      Margins.Right = 5.000000000000000000
+      Margins.Bottom = 5.000000000000000000
+      Size.Width = 437.000000000000000000
+      Size.Height = 187.000000000000000000
+      Size.PlatformDefault = False
+      TextSettings.Font.Size = 20.000000000000000000
+      TextSettings.HorzAlign = Center
+      Text = 'Message'
+      TabOrder = 0
+    end
+  end
+end
