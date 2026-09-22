@@ -52,10 +52,6 @@ destructor TSafeQueueThread.Destroy;
 begin
   DeactivateThreadQueue;
 
-  //  Просто нилим интерфейсный объект,
-  //  он освободится автоматически
-  FSafeQueueThreadSignal := nil;
-
   inherited;
 end;
 

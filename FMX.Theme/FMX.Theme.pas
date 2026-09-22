@@ -162,7 +162,14 @@ type
     FBorderFrameKind: TBorderFrameKind;
     FBorderFrameColor: TAlphaColor;
     FBorderFrameToolButtonColor: TAlphaColor;
+    { TODO: видимо это свойство больше не нужно, оно заменено на
+            FBorderFrameCloseToolButtonMouseOverBackgroundColor: TAlphaColor;
+            FBorderFrameMaxToolButtonMouseOverBackgroundColor: TAlphaColor;
+            FBorderFrameMinToolButtonMouseOverBackgroundColor: TAlphaColor; }
     FBorderFrameToolButtonMouseOverColor: TAlphaColor;
+    FBorderFrameCloseToolButtonMouseOverBackgroundColor: TAlphaColor;
+    FBorderFrameMaxToolButtonMouseOverBackgroundColor: TAlphaColor;
+    FBorderFrameMinToolButtonMouseOverBackgroundColor: TAlphaColor;
     {$ENDIF}
   protected
     procedure SetContainer(const AFmxObject: TFmxObject); override;
@@ -181,6 +188,13 @@ type
       read FBorderFrameToolButtonColor write FBorderFrameToolButtonColor;
     property BorderFrameToolButtonMouseOverColor: TAlphaColor
       read FBorderFrameToolButtonMouseOverColor write FBorderFrameToolButtonMouseOverColor;
+
+    property BorderFrameCloseToolButtonMouseOverBackgroundColor: TAlphaColor
+      read FBorderFrameCloseToolButtonMouseOverBackgroundColor write FBorderFrameCloseToolButtonMouseOverBackgroundColor;
+    property BorderFrameMaxToolButtonMouseOverBackgroundColor: TAlphaColor
+      read FBorderFrameMaxToolButtonMouseOverBackgroundColor write FBorderFrameMaxToolButtonMouseOverBackgroundColor;
+    property BorderFrameMinToolButtonMouseOverBackgroundColor: TAlphaColor
+      read FBorderFrameMinToolButtonMouseOverBackgroundColor write FBorderFrameMinToolButtonMouseOverBackgroundColor;
     {$ENDIF}
 
     procedure Apply; override;
@@ -648,6 +662,13 @@ begin
   FBorderFrameToolButtonColor := TAlphaColorRec.White;
   FBorderFrameToolButtonMouseOverColor := TAlphaColorRec.Whitesmoke;
 
+  FBorderFrameCloseToolButtonMouseOverBackgroundColor :=
+    TAlphaColorRec.Red;
+  FBorderFrameMaxToolButtonMouseOverBackgroundColor :=
+    TAlphaColorRec.Yellowgreen;
+  FBorderFrameMinToolButtonMouseOverBackgroundColor :=
+    TAlphaColorRec.Yellowgreen;
+
   CustomTextSettings.FontColor := TAlphaColorRec.White;
   CustomTextSettings.FontSize := 16;
   CustomTextSettings.Bold := true;
@@ -701,6 +722,13 @@ begin
     Self.CustomTextSettings.FontSize;
   Form.BorderFrame.CaptionText.TextSettings.Font.Family :=
     Self.CustomTextSettings.FontFamily;
+
+  FBorderFrameCloseToolButtonMouseOverBackgroundColor :=
+    TAlphaColorRec.Red;
+  FBorderFrameMaxToolButtonMouseOverBackgroundColor :=
+    TAlphaColorRec.Yellowgreen;
+  FBorderFrameMinToolButtonMouseOverBackgroundColor :=
+    TAlphaColorRec.Yellowgreen;
   {$ENDIF}
 end;
 

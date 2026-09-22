@@ -200,6 +200,7 @@ type
       const ASpacing: Single); overload;
     procedure Rebuild; overload;
     procedure Clear;
+    procedure ScrollTo(const AControl: TControl);
   end;
 
   TComboBoxHelper = class helper for TComboBox
@@ -338,6 +339,20 @@ begin
 
     Content.Controls[i].Free;
   end;
+end;
+
+procedure TScrollBoxHelper.ScrollTo(const AControl: TControl);
+var
+  Control: TControl absolute AControl;
+  PointF: TPointF;
+begin
+  if not Assigned(Control) then
+    Exit;
+
+  PointF.X := Control.Position.X;
+  PointF.Y := Control.Position.Y;
+//  PointF := Control.LocalToAbsolute(PointF);
+  ViewportPosition := PointF;
 end;
 
 procedure TScrollBoxHelper.Rebuild(

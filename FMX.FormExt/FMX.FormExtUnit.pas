@@ -71,6 +71,7 @@ type
 
   TBorderFrame = BorderFrameUnit.TBorderFrame;
   TBorderFrameKind = BorderFrameUnit.TBorderFrameKind;
+  TBorderFrameIcon = BorderFrameUnit.TBorderFrameIcon;
   {$ENDIF}
   TTheme = FMX.Theme.TTheme;
   TFormSettings = FMX.Theme.TFormSettings;
@@ -164,6 +165,9 @@ type
     procedure InnerTrayIconMouseDown(
       Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Single);
     procedure OnBorderFrameMaxupButtonClickHandler;
+
+    function GetCaption: String;
+    procedure SetCaption(const ACaption: String);
     {$ENDIF}
   protected
     {$IFDEF MSWINDOWS}
@@ -183,6 +187,9 @@ type
     property Theme: TTheme read FTheme;
     property ScreenScale: Single read FScreenScale;
     {$IFDEF MSWINDOWS}
+
+    property Caption: String read GetCaption write SetCaption;
+
     property BorderFrame: TBorderFrame read FBorderFrame;
 
     property ClientWidth: Integer read GetClientWidth write SetClientWidth;
@@ -439,6 +446,8 @@ begin
 
   FTheme := TTheme.Create;
 
+  FBorderFrame := nil;
+
   {$IFDEF MSWINDOWS}
   FLastFormStateRec.Left := Left;
   FLastFormStateRec.Top := Top;
@@ -522,6 +531,17 @@ begin
   end;
 
   Self.Invalidate;
+end;
+
+function TFormExt.GetCaption: String;
+begin
+  Result := inherited Caption;
+end;
+
+procedure TFormExt.SetCaption(const ACaption: String);
+begin
+  inherited Caption := ACaption;
+  BorderFrame.Caption := Caption;
 end;
 
 function TFormExt.GetClientWidth: Integer;

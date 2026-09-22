@@ -26,6 +26,10 @@ type
   end;
 
 type
+  TBorderFrameIcon = (bfiClose, bfiMinimize, bfiMaximize);
+  TBorderFrameIcons = set of TBorderFrameIcon;
+
+type
   TBorderFrameMaxupButtonClickProcRef = procedure of object;
 
 type
@@ -98,6 +102,8 @@ type
     procedure MaxupButtonRectangleMouseLeave(Sender: TObject);
     procedure MaxupButtonRectangleClick(Sender: TObject);
   private
+    FBorderFrameIcons: TBorderFrameIcons;
+
     FMinWidth, FMinHeight: Integer;
     FMaxWidth, FMaxHeight: Integer;
 
@@ -112,14 +118,16 @@ type
     FBorderFrameKind: TBorderFrameKind;
     FBorderFrameMaxupButtonClickProcRef: TBorderFrameMaxupButtonClickProcRef;
 
+    FCloseToolButtonMouseOverBackgroundColor: TAlphaColor;
+    FMaxToolButtonMouseOverBackgroundColor: TAlphaColor;
+    FMinToolButtonMouseOverBackgroundColor: TAlphaColor;
+
     procedure ShowMaxupIcon(const AIsMaxedup: Boolean);
 
     procedure LeftConstraint(const X: Single);
     procedure RightConstraint(const X: Single);
     procedure TopConstraint(const Y: Single);
     procedure BottomConstraint(const Y: Single);
-
-    //function GetCaption: TText;
 
     procedure SetMinWidth(const AMinWidth: Integer);
     procedure SetMinHeight(const AMinHeight: Integer);
@@ -155,6 +163,8 @@ type
     procedure SetCaptionColor(const ACaptionColor: TAlphaColor);
     procedure SetCaption(const ACaption: String);
 
+    procedure SetBorderFrameIcons(const ABorderFrameIcons: TBorderFrameIcons);
+
     procedure BorderMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Single);
     procedure BorderMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Single);
     procedure BorderMouseLeave(Sender: TObject);
@@ -176,7 +186,7 @@ type
       ACaptionColor: TAlphaColor = TAlphaColorRec.White;
       ABorderColor: TAlphaColor = TAlphaColorRec.Cornflowerblue;
       AToolButtonColor: TAlphaColor = TAlphaColorRec.White;
-      AToolButtonMouseOverColor: TAlphaColor = TAlphaColorRec.Lime
+      AToolButtonMouseOverColor: TAlphaColor = TAlphaColorRec.Skyblue
       ); reintroduce; overload;
 
     property MinWidth: Integer read FMinWidth write SetMinWidth;
@@ -187,6 +197,8 @@ type
 
     property MaxClientWidth: Integer read GetMaxClientWidth write SetMaxClientWidth;
     property MaxClientHeight: Integer read GetMaxClientHeight write SetMaxClientHeight;
+
+    property BorderFrameIcons: TBorderFrameIcons write SetBorderFrameIcons;
 
     /// <summary>
     ///   Ширина окна вместе с бортами
@@ -209,6 +221,10 @@ type
     property Color: TAlphaColor read FBorderColor write SetBorderColor;
     property ToolButtonColor: TAlphaColor read FToolButtonColor write SetToolButtonColor;
     property ToolButtonMouseOverColor: TAlphaColor read FToolButtonMouseOverColor write SetToolButtonMouseOverColor;
+
+    property CloseToolButtonMouseOverBackgroundColor: TAlphaColor
+      read FCloseToolButtonMouseOverBackgroundColor write FCloseToolButtonMouseOverBackgroundColor;
+
     property CaptionColor: TAlphaColor read FCaptionColor write SetCaptionColor;
     property Caption: String write SetCaption;
 
@@ -464,6 +480,10 @@ end;
 
 procedure TBorderFrame.ApplyChanges;
 begin
+  RolldownButtonLayout.Visible := bfiMinimize in FBorderFrameIcons;
+  MaxButtonLayout.Visible := bfiMaximize in FBorderFrameIcons;
+  CloseButtonLayout.Visible := bfiClose in FBorderFrameIcons;
+
   TopBorderRectangle.Fill.Color := FBorderColor;
   CaptionRectangle.Fill.Color := FBorderColor;
   UnderCaptionRectangle.Fill.Color := FBorderColor;
@@ -476,9 +496,9 @@ begin
   BackgroundRolldownButtonRectangle.Fill.Color := FBorderColor;
   BackgroundMaxupButtonRectangle.Fill.Color := FBorderColor;
 
-  ForegroundCloseButtonRectangle.Fill.Color := FToolButtonMouseOverColor;
-  ForegroundRolldownButtonRectangle.Fill.Color := FToolButtonMouseOverColor;
-  ForegroundMaxupButtonRectangle.Fill.Color := FToolButtonMouseOverColor;
+  ForegroundCloseButtonRectangle.Fill.Color := FCloseToolButtonMouseOverBackgroundColor;
+  ForegroundRolldownButtonRectangle.Fill.Color := FMinToolButtonMouseOverBackgroundColor;
+  ForegroundMaxupButtonRectangle.Fill.Color := FMaxToolButtonMouseOverBackgroundColor;
 
   CaptionText.Text := FCaption;
   CaptionText.TextSettings.FontColor := FCaptionColor;
@@ -499,126 +519,6 @@ begin
     FToolButtonColor);
 end;
 
-//constructor TBorderFrame.Create(
-//  AOwner: TComponent;
-//  AContentLayout: TLayout;
-//  ACaption: String = '';
-//  AMinWidth: Integer = 0;
-//  AMinHeigth: Integer = 0;
-//  ACaptionColor: TAlphaColor = TAlphaColorRec.White;
-//  ABorderColor: TAlphaColor = TAlphaColorRec.Cornflowerblue;
-//  ACloseButtonColor: TAlphaColor = TAlphaColorRec.White;
-//  ACloseButtonMouseOverColor: TAlphaColor = TAlphaColorRec.Lime
-//);
-//begin
-//  Create(
-//    AOwner,
-//    AContentLayout,
-//    ACaption,
-//    AMinWidth,
-//    AMinHeigth,
-//    0,
-//    0,
-//    ACaptionColor,
-//    ABorderColor,
-//    ACloseButtonColor,
-//    ACloseButtonMouseOverColor
-//    );
-//end;
-
-//constructor TBorderFrame.Create(
-//  AOwner: TComponent;
-//  AContentLayout: TLayout;
-//  ACaption: String = '';
-//  AMinWidth: Integer = 0;
-//  AMinHeigth: Integer = 0;
-//  AMaxWidth: Integer = 0;
-//  AMaxHeigth: Integer = 0;
-//  ACaptionColor: TAlphaColor = TAlphaColorRec.White;
-//  ABorderColor: TAlphaColor = TAlphaColorRec.Cornflowerblue;
-//  ACloseButtonColor: TAlphaColor = TAlphaColorRec.White;
-//  ACloseButtonMouseOverColor: TAlphaColor = TAlphaColorRec.Lime
-//  );
-//var
-//  Control: TControl;
-//begin
-//  inherited Create(AOwner);
-//
-//  FMinWidth := AMinWidth;
-//  FMinHeight := AMinHeigth;
-//
-//  FMaxWidth := AMaxWidth;
-//  FMaxHeight := AMaxHeigth;
-//
-//  FBorderColor := 0;
-//
-//  FIsMouseDown := false;
-//
-//  for Control in [CaptionLayout,
-//                  CaptionText,
-//                  LeftTopLayout,
-//                  RightTopLayout,
-//                  LeftBottomLayout,
-//                  RightBottomLayout,
-//                  LeftLayout,
-//                  RightLayout,
-//                  BottomLayout,
-//                  TopLayout]
-//  do
-//  begin
-//    Control.OnMouseDown := BorderMouseDown;
-//    Control.OnMouseUp := BorderMouseUp;
-//    Control.OnMouseLeave := BorderMouseLeave;
-//  end;
-//
-//  if AOwner is TForm then
-//    TForm(AOwner).BorderStyle := TFmxFormBorderStyle.None;
-//
-//  MinWidth := Trunc(AContentLayout.Width);
-//  MinHeight := Trunc(AContentLayout.Height);
-//
-//  Self.Parent := TForm(AOwner);
-//  Self.Align := TAlignLayout.Contents;
-//  AContentLayout.Parent := Self.ContentLayout;
-//
-//  TopBorderRectangle.Fill.Color := ABorderColor;
-//  CaptionRectangle.Fill.Color := ABorderColor;
-//  UnderCaptionRectangle.Fill.Color := ABorderColor;
-//
-//  LeftBorderRectangle.Fill.Color := ABorderColor;
-//  RightBorderRectangle.Fill.Color := ABorderColor;
-//  BottomBorderRectangle.Fill.Color := ABorderColor;
-//
-//  BackgroundCloseButtonRectangle.Fill.Color := ABorderColor;
-//  BackgroundRolldownButtonRectangle.Fill.Color := ABorderColor;
-//
-//  ForegroundCloseButtonRectangle.Fill.Color := ACloseButtonMouseOverColor;
-//  ForegroundRolldownButtonRectangle.Fill.Color := ACloseButtonMouseOverColor;
-//
-//  CaptionText.Text := ACaption;
-//  CaptionText.OnMouseMove := CaptionLayoutMouseMove;
-//  CaptionText.TextSettings.FontColor := ACaptionColor;
-//
-//  TImageTools.ReplaceColor(
-//    CloseButtonRectangle.Fill.Bitmap.Bitmap,
-//    TAlphaColorRec.White,
-//    ACaptionColor);
-//
-//  TImageTools.ReplaceColor(
-//    RolldownButtonRectangle.Fill.Bitmap.Bitmap,
-//    TAlphaColorRec.White,
-//    ACaptionColor);
-//
-//  CaptionLayout.BringToFront;
-//  BottomLayout.BringToFront;
-//  LeftLayout.BringToFront;
-//  RightLayout.BringToFront;
-//  TopLayout.BringToFront;
-//  UnderCaptionLayout.BringToFront;
-//
-//  ContentLayout.SendToBack;
-//end;
-
 constructor TBorderFrame.Create(
   AOwner: TComponent;
   ABorderFrameKind: TBorderFrameKind;
@@ -628,7 +528,7 @@ constructor TBorderFrame.Create(
   ACaptionColor: TAlphaColor = TAlphaColorRec.White;
   ABorderColor: TAlphaColor = TAlphaColorRec.Cornflowerblue;
   AToolButtonColor: TAlphaColor = TAlphaColorRec.White;
-  AToolButtonMouseOverColor: TAlphaColor = TAlphaColorRec.Lime
+  AToolButtonMouseOverColor: TAlphaColor = TAlphaColorRec.Skyblue
   );
 var
   Form: TForm;
@@ -640,6 +540,8 @@ begin
   inherited Create(AOwner);
 
   Form := AOwner as TForm;
+
+  FBorderFrameIcons := [bfiClose, bfiMinimize, bfiMaximize];
 
   FBorderFrameMaxupButtonClickProcRef := nil;
 
@@ -675,6 +577,11 @@ begin
   FCaptionColor := ACaptionColor;
   FToolButtonColor := AToolButtonColor;
   FToolButtonMouseOverColor := AToolButtonMouseOverColor;
+
+  FCloseToolButtonMouseOverBackgroundColor := TAlphaColorRec.Red;
+  FMaxToolButtonMouseOverBackgroundColor := AToolButtonMouseOverColor;
+  FMinToolButtonMouseOverBackgroundColor := AToolButtonMouseOverColor;
+
   FCaption := Form.Caption;
 
   Kind := ABorderFrameKind;
@@ -1308,6 +1215,14 @@ end;
 procedure TBorderFrame.SetCaption(const ACaption: String);
 begin
   FCaption := ACaption;
+
+  ApplyChanges;
+end;
+
+procedure TBorderFrame.SetBorderFrameIcons(
+  const ABorderFrameIcons: TBorderFrameIcons);
+begin
+  FBorderFrameIcons := ABorderFrameIcons;
 
   ApplyChanges;
 end;
