@@ -93,6 +93,7 @@ type
     procedure Apply; virtual; abstract;
   end;
 
+  // Контейнер для хранения настроек текста
   TCustomTextSettings = class (TContainer)
   strict private
     FFontSize: Single;
@@ -156,6 +157,9 @@ type
     destructor Destroy; override;
   end;
 
+  // Контейнер для хранения настроек самой формы
+  // Например, настройки для заголовка задаются через
+  // унаследованное свойство CustomTextSettings
   TFormSettings = class(TBaseControlSettings)
   strict private
     {$IFDEF MSWINDOWS}
@@ -200,6 +204,7 @@ type
     procedure Apply; override;
   end;
 
+  // Контейнер для хранения настроек для всплывающих хинтов
   THintSettings = class(TBaseControlSettings)
   strict private
     FBorderFrameColor: TAlphaColor;
@@ -217,6 +222,7 @@ type
     procedure Apply; override;
   end;
 
+  // Контейнер для хранения настроек контролов расположенных на форме
   TCommonSettings = class(TBaseControlSettings)
   strict private
     FOnApplyProcRef: TCommonSettingsApplyProcRef;
@@ -246,6 +252,7 @@ type
     procedure Apply; override;
   end;
 
+  // Контейнер для хранения настроек списковых item
   TItemSettings = class(TCommonSettings)
   strict private
     FOnApplyProcRef: TItemSettingsApplyProcRef;
@@ -258,6 +265,7 @@ type
     procedure Apply; override;
   end;
 
+  // Контейнер для хранения настроек всплывающего меню
   TPopUpMenuSettings = class(TCommonSettings)
   strict private
     FOnApplyProcRef: TPopUpMenuSettingsApplyProcRef;
@@ -272,6 +280,7 @@ type
     procedure Apply; override;
   end;
 
+  // Контейнер для хранения настроек кнопок
   TButtonSettings = class(TBaseControlSettings)
   strict private
     FNormalBackgroundColor: TAlphaColor;
@@ -334,6 +343,8 @@ type
     procedure LoadFromFile(const AFileName: String);
     procedure SaveToFile(const AFileName: String);
   public
+    // Метод декорировани стандартной кнопки
+    // Добавляет свойства позволяющие применить к кнопке настройки Темы
     procedure DecorateButton(const AButton: TButton);
   public
     property DarkBackgroundColor: TAlphaColor
@@ -1118,6 +1129,8 @@ procedure TTheme.Apply;
 begin
   if Assigned(FFormSettings.Container) then
     FFormSettings.Apply;
+  if Assigned(FFormSettings.CustomTextSettings.Container) then
+    FFormSettings.CustomTextSettings.Apply;
   if Assigned(FCommonSettings.Container) then
     FCommonSettings.Apply;
   if Assigned(CommonSettings.CustomTextSettings.Container) then
