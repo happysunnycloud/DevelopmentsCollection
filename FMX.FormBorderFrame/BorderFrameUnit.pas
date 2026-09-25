@@ -101,6 +101,15 @@ type
     procedure MaxupButtonRectangleMouseEnter(Sender: TObject);
     procedure MaxupButtonRectangleMouseLeave(Sender: TObject);
     procedure MaxupButtonRectangleClick(Sender: TObject);
+    procedure RolldownButtonLayoutMouseEnter(Sender: TObject);
+    procedure RolldownButtonLayoutMouseLeave(Sender: TObject);
+    procedure RolldownButtonLayoutClick(Sender: TObject);
+    procedure MaxButtonLayoutMouseEnter(Sender: TObject);
+    procedure MaxButtonLayoutMouseLeave(Sender: TObject);
+    procedure MaxButtonLayoutClick(Sender: TObject);
+    procedure CloseButtonLayoutClick(Sender: TObject);
+    procedure CloseButtonLayoutMouseEnter(Sender: TObject);
+    procedure CloseButtonLayoutMouseLeave(Sender: TObject);
   private
     FBorderFrameIcons: TBorderFrameIcons;
 
@@ -113,6 +122,7 @@ type
     FBorderColor: TAlphaColor;
     FCaptionColor: TAlphaColor;
     FToolButtonColor: TAlphaColor;
+    FOldToolButtonColor: TAlphaColor;
     FToolButtonMouseOverColor: TAlphaColor;
     FCaption: String;
     FBorderFrameKind: TBorderFrameKind;
@@ -291,6 +301,27 @@ end;
 
 { TBorderFrame }
 
+procedure TBorderFrame.CloseButtonLayoutClick(Sender: TObject);
+begin
+  TForm(Owner).Close;
+end;
+
+procedure TBorderFrame.CloseButtonLayoutMouseEnter(Sender: TObject);
+begin
+  MouseEnterControl(
+    ForegroundCloseButtonRectangle,
+    BackgroundCloseButtonRectangle,
+    CloseButtonRectangle);
+end;
+
+procedure TBorderFrame.CloseButtonLayoutMouseLeave(Sender: TObject);
+begin
+  MouseEnterControl(
+    BackgroundCloseButtonRectangle,
+    ForegroundCloseButtonRectangle,
+    CloseButtonRectangle);
+end;
+
 procedure TBorderFrame.CloseButtonRectangleClick(Sender: TObject);
 begin
   TForm(Owner).Close;
@@ -298,18 +329,18 @@ end;
 
 procedure TBorderFrame.CloseButtonRectangleMouseEnter(Sender: TObject);
 begin
-  MouseEnterControl(
-    ForegroundCloseButtonRectangle,
-    BackgroundCloseButtonRectangle,
-    CloseButtonRectangle);
+//  MouseEnterControl(
+//    ForegroundCloseButtonRectangle,
+//    BackgroundCloseButtonRectangle,
+//    CloseButtonRectangle);
 end;
 
 procedure TBorderFrame.CloseButtonRectangleMouseLeave(Sender: TObject);
 begin
-  MouseEnterControl(
-    BackgroundCloseButtonRectangle,
-    ForegroundCloseButtonRectangle,
-    CloseButtonRectangle);
+//  MouseEnterControl(
+//    BackgroundCloseButtonRectangle,
+//    ForegroundCloseButtonRectangle,
+//    CloseButtonRectangle);
 end;
 
 procedure TBorderFrame.Mount;
@@ -505,17 +536,20 @@ begin
 
   TImageTools.ReplaceColor(
     CloseButtonRectangle.Fill.Bitmap.Bitmap,
-    TAlphaColorRec.White,
+    FOldToolButtonColor,
+//    TAlphaColorRec.White,
     FToolButtonColor);
 
   TImageTools.ReplaceColor(
     RolldownButtonRectangle.Fill.Bitmap.Bitmap,
-    TAlphaColorRec.White,
+    FOldToolButtonColor,
+//    TAlphaColorRec.White,
     FToolButtonColor);
 
   TImageTools.ReplaceColor(
     MaxupButtonRectangle.Fill.Bitmap.Bitmap,
-    TAlphaColorRec.White,
+    FOldToolButtonColor,
+//    TAlphaColorRec.White,
     FToolButtonColor);
 end;
 
@@ -576,6 +610,7 @@ begin
   FBorderColor := ABorderColor;
   FCaptionColor := ACaptionColor;
   FToolButtonColor := AToolButtonColor;
+  FOldToolButtonColor := FToolButtonColor;
   FToolButtonMouseOverColor := AToolButtonMouseOverColor;
 
   FCloseToolButtonMouseOverBackgroundColor := TAlphaColorRec.Red;
@@ -606,10 +641,10 @@ end;
 procedure TBorderFrame.ForegroundRolldownButtonRectangleMouseLeave(
   Sender: TObject);
 begin
-  MouseLeaveControl(
-    ForegroundRolldownButtonRectangle,
-    BackgroundRolldownButtonRectangle,
-    RolldownButtonRectangle);
+//  MouseLeaveControl(
+//    ForegroundRolldownButtonRectangle,
+//    BackgroundRolldownButtonRectangle,
+//    RolldownButtonRectangle);
 end;
 
 procedure TBorderFrame.ForegroundMaxupButtonRectangleMouseLeave(
@@ -921,10 +956,10 @@ end;
 procedure TBorderFrame.BackgroundRolldownButtonRectangleMouseEnter(
   Sender: TObject);
 begin
-  MouseEnterControl(
-    ForegroundRolldownButtonRectangle,
-    BackgroundRolldownButtonRectangle,
-    RolldownButtonRectangle);
+//  MouseEnterControl(
+//    ForegroundRolldownButtonRectangle,
+//    BackgroundRolldownButtonRectangle,
+//    RolldownButtonRectangle);
 end;
 
 procedure TBorderFrame.BackgroundMaxupButtonRectangleMouseEnter(
@@ -1034,47 +1069,92 @@ begin
   TopConstraint(Y);
 end;
 
-procedure TBorderFrame.RolldownButtonRectangleClick(Sender: TObject);
+procedure TBorderFrame.RolldownButtonLayoutClick(Sender: TObject);
 begin
   TForm(Owner).Hide;
   ShowWindow(ApplicationHwnd, SW_HIDE);
 end;
 
-procedure TBorderFrame.RolldownButtonRectangleMouseEnter(Sender: TObject);
+procedure TBorderFrame.RolldownButtonLayoutMouseEnter(Sender: TObject);
 begin
   MouseEnterControl(
     ForegroundRolldownButtonRectangle,
     BackgroundRolldownButtonRectangle,
     RolldownButtonRectangle);
+end;
+
+procedure TBorderFrame.RolldownButtonLayoutMouseLeave(Sender: TObject);
+begin
+  MouseEnterControl(
+    BackgroundRolldownButtonRectangle,
+    ForegroundRolldownButtonRectangle,
+    RolldownButtonRectangle);
+end;
+
+procedure TBorderFrame.RolldownButtonRectangleClick(Sender: TObject);
+begin
+//  TForm(Owner).Hide;
+//  ShowWindow(ApplicationHwnd, SW_HIDE);
+end;
+
+procedure TBorderFrame.RolldownButtonRectangleMouseEnter(Sender: TObject);
+begin
+//  MouseEnterControl(
+//    ForegroundRolldownButtonRectangle,
+//    BackgroundRolldownButtonRectangle,
+//    RolldownButtonRectangle);
 end;
 
 procedure TBorderFrame.RolldownButtonRectangleMouseLeave(Sender: TObject);
 begin
-  MouseEnterControl(
-    BackgroundRolldownButtonRectangle,
-    ForegroundRolldownButtonRectangle,
-    RolldownButtonRectangle);
+//  MouseEnterControl(
+//    BackgroundRolldownButtonRectangle,
+//    ForegroundRolldownButtonRectangle,
+//    RolldownButtonRectangle);
 end;
 
-procedure TBorderFrame.MaxupButtonRectangleClick(Sender: TObject);
+procedure TBorderFrame.MaxButtonLayoutClick(Sender: TObject);
 begin
   if Assigned(FBorderFrameMaxupButtonClickProcRef) then
     FBorderFrameMaxupButtonClickProcRef();
 end;
 
-procedure TBorderFrame.MaxupButtonRectangleMouseEnter(Sender: TObject);
+procedure TBorderFrame.MaxButtonLayoutMouseEnter(Sender: TObject);
 begin
   MouseEnterControl(
     ForegroundMaxupButtonRectangle,
     BackgroundMaxupButtonRectangle,
     MaxupButtonRectangle);
 end;
-procedure TBorderFrame.MaxupButtonRectangleMouseLeave(Sender: TObject);
+
+procedure TBorderFrame.MaxButtonLayoutMouseLeave(Sender: TObject);
 begin
   MouseEnterControl(
     BackgroundMaxupButtonRectangle,
     ForegroundMaxupButtonRectangle,
     MaxupButtonRectangle);
+end;
+
+procedure TBorderFrame.MaxupButtonRectangleClick(Sender: TObject);
+begin
+//  if Assigned(FBorderFrameMaxupButtonClickProcRef) then
+//    FBorderFrameMaxupButtonClickProcRef();
+end;
+
+procedure TBorderFrame.MaxupButtonRectangleMouseEnter(Sender: TObject);
+begin
+//  MouseEnterControl(
+//    ForegroundMaxupButtonRectangle,
+//    BackgroundMaxupButtonRectangle,
+//    MaxupButtonRectangle);
+end;
+
+procedure TBorderFrame.MaxupButtonRectangleMouseLeave(Sender: TObject);
+begin
+//  MouseEnterControl(
+//    BackgroundMaxupButtonRectangle,
+//    ForegroundMaxupButtonRectangle,
+//    MaxupButtonRectangle);
 end;
 
 procedure TBorderFrame.LeftBottomLayoutMouseEnter(Sender: TObject);
@@ -1193,6 +1273,7 @@ end;
 
 procedure TBorderFrame.SetToolButtonColor(const AToolButtonColor: TAlphaColor);
 begin
+  FOldToolButtonColor := FToolButtonColor;
   FToolButtonColor := AToolButtonColor;
 
   ApplyChanges;

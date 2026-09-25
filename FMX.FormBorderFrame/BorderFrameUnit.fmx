@@ -182,15 +182,20 @@ object BorderFrame: TBorderFrame
     end
     object CloseButtonLayout: TLayout
       Align = Right
+      HitTest = True
       Margins.Right = 5.000000000000000000
       Position.X = 343.000000000000000000
       Size.Width = 20.000000000000000000
       Size.Height = 20.000000000000000000
       Size.PlatformDefault = False
       TabOrder = 1
+      OnClick = CloseButtonLayoutClick
+      OnMouseEnter = CloseButtonLayoutMouseEnter
+      OnMouseLeave = CloseButtonLayoutMouseLeave
       object ForegroundCloseButtonRectangle: TRectangle
         Align = Contents
         Fill.Color = claBrown
+        HitTest = False
         Size.Width = 20.000000000000000000
         Size.Height = 20.000000000000000000
         Size.PlatformDefault = False
@@ -200,6 +205,7 @@ object BorderFrame: TBorderFrame
       object BackgroundCloseButtonRectangle: TRectangle
         Align = Contents
         Fill.Color = claCornflowerblue
+        HitTest = False
         Size.Width = 20.000000000000000000
         Size.Height = 20.000000000000000000
         Size.PlatformDefault = False
@@ -220,6 +226,7 @@ object BorderFrame: TBorderFrame
           068017D1441B06AE5996360000000049454E44AE426082}
         Fill.Bitmap.WrapMode = TileOriginal
         Fill.Kind = Bitmap
+        HitTest = False
         Size.Width = 15.000000000000000000
         Size.Height = 15.000000000000000000
         Size.PlatformDefault = False
@@ -231,15 +238,20 @@ object BorderFrame: TBorderFrame
     end
     object RolldownButtonLayout: TLayout
       Align = Right
+      HitTest = True
       Margins.Right = 5.000000000000000000
       Position.X = 293.000000000000000000
       Size.Width = 20.000000000000000000
       Size.Height = 20.000000000000000000
       Size.PlatformDefault = False
       TabOrder = 0
+      OnClick = RolldownButtonLayoutClick
+      OnMouseEnter = RolldownButtonLayoutMouseEnter
+      OnMouseLeave = RolldownButtonLayoutMouseLeave
       object ForegroundRolldownButtonRectangle: TRectangle
         Align = Contents
         Fill.Color = claBrown
+        HitTest = False
         Size.Width = 20.000000000000000000
         Size.Height = 20.000000000000000000
         Size.PlatformDefault = False
@@ -249,6 +261,7 @@ object BorderFrame: TBorderFrame
       object BackgroundRolldownButtonRectangle: TRectangle
         Align = Contents
         Fill.Color = claCornflowerblue
+        HitTest = False
         Size.Width = 20.000000000000000000
         Size.Height = 20.000000000000000000
         Size.PlatformDefault = False
@@ -264,6 +277,7 @@ object BorderFrame: TBorderFrame
           1999D00549011469A6080000BC460406236736190000000049454E44AE426082}
         Fill.Bitmap.WrapMode = TileOriginal
         Fill.Kind = Bitmap
+        HitTest = False
         Size.Width = 15.000000000000000000
         Size.Height = 15.000000000000000000
         Size.PlatformDefault = False
@@ -275,15 +289,20 @@ object BorderFrame: TBorderFrame
     end
     object MaxButtonLayout: TLayout
       Align = Right
+      HitTest = True
       Margins.Right = 5.000000000000000000
       Position.X = 318.000000000000000000
       Size.Width = 20.000000000000000000
       Size.Height = 20.000000000000000000
       Size.PlatformDefault = False
       TabOrder = 2
+      OnClick = MaxButtonLayoutClick
+      OnMouseEnter = MaxButtonLayoutMouseEnter
+      OnMouseLeave = MaxButtonLayoutMouseLeave
       object ForegroundMaxupButtonRectangle: TRectangle
         Align = Contents
         Fill.Color = claBrown
+        HitTest = False
         Size.Width = 20.000000000000000000
         Size.Height = 20.000000000000000000
         Size.PlatformDefault = False
@@ -293,6 +312,7 @@ object BorderFrame: TBorderFrame
       object BackgroundMaxupButtonRectangle: TRectangle
         Align = Contents
         Fill.Color = claCornflowerblue
+        HitTest = False
         Size.Width = 20.000000000000000000
         Size.Height = 20.000000000000000000
         Size.PlatformDefault = False
@@ -309,6 +329,7 @@ object BorderFrame: TBorderFrame
           466510187D3084BC0000000049454E44AE426082}
         Fill.Bitmap.WrapMode = TileOriginal
         Fill.Kind = Bitmap
+        HitTest = False
         Size.Width = 15.000000000000000000
         Size.Height = 15.000000000000000000
         Size.PlatformDefault = False
