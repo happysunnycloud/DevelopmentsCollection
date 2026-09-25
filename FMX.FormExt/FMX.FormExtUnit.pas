@@ -446,9 +446,9 @@ begin
 
   FTheme := TTheme.Create;
 
+  {$IFDEF MSWINDOWS}
   FBorderFrame := nil;
 
-  {$IFDEF MSWINDOWS}
   FLastFormStateRec.Left := Left;
   FLastFormStateRec.Top := Top;
   FLastFormStateRec.Width := Width;
