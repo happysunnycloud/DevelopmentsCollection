@@ -39,15 +39,19 @@ type
     class var FMessageBoxForm: TMessageBoxForm;
     class var FDelayShowThread: TDelayShowThread;
     class var FTheme: TTheme;
+
+    class procedure DoMessageBoxFormDestroy(Sender: TObject);
   private
     class procedure CreateAndShow(
       const AMessage: String;
       const ACaption: String = '');
+    class procedure HideAndFree;
   public
     class procedure Show(
       const AMessage: String;
       const ACaption: String = '';
       const ADelayShowSec: Integer = 0);
+    class procedure Hide;
     class procedure Break;
 
     class property Theme: TTheme
@@ -77,11 +81,17 @@ implementation
 
 { TMessageBox }
 
+class procedure TMessageBox.DoMessageBoxFormDestroy(Sender: TObject);
+begin
+  FMessageBoxForm := nil;
+end;
+
 class procedure TMessageBox.CreateAndShow(
   const AMessage: String;
   const ACaption: String = '');
 begin
   FMessageBoxForm := TMessageBoxForm.Create(nil);
+  FMessageBoxForm.OnDestroy := DoMessageBoxFormDestroy;
   FMessageBoxForm.Caption := ACaption;
   FMessageBoxForm.Position := TFormPosition.ScreenCenter;
   FMessageBoxForm.MessageLabel.Text := AMessage;
@@ -104,6 +114,15 @@ begin
   FMessageBoxForm.ShowModal;
 end;
 
+class procedure TMessageBox.HideAndFree;
+begin
+  if not Assigned(FMessageBoxForm) then
+    Exit;
+
+  FMessageBoxForm.Hide;
+  FMessageBoxForm.Close;
+end;
+
 class procedure TMessageBox.Show(
   const AMessage: String;
   const ACaption: String = '';
@@ -119,12 +138,16 @@ begin
   if not ACaption.IsEmpty then
     _Caption := ACaption;
   if ADelayShowSec <= 0 then
-  begin
-    CreateAndShow(AMessage, _Caption);
-  end
+    CreateAndShow(AMessage, _Caption)
   else
     FDelayShowThread :=
       TDelayShowThread.Create(ADelayShowSec, AMessage, ACaption);
+end;
+
+class procedure TMessageBox.Hide;
+begin
+  Break;
+  HideAndFree;
 end;
 
 class procedure TMessageBox.Break;
@@ -139,6 +162,8 @@ end;
 
 class procedure TMessageBox.Init;
 begin
+  FMessageBoxForm := nil;
+  FDelayShowThread := nil;
   FTheme := TTheme.Create;
 end;
 
