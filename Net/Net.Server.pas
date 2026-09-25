@@ -40,7 +40,7 @@ type
   strict private
     FFieldAccessCriticalSection:  TCriticalSection;
 
-    FSafeQueueThreadSignal:       ISafeQueueThreadSignal;
+    FSafeQueueThreadSignalOwner:  ISafeQueueThreadSignalOwner;
 
     FConnection:                  TIdTCPServer;
     FReadTimeOut:                 Word;
@@ -167,7 +167,7 @@ constructor TNetServer.Create(
 begin
   FFieldAccessCriticalSection   := TCriticalSection.Create;
 
-  FSafeQueueThreadSignal        := TSafeQueueThreadSignal.Create;
+  FSafeQueueThreadSignalOwner   := TSafeQueueThreadSignal.Create;
 
   FConnection                   := TIdTCPServer.Create(nil);
   FConnection.DefaultPort       := APort;
@@ -198,7 +198,7 @@ var
   Context: TIdContext;
   i: Integer;
 begin
-  FSafeQueueThreadSignal.Deactivate;
+  FSafeQueueThreadSignalOwner.Deactivate;
 
   try
     ContextList := FConnection.Contexts.LockList;
@@ -236,7 +236,7 @@ begin
   FreeAndNil(FFieldAccessCriticalSection);
 
   // Нилим в самом конце, после закрытия всех контекстов
-  FSafeQueueThreadSignal := nil;
+  // FSafeQueueThreadSignalOwner := nil;
 
   inherited;
 end;
@@ -386,7 +386,7 @@ begin
     FUserList.DisconnectByCredential(UserCredential);
 
     if Assigned(FOnClientDisconnected) then
-      TSafeQueueThread.SafeForceQueue(FSafeQueueThreadSignal,
+      TSafeQueueThread.SafeForceQueue(FSafeQueueThreadSignalOwner,
         procedure
         begin
           FOnClientDisconnected(
@@ -408,7 +408,7 @@ begin
     Exit;
 
   if Assigned(FOnClientAuthorized) then
-    TSafeQueueThread.SafeForceQueue(FSafeQueueThreadSignal,
+    TSafeQueueThread.SafeForceQueue(FSafeQueueThreadSignalOwner,
       procedure
       begin
         FOnClientAuthorized(Credential);
@@ -455,7 +455,7 @@ begin
     end;
 
     if Assigned(FOnClientConnected) then
-      TSafeQueueThread.SafeForceQueue(FSafeQueueThreadSignal,
+      TSafeQueueThread.SafeForceQueue(FSafeQueueThreadSignalOwner,
         procedure
         begin
           FOnClientConnected(
@@ -755,7 +755,7 @@ begin
         if IsExceptionHandled then
         begin
           if Assigned(FOnException) then
-            TSafeQueueThread.SafeForceQueue(FSafeQueueThreadSignal,
+            TSafeQueueThread.SafeForceQueue(FSafeQueueThreadSignalOwner,
               procedure
               begin
                 FOnException(
