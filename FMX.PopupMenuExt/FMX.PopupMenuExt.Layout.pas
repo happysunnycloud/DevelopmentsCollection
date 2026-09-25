@@ -20,12 +20,14 @@ type
     FTheme: TPopUpMenuSettings;
     FOnItemClickHandler: TNotifyEvent;
     FOnGoBackButtonClickHandler: TNotifyEvent;
-
-    procedure OnItemMouseEnterInternalHandler(Sender: TObject);
-    procedure OnItemMouseLeaveInternalHandler(Sender: TObject);
-    {$IFDEF ANDROID}
+    {$IFDEF MSWINDOWS}
+    procedure DoItemClick(Sender: TObject);
+    {$ELSE IFDEF ANDROID}
+    procedure DoItemTap(Sender: TObject; const Point: TPointF);
     procedure OnGoBackButtonClickInternalHandler(Sender: TObject);
     {$ENDIF}
+    procedure OnItemMouseEnterInternalHandler(Sender: TObject);
+    procedure OnItemMouseLeaveInternalHandler(Sender: TObject);
   protected
   public
     constructor Create(
@@ -232,7 +234,11 @@ begin
         ItemsHeight := ItemsHeight + ItemLayout.Margins.Top;
       end;
       ItemLayout.HitTest := true;
-      ItemLayout.OnClick := FOnItemClickHandler;
+      {$IFDEF MSWINDOWS}
+      ItemLayout.OnClick := DoItemClick;
+      {$ELSE IFDEF ANDROID}
+      ItemLayout.OnTap := DoItemTap;
+      {$ENDIF}
       ItemLayout.OnMouseEnter := OnItemMouseEnterInternalHandler;
       ItemLayout.OnMouseLeave := OnItemMouseLeaveInternalHandler;
       ItemLayout.Align := TAlignLayout.Top;
@@ -352,23 +358,24 @@ begin
   AItemsWidth := PopupLayoutWidth;
   AItemsHeight := ItemsHeight;
 end;
-
-procedure TPopupMenuLayout.OnItemMouseEnterInternalHandler(Sender: TObject);
-var
-  Rectangle: TRectangle;
+{$REGION 'Click/Tap handlers'}
+{$IFDEF MSWINDOWS}
+procedure TPopupMenuLayout.DoItemClick(Sender: TObject);
 begin
-  Rectangle := TRectangle(TLayout(Sender).Children[0]);
-  Rectangle.Fill.Color := FTheme.MouseOverColor;
+  if not Assigned(FOnItemClickHandler) then
+    Exit;
+
+  FOnItemClickHandler(Sender);
+end;
+{$ELSE IFDEF ANDROID}
+procedure TPopupMenuLayout.DoItemTap(Sender: TObject; const Point: TPointF);
+begin
+  if not Assigned(FOnItemClickHandler) then
+    Exit;
+
+  FOnItemClickHandler(Sender);
 end;
 
-procedure TPopupMenuLayout.OnItemMouseLeaveInternalHandler(Sender: TObject);
-var
-  Rectangle: TRectangle;
-begin
-  Rectangle := TRectangle(TLayout(Sender).Children[0]);
-  Rectangle.Fill.Color := FTheme.NormalBackgroundColor;
-end;
-{$IFDEF ANDROID}
 procedure TPopupMenuLayout.OnGoBackButtonClickInternalHandler(Sender: TObject);
 var
   Obj: TFmxObject;
@@ -385,6 +392,22 @@ begin
     FOnGoBackButtonClickHandler(Obj);
 end;
 {$ENDIF}
+{$ENDREGION 'Click/Tap handlers'}
+procedure TPopupMenuLayout.OnItemMouseEnterInternalHandler(Sender: TObject);
+var
+  Rectangle: TRectangle;
+begin
+  Rectangle := TRectangle(TLayout(Sender).Children[0]);
+  Rectangle.Fill.Color := FTheme.MouseOverColor;
+end;
+
+procedure TPopupMenuLayout.OnItemMouseLeaveInternalHandler(Sender: TObject);
+var
+  Rectangle: TRectangle;
+begin
+  Rectangle := TRectangle(TLayout(Sender).Children[0]);
+  Rectangle.Fill.Color := FTheme.NormalBackgroundColor;
+end;
 
 end.
 
