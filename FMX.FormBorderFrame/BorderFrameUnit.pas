@@ -120,7 +120,7 @@ type
     FStartX, FStartY: Single;
 
     FBorderColor: TAlphaColor;
-    FCaptionColor: TAlphaColor;
+    //FCaptionColor: TAlphaColor;
     FToolButtonColor: TAlphaColor;
     FOldToolButtonColor: TAlphaColor;
     FToolButtonMouseOverColor: TAlphaColor;
@@ -170,8 +170,12 @@ type
     procedure SetBorderColor(const ABorderColor: TAlphaColor);
     procedure SetToolButtonColor(const AToolButtonColor: TAlphaColor);
     procedure SetToolButtonMouseOverColor(const AToolButtonMouseOverColor: TAlphaColor);
-    procedure SetCaptionColor(const ACaptionColor: TAlphaColor);
+//    procedure SetCaptionColor(const ACaptionColor: TAlphaColor);
     procedure SetCaption(const ACaption: String);
+
+    procedure SetCloseToolButtonMouseOverBackgroundColor(const AColor: TAlphaColor);
+    procedure SetMaxToolButtonMouseOverBackgroundColor(const AColor: TAlphaColor);
+    procedure SetMinToolButtonMouseOverBackgroundColor(const AColor: TAlphaColor);
 
     procedure SetBorderFrameIcons(const ABorderFrameIcons: TBorderFrameIcons);
 
@@ -233,9 +237,13 @@ type
     property ToolButtonMouseOverColor: TAlphaColor read FToolButtonMouseOverColor write SetToolButtonMouseOverColor;
 
     property CloseToolButtonMouseOverBackgroundColor: TAlphaColor
-      read FCloseToolButtonMouseOverBackgroundColor write FCloseToolButtonMouseOverBackgroundColor;
+      read FCloseToolButtonMouseOverBackgroundColor write SetCloseToolButtonMouseOverBackgroundColor;
+    property MaxToolButtonMouseOverBackgroundColor: TAlphaColor
+      read FMaxToolButtonMouseOverBackgroundColor write SetMaxToolButtonMouseOverBackgroundColor;
+    property MinToolButtonMouseOverBackgroundColor: TAlphaColor
+      read FMinToolButtonMouseOverBackgroundColor write SetMinToolButtonMouseOverBackgroundColor;
 
-    property CaptionColor: TAlphaColor read FCaptionColor write SetCaptionColor;
+//    property CaptionColor: TAlphaColor read FCaptionColor write SetCaptionColor;
     property Caption: String write SetCaption;
 
     property OnBorderFrameMaxupButtonClick: TBorderFrameMaxupButtonClickProcRef
@@ -532,7 +540,7 @@ begin
   ForegroundMaxupButtonRectangle.Fill.Color := FMaxToolButtonMouseOverBackgroundColor;
 
   CaptionText.Text := FCaption;
-  CaptionText.TextSettings.FontColor := FCaptionColor;
+//  CaptionText.TextSettings.FontColor := FCaptionColor;
 
   TImageTools.ReplaceColor(
     CloseButtonRectangle.Fill.Bitmap.Bitmap,
@@ -608,7 +616,8 @@ begin
   end;
 
   FBorderColor := ABorderColor;
-  FCaptionColor := ACaptionColor;
+  CaptionText.TextSettings.FontColor := ACaptionColor;
+//  FCaptionColor := ACaptionColor;
   FToolButtonColor := AToolButtonColor;
   FOldToolButtonColor := FToolButtonColor;
   FToolButtonMouseOverColor := AToolButtonMouseOverColor;
@@ -1286,16 +1295,37 @@ begin
   ApplyChanges;
 end;
 
-procedure TBorderFrame.SetCaptionColor(const ACaptionColor: TAlphaColor);
-begin
-  FCaptionColor := ACaptionColor;
-
-  ApplyChanges;
-end;
+//procedure TBorderFrame.SetCaptionColor(const ACaptionColor: TAlphaColor);
+//begin
+//  FCaptionColor := ACaptionColor;
+//
+//  ApplyChanges;
+//end;
 
 procedure TBorderFrame.SetCaption(const ACaption: String);
 begin
   FCaption := ACaption;
+
+  ApplyChanges;
+end;
+
+procedure TBorderFrame.SetCloseToolButtonMouseOverBackgroundColor(const AColor: TAlphaColor);
+begin
+  FCloseToolButtonMouseOverBackgroundColor := AColor;
+
+  ApplyChanges;
+end;
+
+procedure TBorderFrame.SetMaxToolButtonMouseOverBackgroundColor(const AColor: TAlphaColor);
+begin
+  FMaxToolButtonMouseOverBackgroundColor := AColor;
+
+  ApplyChanges;
+end;
+
+procedure TBorderFrame.SetMinToolButtonMouseOverBackgroundColor(const AColor: TAlphaColor);
+begin
+  FMinToolButtonMouseOverBackgroundColor := AColor;
 
   ApplyChanges;
 end;
