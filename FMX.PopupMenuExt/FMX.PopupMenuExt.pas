@@ -13,6 +13,7 @@ uses
   {$ELSE IFDEF ANDROID}
     FMX.PopupMenuExt.Android
   {$ENDIF}
+  , PopupMenuExt.Item
   ;
 
 type
@@ -21,6 +22,7 @@ type
   {$ELSE IFDEF ANDROID}
   TPopupMenuExt = FMX.PopupMenuExt.Android.TPopupMenuExt;
   {$ENDIF}
+  TItem = PopupMenuExt.Item.TItem;
 
 implementation
 
