@@ -90,6 +90,9 @@ type
 
     procedure CollectObjects;
 
+    procedure ToParams(const AParams: TParamsExt);
+    procedure FromParams(const AParams: TParamsExt);
+
     procedure Apply; virtual; abstract;
   end;
 
@@ -126,54 +129,94 @@ type
       read FOnApplyProcRef write FOnApplyProcRef;
   end;
 
-  TBaseSettings = class (TContainer)
+  TParentClass =  class (TContainer)
   strict private
     FIdent: String;
+  public
+    constructor Create(const AIdent: String);
+    destructor Destroy; override;
 
+    property Ident: String read FIdent write FIdent;
+  end;
+
+  TBaseClass = class (TParentClass)
+  strict private
     FBackgroundColor: TAlphaColor;
+  public
+    constructor Create(const AIdent: String);
+    destructor Destroy; override;
+
+    procedure CopyFrom(const ABaseClass: TBaseClass); virtual;
+
+    property BackgroundColor: TAlphaColor
+      read FBackgroundColor write FBackgroundColor;
+  end;
+
+  TBaseSettings = class (TBaseClass)
+  strict private
     FCustomTextSettings: TCustomTextSettings;
   public
     constructor Create(const AIdent: String);
     destructor Destroy; override;
 
-    procedure CopyFrom(const ABaseSettings: TBaseSettings); virtual;
+    procedure CopyFrom(const ABaseSettings: TBaseSettings); reintroduce;
 
-    property Ident: String read FIdent write FIdent;
-
-    property BackgroundColor: TAlphaColor
-      read FBackgroundColor write FBackgroundColor;
     property CustomTextSettings: TCustomTextSettings
       read FCustomTextSettings write FCustomTextSettings;
-
-    procedure ToParams(const AParams: TParamsExt);
-    procedure FromParams(const AParams: TParamsExt);
   end;
 
-  { TODO: Проверить и размонтировать класс, так как в нем нет необходимости }
-  TBaseControlSettings = class(TBaseSettings)
-  protected
+  TBorderFrameSettings = class
+  strict private
+    FCaptionTextSettings: TCustomTextSettings;
+    FKind: TBorderFrameKind;
+    FColor: TAlphaColor;
+    FToolButtonColor: TAlphaColor;
+    FCloseToolButtonMouseOverBackgroundColor: TAlphaColor;
+    FMinToolButtonMouseOverBackgroundColor: TAlphaColor;
+    FMaxToolButtonMouseOverBackgroundColor: TAlphaColor;
   public
-    constructor Create(const AIdent: String);
+    constructor Create;
     destructor Destroy; override;
+
+    procedure CopyFrom(const ABorderFrameSettings: TBorderFrameSettings);
+
+    property CaptionTextSettings: TCustomTextSettings
+      read FCaptionTextSettings
+      write FCaptionTextSettings;
+    property Kind: TBorderFrameKind
+      read FKind write FKind;
+    property Color: TAlphaColor
+      read FColor write FColor;
+    property ToolButtonColor: TAlphaColor
+      read FToolButtonColor write FToolButtonColor;
+    property CloseToolButtonMouseOverBackgroundColor: TAlphaColor
+      read FCloseToolButtonMouseOverBackgroundColor
+      write FCloseToolButtonMouseOverBackgroundColor;
+    property MinToolButtonMouseOverBackgroundColor: TAlphaColor
+      read FMinToolButtonMouseOverBackgroundColor
+      write FMinToolButtonMouseOverBackgroundColor;
+    property MaxToolButtonMouseOverBackgroundColor: TAlphaColor
+      read FMaxToolButtonMouseOverBackgroundColor
+      write FMaxToolButtonMouseOverBackgroundColor;
   end;
 
   // Контейнер для хранения настроек самой формы
-  // Например, настройки для заголовка задаются через
-  // унаследованное свойство CustomTextSettings
-  TFormSettings = class(TBaseControlSettings)
+  TFormSettings = class(TBaseClass)
   strict private
+//    FCaptionTextSettings: TCustomTextSettings;
     {$IFDEF MSWINDOWS}
-    FBorderFrameKind: TBorderFrameKind;
-    FBorderFrameColor: TAlphaColor;
-    FBorderFrameToolButtonColor: TAlphaColor;
-    { TODO: видимо это свойство больше не нужно, оно заменено на
-            FBorderFrameCloseToolButtonMouseOverBackgroundColor: TAlphaColor;
-            FBorderFrameMaxToolButtonMouseOverBackgroundColor: TAlphaColor;
-            FBorderFrameMinToolButtonMouseOverBackgroundColor: TAlphaColor; }
-    FBorderFrameToolButtonMouseOverColor: TAlphaColor;
-    FBorderFrameCloseToolButtonMouseOverBackgroundColor: TAlphaColor;
-    FBorderFrameMaxToolButtonMouseOverBackgroundColor: TAlphaColor;
-    FBorderFrameMinToolButtonMouseOverBackgroundColor: TAlphaColor;
+    FBorderFrameSettings: TBorderFrameSettings;
+//    FBorderFrameKind: TBorderFrameKind;
+//    FBorderFrameColor: TAlphaColor;
+//    FBorderFrameToolButtonColor: TAlphaColor;
+//    { TODO: видимо это свойство больше не нужно, оно заменено на
+//            FBorderFrameCloseToolButtonMouseOverBackgroundColor: TAlphaColor;
+//            FBorderFrameMaxToolButtonMouseOverBackgroundColor: TAlphaColor;
+//            FBorderFrameMinToolButtonMouseOverBackgroundColor: TAlphaColor; }
+//    FBorderFrameToolButtonMouseOverColor: TAlphaColor;
+//    FBorderFrameCloseToolButtonMouseOverBackgroundColor: TAlphaColor;
+//    FBorderFrameMaxToolButtonMouseOverBackgroundColor: TAlphaColor;
+//    FBorderFrameMinToolButtonMouseOverBackgroundColor: TAlphaColor;
     {$ENDIF}
   protected
     procedure SetContainer(const AFmxObject: TFmxObject); override;
@@ -182,30 +225,44 @@ type
     destructor Destroy; override;
 
     procedure CopyFrom(const AFormSettings: TFormSettings); reintroduce;
+
+//    property CaptionTextSettings: TCustomTextSettings
+//      read FCaptionTextSettings
+//      write FCaptionTextSettings;
+
     {$IFDEF MSWINDOWS}
-    property BorderFrameKind: TBorderFrameKind
-      read FBorderFrameKind write FBorderFrameKind;
-    property BorderFrameColor: TAlphaColor
-      read FBorderFrameColor write FBorderFrameColor;
+    property BorderFrameSettings: TBorderFrameSettings
+      read FBorderFrameSettings
+      write FBorderFrameSettings;
 
-    property BorderFrameToolButtonColor: TAlphaColor
-      read FBorderFrameToolButtonColor write FBorderFrameToolButtonColor;
-    property BorderFrameToolButtonMouseOverColor: TAlphaColor
-      read FBorderFrameToolButtonMouseOverColor write FBorderFrameToolButtonMouseOverColor;
-
-    property BorderFrameCloseToolButtonMouseOverBackgroundColor: TAlphaColor
-      read FBorderFrameCloseToolButtonMouseOverBackgroundColor write FBorderFrameCloseToolButtonMouseOverBackgroundColor;
-    property BorderFrameMaxToolButtonMouseOverBackgroundColor: TAlphaColor
-      read FBorderFrameMaxToolButtonMouseOverBackgroundColor write FBorderFrameMaxToolButtonMouseOverBackgroundColor;
-    property BorderFrameMinToolButtonMouseOverBackgroundColor: TAlphaColor
-      read FBorderFrameMinToolButtonMouseOverBackgroundColor write FBorderFrameMinToolButtonMouseOverBackgroundColor;
+//    property BorderFrameKind: TBorderFrameKind
+//      read FBorderFrameKind write FBorderFrameKind;
+//    property BorderFrameColor: TAlphaColor
+//      read FBorderFrameColor write FBorderFrameColor;
+//
+//    property BorderFrameToolButtonColor: TAlphaColor
+//      read FBorderFrameToolButtonColor
+//      write FBorderFrameToolButtonColor;
+//    property BorderFrameToolButtonMouseOverColor: TAlphaColor
+//      read FBorderFrameToolButtonMouseOverColor
+//      write FBorderFrameToolButtonMouseOverColor;
+//
+//    property BorderFrameCloseToolButtonMouseOverBackgroundColor: TAlphaColor
+//      read FBorderFrameCloseToolButtonMouseOverBackgroundColor
+//      write FBorderFrameCloseToolButtonMouseOverBackgroundColor;
+//    property BorderFrameMaxToolButtonMouseOverBackgroundColor: TAlphaColor
+//      read FBorderFrameMaxToolButtonMouseOverBackgroundColor
+//      write FBorderFrameMaxToolButtonMouseOverBackgroundColor;
+//    property BorderFrameMinToolButtonMouseOverBackgroundColor: TAlphaColor
+//      read FBorderFrameMinToolButtonMouseOverBackgroundColor
+//      write FBorderFrameMinToolButtonMouseOverBackgroundColor;
     {$ENDIF}
 
     procedure Apply; override;
   end;
 
   // Контейнер для хранения настроек для всплывающих хинтов
-  THintSettings = class(TBaseControlSettings)
+  THintSettings = class(TBaseSettings)
   strict private
     FBorderFrameColor: TAlphaColor;
     FOnApplyProcRef: THintSettingsApplyProcRef;
@@ -223,7 +280,7 @@ type
   end;
 
   // Контейнер для хранения настроек контролов расположенных на форме
-  TCommonSettings = class(TBaseControlSettings)
+  TCommonSettings = class(TBaseSettings)
   strict private
     FOnApplyProcRef: TCommonSettingsApplyProcRef;
     FNormalBackgroundColor: TAlphaColor;
@@ -281,7 +338,7 @@ type
   end;
 
   // Контейнер для хранения настроек кнопок
-  TButtonSettings = class(TBaseControlSettings)
+  TButtonSettings = class(TBaseSettings)
   strict private
     FNormalBackgroundColor: TAlphaColor;
     FFocusedBackgroundColor: TAlphaColor;
@@ -452,6 +509,18 @@ begin
   FControlsCollection.CollectFrom(FContainer);
 end;
 
+procedure TContainer.ToParams(const AParams: TParamsExt);
+begin
+  AParams.Clear;
+
+  AParams.FromObject(Self, ClassName, '', EXCLUDED_PROP_NAMES);
+end;
+
+procedure TContainer.FromParams(const AParams: TParamsExt);
+begin
+  AParams.ToObject(Self, ClassName, '', EXCLUDED_PROP_NAMES);
+end;
+
 { TCustomTextSettings }
 
 constructor TCustomTextSettings.Create;
@@ -619,15 +688,45 @@ begin
   FHitTest := ACommonProperties.HitTest;
 end;
 
-{ TBaseSettings }
+{ TParentClass }
 
-constructor TBaseSettings.Create(const AIdent: String);
+constructor TParentClass.Create(const AIdent: String);
 begin
   inherited Create;
 
   FIdent := AIdent;
+end;
+
+destructor TParentClass.Destroy;
+begin
+  inherited Destroy;
+end;
+
+{ TBaseClass }
+
+constructor TBaseClass.Create(const AIdent: String);
+begin
+  inherited Create(AIdent);
 
   FBackgroundColor := $FF2A001A;
+end;
+
+destructor TBaseClass.Destroy;
+begin
+  inherited Destroy;
+end;
+
+procedure TBaseClass.CopyFrom(
+  const ABaseClass: TBaseClass);
+begin
+  FBackgroundColor := ABaseClass.BackgroundColor;
+end;
+
+{ TBaseSettings }
+
+constructor TBaseSettings.Create(const AIdent: String);
+begin
+  inherited Create(AIdent);
 
   FCustomTextSettings := TCustomTextSettings.Create;
 end;
@@ -642,21 +741,38 @@ end;
 procedure TBaseSettings.CopyFrom(
   const ABaseSettings: TBaseSettings);
 begin
-  FBackgroundColor := ABaseSettings.BackgroundColor;
+  inherited CopyFrom(ABaseSettings);
 
   FCustomTextSettings.CopyFrom(ABaseSettings.CustomTextSettings);
 end;
 
-procedure TBaseSettings.ToParams(const AParams: TParamsExt);
-begin
-  AParams.Clear;
+{ TBorderFrameSettings }
 
-  AParams.FromObject(Self, ClassName, '', EXCLUDED_PROP_NAMES);
+constructor TBorderFrameSettings.Create;
+begin
+  FCaptionTextSettings := TCustomTextSettings.Create;
 end;
 
-procedure TBaseSettings.FromParams(const AParams: TParamsExt);
+destructor TBorderFrameSettings.Destroy;
 begin
-  AParams.ToObject(Self, ClassName, '', EXCLUDED_PROP_NAMES);
+  FreeAndNil(FCaptionTextSettings);
+
+  inherited;
+end;
+
+procedure TBorderFrameSettings.CopyFrom(
+  const ABorderFrameSettings: TBorderFrameSettings);
+begin
+  FCaptionTextSettings.CopyFrom(ABorderFrameSettings.CaptionTextSettings);
+  FKind := ABorderFrameSettings.Kind;
+  FColor := ABorderFrameSettings.Color;
+  FToolButtonColor := ABorderFrameSettings.ToolButtonColor;
+  FCloseToolButtonMouseOverBackgroundColor :=
+    ABorderFrameSettings.CloseToolButtonMouseOverBackgroundColor;
+  FMinToolButtonMouseOverBackgroundColor :=
+    ABorderFrameSettings.MinToolButtonMouseOverBackgroundColor;
+  FMaxToolButtonMouseOverBackgroundColor :=
+    ABorderFrameSettings.MaxToolButtonMouseOverBackgroundColor;
 end;
 
 { TFormSettings }
@@ -666,28 +782,34 @@ begin
   inherited Create(ClassName);
 
   BackgroundColor := TAlphaColorRec.Lightgray;
+  //FCaptionTextSettings := TCustomTextSettings.Create;
 
   {$IFDEF MSWINDOWS}
-  FBorderFrameKind := TBorderFrameKind.bfkNormal;
-  FBorderFrameColor := TAlphaColorRec.Cornflowerblue;
-  FBorderFrameToolButtonColor := TAlphaColorRec.White;
-  FBorderFrameToolButtonMouseOverColor := TAlphaColorRec.Whitesmoke;
+  FBorderFrameSettings := TBorderFrameSettings.Create;
 
-  FBorderFrameCloseToolButtonMouseOverBackgroundColor :=
+  FBorderFrameSettings.Kind := TBorderFrameKind.bfkNormal;
+  FBorderFrameSettings.Color := TAlphaColorRec.Cornflowerblue;
+  FBorderFrameSettings.ToolButtonColor := TAlphaColorRec.White;
+//  FBorderFrameSettings.ToolButtonMouseOverColor := TAlphaColorRec.Whitesmoke;
+
+  FBorderFrameSettings.CloseToolButtonMouseOverBackgroundColor :=
     TAlphaColorRec.Red;
-  FBorderFrameMaxToolButtonMouseOverBackgroundColor :=
-    TAlphaColorRec.Yellowgreen;
-  FBorderFrameMinToolButtonMouseOverBackgroundColor :=
-    TAlphaColorRec.Yellowgreen;
+  FBorderFrameSettings.MaxToolButtonMouseOverBackgroundColor :=
+    TAlphaColorRec.Lightblue;
+  FBorderFrameSettings.MinToolButtonMouseOverBackgroundColor :=
+    TAlphaColorRec.Lightblue;
 
-  CustomTextSettings.FontColor := TAlphaColorRec.White;
-  CustomTextSettings.FontSize := 16;
-  CustomTextSettings.Bold := true;
+  FBorderFrameSettings.CaptionTextSettings.FontColor := TAlphaColorRec.White;
+  FBorderFrameSettings.CaptionTextSettings.FontSize := 16;
+  FBorderFrameSettings.CaptionTextSettings.Bold := true;
   {$ENDIF}
 end;
 
 destructor TFormSettings.Destroy;
 begin
+//  FreeAndNil(FCaptionTextSettings);
+  FreeAndNil(FBorderFrameSettings);
+
   inherited;
 end;
 
@@ -706,14 +828,26 @@ begin
   inherited CopyFrom(AFormSettings);
 
   {$IFDEF MSWINDOWS}
-  FBorderFrameKind := AFormSettings.BorderFrameKind;
-  FBorderFrameColor := AFormSettings.BorderFrameColor;
+  FBorderFrameSettings.CopyFrom(AFormSettings.BorderFrameSettings);
+
+//  FBorderFrameKind := AFormSettings.BorderFrameKind;
+//  FBorderFrameColor := AFormSettings.BorderFrameColor;
+//
+//  FBorderFrameToolButtonColor :=
+//    AFormSettings.BorderFrameToolButtonColor;
+//  FBorderFrameCloseToolButtonMouseOverBackgroundColor :=
+//    AFormSettings.BorderFrameCloseToolButtonMouseOverBackgroundColor;
+//  FBorderFrameMaxToolButtonMouseOverBackgroundColor :=
+//    AFormSettings.BorderFrameMaxToolButtonMouseOverBackgroundColor;
+//  FBorderFrameMinToolButtonMouseOverBackgroundColor :=
+//    AFormSettings.BorderFrameMinToolButtonMouseOverBackgroundColor;
   {$ENDIF}
 end;
 
 procedure TFormSettings.Apply;
 var
   Form: TFormExt;
+  FontStyles: TFontStyles;
 begin
   if not Assigned(FContainer) then
     Exit;
@@ -724,22 +858,67 @@ begin
   Form.Fill.Color := Self.BackgroundColor;
 
   {$IFDEF MSWINDOWS}
-  Form.BorderFrame.Kind := Self.BorderFrameKind;
-  Form.BorderFrame.Color := Self.BorderFrameColor;
-  Form.BorderFrame.CaptionText.Font.Style := [];
-  Form.BorderFrame.CaptionText.TextSettings.FontColor :=
-    Self.CustomTextSettings.FontColor;
-  Form.BorderFrame.CaptionText.TextSettings.Font.Size :=
-    Self.CustomTextSettings.FontSize;
-  Form.BorderFrame.CaptionText.TextSettings.Font.Family :=
-    Self.CustomTextSettings.FontFamily;
+//  Form.BorderFrame.Kind := Self.BorderFrameKind;
+//  Form.BorderFrame.Color := Self.BorderFrameColor;
+//  Form.BorderFrame.CaptionText.Font.Style := [];
+//  Form.BorderFrame.CaptionText.TextSettings.FontColor :=
+//    Self.CaptionTextSettings.FontColor;
+//  Form.BorderFrame.CaptionText.TextSettings.Font.Size :=
+//    Self.CaptionTextSettings.FontSize;
+//  Form.BorderFrame.CaptionText.TextSettings.Font.Family :=
+//    Self.CaptionTextSettings.FontFamily;
+//
+//  Form.BorderFrame.ToolButtonColor :=
+//    Self.BorderFrameToolButtonColor;
+//  Form.BorderFrame.CloseToolButtonMouseOverBackgroundColor :=
+//    Self.BorderFrameCloseToolButtonMouseOverBackgroundColor;
+//  Form.BorderFrame.MinToolButtonMouseOverBackgroundColor :=
+//    Self.BorderFrameMinToolButtonMouseOverBackgroundColor;
+//  Form.BorderFrame.MaxToolButtonMouseOverBackgroundColor :=
+//    Self.BorderFrameMaxToolButtonMouseOverBackgroundColor;
 
-  FBorderFrameCloseToolButtonMouseOverBackgroundColor :=
-    TAlphaColorRec.Red;
-  FBorderFrameMaxToolButtonMouseOverBackgroundColor :=
-    TAlphaColorRec.Yellowgreen;
-  FBorderFrameMinToolButtonMouseOverBackgroundColor :=
-    TAlphaColorRec.Yellowgreen;
+  //*************//
+
+  Form.BorderFrame.Kind := Self.BorderFrameSettings.Kind;
+  Form.BorderFrame.Color := Self.BorderFrameSettings.Color;
+
+  FontStyles := [];
+  if Self.BorderFrameSettings.CaptionTextSettings.Bold then
+    FontStyles := FontStyles + [TFontStyle.fsBold];
+  if Self.BorderFrameSettings.CaptionTextSettings.Italic then
+    FontStyles := FontStyles + [TFontStyle.fsItalic];
+  if Self.BorderFrameSettings.CaptionTextSettings.Underline then
+    FontStyles := FontStyles + [TFontStyle.fsUnderline];
+  if Self.BorderFrameSettings.CaptionTextSettings.StrikeOut then
+    FontStyles := FontStyles + [TFontStyle.fsStrikeOut];
+  Form.BorderFrame.CaptionText.TextSettings.Font.Style := FontStyles;
+
+//  Form.BorderFrame.CaptionColor :=
+//    Self.BorderFrameSettings.CaptionTextSettings.FontColor;
+  Form.BorderFrame.CaptionText.TextSettings.FontColor :=
+    Self.BorderFrameSettings.CaptionTextSettings.FontColor;
+  Form.BorderFrame.CaptionText.TextSettings.Font.Size :=
+    Self.BorderFrameSettings.CaptionTextSettings.FontSize;
+  Form.BorderFrame.CaptionText.TextSettings.Font.Family :=
+    Self.BorderFrameSettings.CaptionTextSettings.FontFamily;
+
+  Form.BorderFrame.ToolButtonColor :=
+    Self.BorderFrameSettings.ToolButtonColor;
+  Form.BorderFrame.CloseToolButtonMouseOverBackgroundColor :=
+    Self.BorderFrameSettings.CloseToolButtonMouseOverBackgroundColor;
+  Form.BorderFrame.MinToolButtonMouseOverBackgroundColor :=
+    Self.BorderFrameSettings.MinToolButtonMouseOverBackgroundColor;
+  Form.BorderFrame.MaxToolButtonMouseOverBackgroundColor :=
+    Self.BorderFrameSettings.MaxToolButtonMouseOverBackgroundColor;
+
+//  FBorderFrameToolButtonColor :=
+//    TAlphaColorRec.White;
+//  FBorderFrameCloseToolButtonMouseOverBackgroundColor :=
+//    TAlphaColorRec.Red;
+//  FBorderFrameMaxToolButtonMouseOverBackgroundColor :=
+//    TAlphaColorRec.Yellowgreen;
+//  FBorderFrameMinToolButtonMouseOverBackgroundColor :=
+//    TAlphaColorRec.Yellowgreen;
   {$ENDIF}
 end;
 
@@ -773,20 +952,20 @@ end;
 
 { TBaseControlSettings }
 
-constructor TBaseControlSettings.Create(const AIdent: String);
-begin
-  inherited Create(AIdent);
-
-//  FContainer := nil;
-//  FControlsCollection := TControlsCollection.Create(nil);
-end;
-
-destructor TBaseControlSettings.Destroy;
-begin
-  FreeAndNil(FControlsCollection);
-
-  inherited Destroy;
-end;
+//constructor TBaseControlSettings.Create(const AIdent: String);
+//begin
+//  inherited Create(AIdent);
+//
+////  FContainer := nil;
+////  FControlsCollection := TControlsCollection.Create(nil);
+//end;
+//
+//destructor TBaseControlSettings.Destroy;
+//begin
+//  FreeAndNil(FControlsCollection);
+//
+//  inherited Destroy;
+//end;
 
 //procedure TBaseControlSettings.SetContainer(const AFmxObject: TFmxObject);
 //begin
@@ -1129,8 +1308,8 @@ procedure TTheme.Apply;
 begin
   if Assigned(FFormSettings.Container) then
     FFormSettings.Apply;
-  if Assigned(FFormSettings.CustomTextSettings.Container) then
-    FFormSettings.CustomTextSettings.Apply;
+//  if Assigned(FFormSettings.CaptionTextSettings.Container) then
+//    FFormSettings.CaptionTextSettings.Apply;
   if Assigned(FCommonSettings.Container) then
     FCommonSettings.Apply;
   if Assigned(CommonSettings.CustomTextSettings.Container) then
