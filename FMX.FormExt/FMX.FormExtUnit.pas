@@ -122,7 +122,7 @@ type
 
     FOnWindowsStateChanged: TWindowStateChangedProcRef;
     FLastFormStateRec: TLastFormStateRec;
-    FOnFormStateLoaded: TProc<TFormExt>;
+    FOnFormStateLoadedProc: TProc<TFormExt>;
     {$ENDIF}
 
     // Нарочно вводим переменную, так как мы всегда используем Close для формы
@@ -207,8 +207,8 @@ type
       read FTrayIconMouseRightButtonDown write FTrayIconMouseRightButtonDown;
     property TrayIconMouseLeftButtonDown: TMouseEvent
       read FTrayIconMouseLeftButtonDown write FTrayIconMouseLeftButtonDown;
-    property OnFormStateLoaded: TProc<TFormExt>
-      read FOnFormStateLoaded write FOnFormStateLoaded;
+    property OnFormStateLoadedProc: TProc<TFormExt>
+      read FOnFormStateLoadedProc write FOnFormStateLoadedProc;
 
     procedure Rollup;
     procedure Rolldown;
@@ -456,7 +456,7 @@ begin
   FLastFormStateRec.BorderFrameKind := bfkNone;
 
   FOnWindowsStateChanged := nil;
-  FOnFormStateLoaded := nil;
+  FOnFormStateLoadedProc := nil;
 
   FBorderFrame := TBorderFrame.Create(
     Self,
@@ -480,8 +480,8 @@ begin
         Self,
         FLastFormStateRec);
 
-      if Assigned(FOnFormStateLoaded) then
-        FOnFormStateLoaded(Self);
+      if Assigned(FOnFormStateLoadedProc) then
+        FOnFormStateLoadedProc(Self);
     end);
   {$ENDIF}
 end;
@@ -815,8 +815,8 @@ end;
 procedure TFormExt.ApplyFormTheme;
 begin
   {$IFDEF MSWINDOWS}
-  BorderFrame.Kind := FTheme.FormSettings.BorderFrameKind;
-  BorderFrame.Color := FTheme.FormSettings.BorderFrameColor;
+  BorderFrame.Kind := FTheme.FormSettings.BorderFrameSettings.Kind;
+  BorderFrame.Color := FTheme.FormSettings.BorderFrameSettings.Color;
   {$ENDIF}
   Fill.Kind := TBrushKind.Solid;
   Fill.Color := FTheme.FormSettings.BackgroundColor;
