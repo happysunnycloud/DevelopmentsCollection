@@ -38,6 +38,7 @@ object MessageBoxForm: TMessageBoxForm
     object MessageLabel: TLabel
       Align = Contents
       StyledSettings = [Family, Style, FontColor]
+      HitTest = True
       Margins.Left = 5.000000000000000000
       Margins.Top = 5.000000000000000000
       Margins.Right = 5.000000000000000000

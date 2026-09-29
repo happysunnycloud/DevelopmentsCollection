@@ -1,10 +1,10 @@
-unit FMX.MessageBox;
+п»їunit FMX.MessageBox;
 {
-  Каждый вызов TMessageBox.Show переопределяет старые значения
-  Например, при последовательности
+  РљР°Р¶РґС‹Р№ РІС‹Р·РѕРІ TMessageBox.Show РїРµСЂРµРѕРїСЂРµРґРµР»СЏРµС‚ СЃС‚Р°СЂС‹Рµ Р·РЅР°С‡РµРЅРёСЏ
+  РќР°РїСЂРёРјРµСЂ, РїСЂРё РїРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅРѕСЃС‚Рё
     TMessageBox.Show('Hello world', '', 2);
     TMessageBox.Show('Hello world', 'Attention', 1);
-  Будет отработан вызов TMessageBox.Show('Hello world', 'Attention', 1);
+  Р‘СѓРґРµС‚ РѕС‚СЂР°Р±РѕС‚Р°РЅ РІС‹Р·РѕРІ TMessageBox.Show('Hello world', 'Attention', 1);
 }
 
 interface
@@ -14,6 +14,7 @@ uses
   FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs,
   FMX.FormExtUnit, FMX.Controls.Presentation, FMX.StdCtrls, FMX.Layouts
   , FMX.Theme
+  , FMX.PopupMenuExt
   ;
 
 type
@@ -29,7 +30,6 @@ type
     procedure FormKeyUp(Sender: TObject; var Key: Word; var KeyChar: Char;
       Shift: TShiftState);
   private
-    { Private declarations }
   public
     { Public declarations }
   end;
@@ -39,8 +39,12 @@ type
     class var FMessageBoxForm: TMessageBoxForm;
     class var FDelayShowThread: TDelayShowThread;
     class var FTheme: TTheme;
+    class var FPopupMenu: TPopupMenuExt;
 
+    class procedure BuildPopupMenu;
     class procedure DoMessageBoxFormDestroy(Sender: TObject);
+    class procedure DoMessageLabelMouseDown(Sender: TObject;
+      Button: TMouseButton; Shift: TShiftState; X, Y: Single);
   private
     class procedure CreateAndShow(
       const AMessage: String;
@@ -79,11 +83,52 @@ implementation
 
 {$R *.fmx}
 
+uses
+    FMX.Platform
+  , FMX.ControlToolsUnit
+  ;
+
+procedure CopyToClipboard(const AText: String);
+var
+  ClipboardService: IFMXClipboardService;
+begin
+  if TPlatformServices.Current.SupportsPlatformService(
+    IFMXClipboardService, ClipboardService) then
+    ClipboardService.SetClipboard(AText);
+end;
+
 { TMessageBox }
+
+class procedure TMessageBox.BuildPopupMenu;
+var
+  MenuItem: TItem;
+begin
+  FPopupMenu := TPopupMenuExt.Create(FMessageBoxForm);
+
+  MenuItem := TItem.Create;
+  MenuItem.Text := 'Copy';
+  MenuItem.OnClickProcRef :=
+    procedure
+    begin
+      CopyToClipboard(FMessageBoxForm.MessageLabel.Text);
+    end;
+  FPopupMenu.Add(MenuItem);
+end;
 
 class procedure TMessageBox.DoMessageBoxFormDestroy(Sender: TObject);
 begin
   FMessageBoxForm := nil;
+end;
+
+class procedure TMessageBox.DoMessageLabelMouseDown(Sender: TObject;
+  Button: TMouseButton; Shift: TShiftState; X, Y: Single);
+begin
+  if Button = TMouseButton.mbRight then
+  begin
+    TControlTools.GetCurPos(X, Y);
+
+    FPopupMenu.Open(X, Y);
+  end;
 end;
 
 class procedure TMessageBox.CreateAndShow(
@@ -96,11 +141,12 @@ begin
   FMessageBoxForm.Position := TFormPosition.ScreenCenter;
   FMessageBoxForm.MessageLabel.Text := AMessage;
   FMessageBoxForm.BorderFrame.BorderFrameIcons := [TBorderFrameIcon.bfiClose];
-  {TODO: добавить в редактор Тем настройку для ToolButton}
-  FMessageBoxForm.BorderFrame.ToolButtonMouseOverColor := $FFFFB800;
   FMessageBoxForm.Theme.DecorateButton(FMessageBoxForm.OkButton);
+  FMessageBoxForm.MessageLabel.OnMouseDown := DoMessageLabelMouseDown;
 
-  FMessageBoxForm.OnFormStateLoaded :=
+  BuildPopupMenu;
+
+  FMessageBoxForm.OnFormStateLoadedProc :=
     procedure (AForm: TFormExt)
     begin
       FMessageBoxForm.Theme.CopyFrom(FTheme);
@@ -108,6 +154,8 @@ begin
       FMessageBoxForm.Theme.CommonSettings.CustomTextSettings.Container :=
         FMessageBoxForm.MessageLayout;
       FMessageBoxForm.Theme.ButtonSettings.Container := FMessageBoxForm;
+      FPopupMenu.Theme.CopyFrom(FTheme.PopUpMenuTheme);
+
       FMessageBoxForm.Theme.Apply;
     end;
 
