@@ -657,9 +657,9 @@ begin
   DontShowNextTimeCheckBox.Visible := false;
 
   BorderFrame.Kind := TBorderFrameKind.bfkNormal;
-  BorderFrame.CaptionColor := $FFFFFFFF;
+  BorderFrame.CaptionText.TextSettings.FontColor := $FFFFFFFF;
   BorderFrame.Color := $FF2A001A;
-  BorderFrame.ToolButtonColor := BorderFrame.CaptionColor;
+  BorderFrame.ToolButtonColor := BorderFrame.CaptionText.TextSettings.FontColor;
   BorderFrame.ToolButtonMouseOverColor := $FF9B0060;
 
   Self.Fill.Kind := TBrushKind.Solid;

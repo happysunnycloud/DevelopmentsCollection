@@ -8,15 +8,16 @@ uses
   , System.SysUtils
   , System.Types
   , FMX.PopupMenuExt.Form
-  , ThreadFactoryUnit
+  , SafeQueueThread
   ;
 
 type
   TStepDirection = (sdNone = -1, sdForward = 0, sdBackward = 1);
 
-  TPopupMenuExtThread = class(TThreadExt)
+  TPopupMenuExtThread = class(TSafeQueueThread)
   strict private
     FCriticalSection: TCriticalSection;
+    FHoldEvent: TEvent;
     FStepDirection: TStepDirection;
     FDoneEvent: TEvent;
     FCountDown: Integer;
@@ -27,7 +28,7 @@ type
     FGoBackClickFixed: Boolean;
     FClickedItem: TObject;
 
-    FForm: TPopupMenuExtForm;
+    FFormScreenScale: Single;
     FRectF: TRectF;
     FOnTimeIsOut: TNotifyEvent;
 
@@ -44,7 +45,6 @@ type
     function GetStepDirection: TStepDirection;
 
     procedure SetForm(const AForm: TPopupMenuExtForm);
-    function GetForm: TPopupMenuExtForm;
 
     procedure SetTimeIsOutFixed(const ATimeIsOutFixed: Boolean);
     function GetTimeIsOutFixed: Boolean;
@@ -57,19 +57,20 @@ type
 
     function IsMouseOverForm: Boolean;
   protected
-    procedure InnerExecute; override;
+    procedure Execute; override;
   public
     constructor Create(
-      const AThreadFactory: TThreadFactory;
       const AStepDirection: TStepDirection;
       const ASuspended: Boolean);
     destructor Destroy; override;
+
+    procedure Terminate;
 
     property TimeIsOutFixed: Boolean read GetTimeIsOutFixed write SetTimeIsOutFixed;
     property ClickFixed: Boolean read GetClickFixed write SetClickFixed;
     property GoBackClickFixed: Boolean
       read GetGoBackClickeFixed write SetGoBackClickeFixed;
-    property Form: TPopupMenuExtForm read GetForm write SetForm;
+    property Form: TPopupMenuExtForm write SetForm;
     property StepDirection: TStepDirection read GetStepDirection write SetStepDirection;
     property ClickedItem: TObject read GetClickedItem write SetClickedItem;
     property CountDown: Integer read GetCountDown write SetCountDown;
@@ -88,11 +89,11 @@ uses
 { TPopupMenuExtThread }
 
 constructor TPopupMenuExtThread.Create(
-  const AThreadFactory: TThreadFactory;
   const AStepDirection: TStepDirection;
   const ASuspended: Boolean);
 begin
   FCriticalSection := TCriticalSection.Create;
+  FHoldEvent := TEvent.Create(nil, true, false, '');
   FStepDirection := AStepDirection;
   FDoneEvent := TEvent.Create(nil, true, false, '', false);
   FTimeIsOutFixed := false;
@@ -103,16 +104,11 @@ begin
   FRectF.Empty;
   FOnTimeIsOut := nil;
 
-  FForm := nil;
-
   StepDirection := sdForward;
 
   FTimeout := FCountDown;
 
-  inherited Create(
-    AThreadFactory,
-    '',
-    true);
+  inherited Create(true);
 end;
 
 destructor TPopupMenuExtThread.Destroy;
@@ -120,9 +116,17 @@ begin
   Form := nil;
 
   FreeAndNil(FDoneEvent);
+  FreeAndNil(FHoldEvent);
   FreeAndNil(FCriticalSection);
 
   inherited Destroy;
+end;
+
+procedure TPopupMenuExtThread.Terminate;
+begin
+  FHoldEvent.SetEvent;
+
+  inherited Terminate;
 end;
 
 procedure TPopupMenuExtThread.SetClickedItem(const AClickedItem: TObject);
@@ -153,7 +157,7 @@ begin
   try
     FGoBackClickFixed := AGoBackClickFixed;
 
-    HoldThread;
+    FHoldEvent.ResetEvent;
   finally
     FCriticalSection.Leave;
   end;
@@ -215,22 +219,25 @@ begin
 end;
 
 procedure TPopupMenuExtThread.SetForm(const AForm: TPopupMenuExtForm);
+var
+  Form: TPopupMenuExtForm;
 begin
   FCriticalSection.Enter;
   try
     if Assigned(AForm) then
     begin
-      FForm := AForm;
+      Form := AForm;
+      FFormScreenScale := Form.ScreenScale;
       // Для оптимизации, что бы не вводить лишних синхноризаций
-      // Прямоугольник формы определяем на стадии инициализации трида
-      FRectF := TRectF.Create(FForm.ClientToScreen(FForm.ClientRect.TopLeft),
-                              FForm.ClientToScreen(FForm.ClientRect.BottomRight));
+      // Прямоугольник формы определяем на стадии запуска/перезапуска трида
+      FRectF := TRectF.Create(Form.ClientToScreen(Form.ClientRect.TopLeft),
+                              Form.ClientToScreen(Form.ClientRect.BottomRight));
 
       FTimeout := FCountDown;
       FTimeIsOutFixed := false;
       FClickFixed := false;
 
-      UnHoldThread;
+      FHoldEvent.SetEvent;
     end
     else
     begin
@@ -244,17 +251,6 @@ begin
   end;
 end;
 
-function TPopupMenuExtThread.GetForm: TPopupMenuExtForm;
-begin
-  FCriticalSection.Enter;
-  try
-    Result := FForm;
-  finally
-    FCriticalSection.Leave;
-  end;
-end;
-
-
 function TPopupMenuExtThread.IsMouseOverForm: Boolean;
 var
   Point: TPoint;
@@ -263,8 +259,8 @@ begin
 
   GetCursorPos(Point);
 
-  Point.X := Round(Point.X / FForm.ScreenScale);
-  Point.Y := Round(Point.Y / FForm.ScreenScale);
+  Point.X := Round(Point.X / FFormScreenScale);
+  Point.Y := Round(Point.Y / FFormScreenScale);
 
   FCriticalSection.Enter;
   try
@@ -335,18 +331,18 @@ begin
   end;
 end;
 
-procedure TPopupMenuExtThread.InnerExecute;
+procedure TPopupMenuExtThread.Execute;
 var
   OnTimeIsOut: TNotifyEvent;
 begin
   FDoneEvent.ResetEvent;
-  HoldThread;
-  ExecHold;
+  FHoldEvent.ResetEvent;
+  FHoldEvent.WaitFor(INFINITE);
 
   while not Terminated do
   begin
     if not Terminated then
-      HoldThread;
+      FHoldEvent.ResetEvent;
 
     while not Terminated and not ClickFixed and not TimeIsOutFixed do
     begin
@@ -384,18 +380,17 @@ begin
         if Assigned(FOnTimeIsOut) then
         begin
           OnTimeIsOut := FOnTimeIsOut;
-          TThread.Queue(nil,
+          SafeForceQueue(
             procedure
             begin
-              if not Application.Terminated then
-                OnTimeIsOut(nil);
+              OnTimeIsOut(nil);
             end);
         end;
       end;
     end;
 
     if not Terminated then
-      ExecHold;
+      FHoldEvent.WaitFor(INFINITE);
   end;
 end;
 

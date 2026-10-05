@@ -168,12 +168,14 @@ type
   TBorderFrameSettings = class
   strict private
     FCaptionTextSettings: TCustomTextSettings;
+    {$IFDEF MSWINDOWS}
     FKind: TBorderFrameKind;
     FColor: TAlphaColor;
     FToolButtonColor: TAlphaColor;
     FCloseToolButtonMouseOverBackgroundColor: TAlphaColor;
     FMinToolButtonMouseOverBackgroundColor: TAlphaColor;
     FMaxToolButtonMouseOverBackgroundColor: TAlphaColor;
+    {$ENDIF}
   public
     constructor Create;
     destructor Destroy; override;
@@ -183,6 +185,7 @@ type
     property CaptionTextSettings: TCustomTextSettings
       read FCaptionTextSettings
       write FCaptionTextSettings;
+    {$IFDEF MSWINDOWS}
     property Kind: TBorderFrameKind
       read FKind write FKind;
     property Color: TAlphaColor
@@ -198,6 +201,7 @@ type
     property MaxToolButtonMouseOverBackgroundColor: TAlphaColor
       read FMaxToolButtonMouseOverBackgroundColor
       write FMaxToolButtonMouseOverBackgroundColor;
+    {$ENDIF}
   end;
 
   // Контейнер для хранения настроек самой формы
@@ -764,6 +768,7 @@ procedure TBorderFrameSettings.CopyFrom(
   const ABorderFrameSettings: TBorderFrameSettings);
 begin
   FCaptionTextSettings.CopyFrom(ABorderFrameSettings.CaptionTextSettings);
+  {$IFDEF MSWINDOWS}
   FKind := ABorderFrameSettings.Kind;
   FColor := ABorderFrameSettings.Color;
   FToolButtonColor := ABorderFrameSettings.ToolButtonColor;
@@ -773,6 +778,7 @@ begin
     ABorderFrameSettings.MinToolButtonMouseOverBackgroundColor;
   FMaxToolButtonMouseOverBackgroundColor :=
     ABorderFrameSettings.MaxToolButtonMouseOverBackgroundColor;
+  {$ENDIF}
 end;
 
 { TFormSettings }
@@ -808,7 +814,9 @@ end;
 destructor TFormSettings.Destroy;
 begin
 //  FreeAndNil(FCaptionTextSettings);
+  {$IFDEF MSWINDOWS}
   FreeAndNil(FBorderFrameSettings);
+  {$ENDIF}
 
   inherited;
 end;
@@ -847,7 +855,9 @@ end;
 procedure TFormSettings.Apply;
 var
   Form: TFormExt;
+  {$IFDEF MSWINDOWS}
   FontStyles: TFontStyles;
+  {$ENDIF}
 begin
   if not Assigned(FContainer) then
     Exit;

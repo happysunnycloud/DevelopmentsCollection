@@ -1,11 +1,4 @@
 ﻿unit FMX.MessageBox;
-{
-  Каждый вызов TMessageBox.Show переопределяет старые значения
-  Например, при последовательности
-    TMessageBox.Show('Hello world', '', 2);
-    TMessageBox.Show('Hello world', 'Attention', 1);
-  Будет отработан вызов TMessageBox.Show('Hello world', 'Attention', 1);
-}
 
 interface
 
@@ -13,8 +6,10 @@ uses
   System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
   FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs,
   FMX.FormExtUnit, FMX.Controls.Presentation, FMX.StdCtrls, FMX.Layouts
+  , System.Generics.Collections
   , FMX.Theme
   , FMX.PopupMenuExt
+  , SafeQueueThread
   ;
 
 type
@@ -26,37 +21,50 @@ type
     MessageLayout: TLayout;
     MessageLabel: TLabel;
     procedure OkButtonClick(Sender: TObject);
-    procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure FormKeyUp(Sender: TObject; var Key: Word; var KeyChar: Char;
       Shift: TShiftState);
+  strict private
+    FDelayShowThread: TDelayShowThread;
+    FPopupMenu: TPopupMenuExt;
+
+    procedure BuildPopupMenu;
+    procedure DoMessageLabelMouseDown(Sender: TObject;
+      Button: TMouseButton; Shift: TShiftState; X, Y: Single);
   private
   public
-    { Public declarations }
+    constructor Create(
+      const AOwner: TComponent;
+      const ADelayTimeSec: Integer;
+      const AMessage: String;
+      const ACaption: String); reintroduce;
+    destructor Destroy; override;
+
+    procedure HideAndFree;
+
+    procedure RunTimer(const ADelayTimeSec: Integer);
+
+    property PopupMenu: TPopupMenuExt read FPopupMenu;
   end;
+
+  TFormsList = TList<TMessageBoxForm>;
 
   TMessageBox = class
   strict private
-    class var FMessageBoxForm: TMessageBoxForm;
-    class var FDelayShowThread: TDelayShowThread;
+    class var FFormRegistry: TFormsList;
     class var FTheme: TTheme;
-    class var FPopupMenu: TPopupMenuExt;
 
-    class procedure BuildPopupMenu;
-    class procedure DoMessageBoxFormDestroy(Sender: TObject);
-    class procedure DoMessageLabelMouseDown(Sender: TObject;
-      Button: TMouseButton; Shift: TShiftState; X, Y: Single);
+    class procedure DoClose(Sender: TObject; var Action: TCloseAction);
   private
-    class procedure CreateAndShow(
+    class function CreateAndShow(
+      const ADelayShowSec: Integer;
       const AMessage: String;
-      const ACaption: String = '');
-    class procedure HideAndFree;
+      const ACaption: String = ''): TMessageBoxForm;
   public
-    class procedure Show(
+    class function Show(
       const AMessage: String;
       const ACaption: String = '';
-      const ADelayShowSec: Integer = 0);
-    class procedure Hide;
-    class procedure Break;
+      const ADelayShowSec: Integer = 0): TMessageBoxForm;
+    class procedure Hide(const AMessageBoxForm: TMessageBoxForm);
 
     class property Theme: TTheme
       read FTheme write FTheme;
@@ -65,18 +73,16 @@ type
     class procedure Uninit;
   end;
 
-  TDelayShowThread = class (TThread)
+  TDelayShowThread = class (TSafeQueueThread)
   strict private
+    FForm: TMessageBoxForm;
     FDelayTimeSec: Integer;
-    FMessage: String;
-    FCaption: String;
   protected
     procedure Execute; override;
   public
     constructor Create(
-      const ADelayTimeSec: Integer;
-      const AMessage: String;
-      const ACaption: String); reintroduce;
+      const AForm: TMessageBoxForm;
+      const ADelayTimeSec: Integer); reintroduce;
   end;
 
 implementation
@@ -87,7 +93,6 @@ uses
     FMX.Platform
   , FMX.ControlToolsUnit
   ;
-
 procedure CopyToClipboard(const AText: String);
 var
   ClipboardService: IFMXClipboardService;
@@ -99,28 +104,199 @@ end;
 
 { TMessageBox }
 
-class procedure TMessageBox.BuildPopupMenu;
+class procedure TMessageBox.DoClose(Sender: TObject; var Action: TCloseAction);
+var
+  Form: TMessageBoxForm;
+begin
+  Action := TCloseAction.caFree;
+
+  Form := TMessageBoxForm(Sender);
+
+  FFormRegistry.Remove(Form);
+
+  Form.HideAndFree;
+end;
+
+class function TMessageBox.CreateAndShow(
+  const ADelayShowSec: Integer;
+  const AMessage: String;
+  const ACaption: String = ''): TMessageBoxForm;
+var
+  MessageBoxForm: TMessageBoxForm;
+  Form: TMessageBoxForm;
+begin
+  MessageBoxForm := TMessageBoxForm.Create(nil, ADelayShowSec, AMessage, ACaption);
+
+  MessageBoxForm.OnClose := DoClose;
+  MessageBoxForm.Caption := ACaption;
+  MessageBoxForm.Position := TFormPosition.ScreenCenter;
+  MessageBoxForm.MessageLabel.Text := AMessage;
+  MessageBoxForm.BorderFrame.BorderFrameIcons := [TBorderFrameIcon.bfiClose];
+  MessageBoxForm.Theme.DecorateButton(MessageBoxForm.OkButton);
+
+  MessageBoxForm.OnFormStateLoadedProc :=
+    procedure (AForm: TFormExt)
+    begin
+      MessageBoxForm.Theme.CopyFrom(FTheme);
+      MessageBoxForm.Theme.FormSettings.Container := MessageBoxForm;
+      MessageBoxForm.Theme.CommonSettings.CustomTextSettings.Container :=
+        MessageBoxForm.MessageLayout;
+      MessageBoxForm.Theme.ButtonSettings.Container := MessageBoxForm;
+      MessageBoxForm.PopupMenu.Theme.CopyFrom(FTheme.PopUpMenuTheme);
+
+      MessageBoxForm.Theme.Apply;
+    end;
+
+  if FFormRegistry.Count > 0 then
+  begin
+    Form := FFormRegistry.Items[FFormRegistry.Count - 1];
+
+    MessageBoxForm.Top :=
+      Round(Form.Top + Form.BorderFrame.CaptionLayout.Height + 10);
+    MessageBoxForm.Left :=
+      Round(Form.Left + Form.BorderFrame.CaptionLayout.Height + 10);
+  end
+  else
+  begin
+    MessageBoxForm.Top := (Screen.Height div 2) - (MessageBoxForm.Height div 2);
+    MessageBoxForm.Left := (Screen.Width div 2) - (MessageBoxForm.Width div 2);
+  end;
+
+  FFormRegistry.Add(MessageBoxForm);
+
+  Result := MessageBoxForm;
+
+  if ADelayShowSec = 0 then
+  begin
+    TThread.ForceQueue(nil,
+      procedure
+      begin
+        TThread.ForceQueue(nil,
+          procedure
+          begin
+            MessageBoxForm.BringToFront;
+          end);
+        MessageBoxForm.ShowModal;
+      end);
+  end
+  else
+  begin
+    MessageBoxForm.RunTimer(ADelayShowSec);
+  end;
+end;
+
+class function TMessageBox.Show(
+  const AMessage: String;
+  const ACaption: String = '';
+  const ADelayShowSec: Integer = 0): TMessageBoxForm;
+var
+  _Caption: String;
+begin
+  _Caption := 'Message';
+  if not ACaption.IsEmpty then
+    _Caption := ACaption;
+
+  Result := CreateAndShow(ADelayShowSec, AMessage, _Caption);
+end;
+
+class procedure TMessageBox.Hide(const AMessageBoxForm: TMessageBoxForm);
+var
+  Form: TMessageBoxForm;
+begin
+  for Form in FFormRegistry do
+  begin
+    if Form = AMessageBoxForm then
+    begin
+      Form.HideAndFree;
+
+      Break;
+    end;
+  end;
+end;
+
+class procedure TMessageBox.Init;
+begin
+  FFormRegistry := TFormsList.Create;
+
+  FTheme := TTheme.Create;
+end;
+
+class procedure TMessageBox.Uninit;
+var
+  Form: TFormExt;
+begin
+  FreeAndNil(FTheme);
+
+  while FFormRegistry.Count > 0 do
+  begin
+    Form := FFormRegistry.Items[0];
+    Form.Close;
+  end;
+
+  FreeAndNil(FFormRegistry);
+end;
+
+{ TMessageBoxForm }
+
+constructor TMessageBoxForm.Create(
+  const AOwner: TComponent;
+  const ADelayTimeSec: Integer;
+  const AMessage: String;
+  const ACaption: String);
+begin
+  FDelayShowThread := nil;
+
+  BuildPopupMenu;
+
+  inherited Create(AOwner);
+
+  SaveFormStateFlag := false;
+  MessageLabel.OnMouseDown := DoMessageLabelMouseDown;
+end;
+
+destructor TMessageBoxForm.Destroy;
+begin
+  inherited;
+end;
+
+procedure TMessageBoxForm.HideAndFree;
+begin
+  Visible := false;
+
+  if Assigned(FDelayShowThread) then
+  begin
+    FDelayShowThread.Terminate;
+    FDelayShowThread.WaitFor;
+    FreeAndNil(FDelayShowThread);
+  end;
+
+  Close;
+end;
+
+procedure TMessageBoxForm.RunTimer(const ADelayTimeSec: Integer);
+begin
+  FDelayShowThread := TDelayShowThread.Create(
+    Self,
+    ADelayTimeSec);
+end;
+
+procedure TMessageBoxForm.BuildPopupMenu;
 var
   MenuItem: TItem;
 begin
-  FPopupMenu := TPopupMenuExt.Create(FMessageBoxForm);
+  FPopupMenu := TPopupMenuExt.Create(Self);
 
   MenuItem := TItem.Create;
   MenuItem.Text := 'Copy';
   MenuItem.OnClickProcRef :=
     procedure
     begin
-      CopyToClipboard(FMessageBoxForm.MessageLabel.Text);
+      CopyToClipboard(Self.MessageLabel.Text);
     end;
   FPopupMenu.Add(MenuItem);
 end;
 
-class procedure TMessageBox.DoMessageBoxFormDestroy(Sender: TObject);
-begin
-  FMessageBoxForm := nil;
-end;
-
-class procedure TMessageBox.DoMessageLabelMouseDown(Sender: TObject;
+procedure TMessageBoxForm.DoMessageLabelMouseDown(Sender: TObject;
   Button: TMouseButton; Shift: TShiftState; X, Y: Single);
 begin
   if Button = TMouseButton.mbRight then
@@ -129,103 +305,6 @@ begin
 
     FPopupMenu.Open(X, Y);
   end;
-end;
-
-class procedure TMessageBox.CreateAndShow(
-  const AMessage: String;
-  const ACaption: String = '');
-begin
-  FMessageBoxForm := TMessageBoxForm.Create(nil);
-  FMessageBoxForm.OnDestroy := DoMessageBoxFormDestroy;
-  FMessageBoxForm.Caption := ACaption;
-  FMessageBoxForm.Position := TFormPosition.ScreenCenter;
-  FMessageBoxForm.MessageLabel.Text := AMessage;
-  FMessageBoxForm.BorderFrame.BorderFrameIcons := [TBorderFrameIcon.bfiClose];
-  FMessageBoxForm.Theme.DecorateButton(FMessageBoxForm.OkButton);
-  FMessageBoxForm.MessageLabel.OnMouseDown := DoMessageLabelMouseDown;
-
-  BuildPopupMenu;
-
-  FMessageBoxForm.OnFormStateLoadedProc :=
-    procedure (AForm: TFormExt)
-    begin
-      FMessageBoxForm.Theme.CopyFrom(FTheme);
-      FMessageBoxForm.Theme.FormSettings.Container := FMessageBoxForm;
-      FMessageBoxForm.Theme.CommonSettings.CustomTextSettings.Container :=
-        FMessageBoxForm.MessageLayout;
-      FMessageBoxForm.Theme.ButtonSettings.Container := FMessageBoxForm;
-      FPopupMenu.Theme.CopyFrom(FTheme.PopUpMenuTheme);
-
-      FMessageBoxForm.Theme.Apply;
-    end;
-
-  FMessageBoxForm.ShowModal;
-end;
-
-class procedure TMessageBox.HideAndFree;
-begin
-  if not Assigned(FMessageBoxForm) then
-    Exit;
-
-  FMessageBoxForm.Hide;
-  FMessageBoxForm.Close;
-end;
-
-class procedure TMessageBox.Show(
-  const AMessage: String;
-  const ACaption: String = '';
-  const ADelayShowSec: Integer = 0);
-var
-  _Caption: String;
-begin
-  Self.Break;
-
-  FDelayShowThread := nil;
-
-  _Caption := 'Message';
-  if not ACaption.IsEmpty then
-    _Caption := ACaption;
-  if ADelayShowSec <= 0 then
-    CreateAndShow(AMessage, _Caption)
-  else
-    FDelayShowThread :=
-      TDelayShowThread.Create(ADelayShowSec, AMessage, ACaption);
-end;
-
-class procedure TMessageBox.Hide;
-begin
-  Break;
-  HideAndFree;
-end;
-
-class procedure TMessageBox.Break;
-begin
-  if not Assigned(FDelayShowThread) then
-    Exit;
-
-  FDelayShowThread.Terminate;
-  FDelayShowThread.WaitFor;
-  FreeAndNil(FDelayShowThread);
-end;
-
-class procedure TMessageBox.Init;
-begin
-  FMessageBoxForm := nil;
-  FDelayShowThread := nil;
-  FTheme := TTheme.Create;
-end;
-
-class procedure TMessageBox.Uninit;
-begin
-  TMessageBox.Break;
-  FreeAndNil(FTheme);
-end;
-
-{ TMessageBoxForm }
-
-procedure TMessageBoxForm.FormClose(Sender: TObject; var Action: TCloseAction);
-begin
-  Action := TCloseAction.caFree;
 end;
 
 procedure TMessageBoxForm.FormKeyUp(Sender: TObject; var Key: Word;
@@ -237,19 +316,21 @@ end;
 
 procedure TMessageBoxForm.OkButtonClick(Sender: TObject);
 begin
-  Close;
+  TThread.Queue(nil,
+    procedure
+    begin
+      HideAndFree;
+    end);
 end;
 
 { TDelayShowThread }
 
 constructor TDelayShowThread.Create(
-  const ADelayTimeSec: Integer;
-  const AMessage: String;
-  const ACaption: String);
+  const AForm: TMessageBoxForm;
+  const ADelayTimeSec: Integer);
 begin
+  FForm := AForm;
   FDelayTimeSec := ADelayTimeSec;
-  FMessage := AMessage;
-  FCaption := ACaption;
 
   inherited Create(false);
 end;
@@ -257,8 +338,6 @@ end;
 procedure TDelayShowThread.Execute;
 var
   Countdown: Integer;
-  _Message: String;
-  _Caption: String;
 begin
   Countdown := (FDelayTimeSec * 1000);
   while (not Terminated) and (Countdown > 0) do
@@ -271,12 +350,10 @@ begin
   if Terminated then
     Exit;
 
-  _Message := FMessage;
-  _Caption := FCaption;
-  Queue(nil,
+  SafeForceQueue(
     procedure
     begin
-      TMessageBox.CreateAndShow(_Message, _Caption);
+      FForm.ShowModal;
     end);
 end;
 

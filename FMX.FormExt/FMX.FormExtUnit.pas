@@ -111,6 +111,9 @@ type
     FCanClose: Boolean;
     FTheme: TTheme;
     FScreenScale: Single;
+
+    FSaveFormStateFlag: Boolean;
+
     {$IFDEF MSWINDOWS}
     FBorderFrame: TBorderFrame;
     { TODO: Проверить, нужен ли FBorderFrameKind: TBorderFrameKind или это анахронизм }
@@ -187,9 +190,13 @@ type
     property Theme: TTheme read FTheme;
     property ScreenScale: Single read FScreenScale;
     {$IFDEF MSWINDOWS}
+    // Флаг SaveFormStateFlag позволяет не сохранять состояние формы
+    // При создании формы, если ее настройки не найдены во внешнем файле,
+    // то никаких исключений вызвано не будет
+    property SaveFormStateFlag: Boolean
+      read FSaveFormStateFlag write FSaveFormStateFlag;
 
     property Caption: String read GetCaption write SetCaption;
-
     property BorderFrame: TBorderFrame read FBorderFrame;
 
     property ClientWidth: Integer read GetClientWidth write SetClientWidth;
@@ -416,6 +423,7 @@ begin
   inherited OnKeyUp := OnKeyUpInternalHandler;
 
   FScreenScale := Canvas.Scale;
+  FSaveFormStateFlag := true;
 
   FModalResult := mrNone;
 
@@ -489,10 +497,12 @@ end;
 destructor TFormExt.Destroy;
 begin
   {$IFDEF MSWINDOWS}
-  TFormStateHelper.SaveFormState(
-    FORM_SETTINGS_FILE_NAME,
-    Self,
-    FLastFormStateRec);
+  if FSaveFormStateFlag then
+    TFormStateHelper.SaveFormState(
+      FORM_SETTINGS_FILE_NAME,
+      Self,
+      FLastFormStateRec);
+
   FreeAndNil(FBorderFrame);
   {$ENDIF}
 

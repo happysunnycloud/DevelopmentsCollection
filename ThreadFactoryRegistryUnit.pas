@@ -9,6 +9,8 @@ uses
   ThreadFactoryUnit;
 
 type
+  TThreadFactoryClass = class of TThreadFactory;
+
   TThreadFactoryRegistry = class(TObjectRegistry<TThreadFactory>)
   strict private
     FOnAllThreadFactoriesAreDestroyed: TNotifyEvent;
@@ -18,7 +20,9 @@ type
   public
     destructor Destroy; override;
 
-    function CreateThreadFactory: TThreadFactory;
+    function CreateThreadFactory: TThreadFactory; overload;
+    function CreateThreadFactory(
+      const AThreadFactoryClass: TThreadFactoryClass): TThreadFactory; overload;
     // Финишируем все фабрики нитей
     // Т.е. для всех фабрик вызывает финишер всех нитей
     procedure DestroyAllThreadFactories;
@@ -51,6 +55,18 @@ function TThreadFactoryRegistry.CreateThreadFactory: TThreadFactory;
 begin
   try
     Result := TThreadFactory.Create(UnregThreadFactoyProc);
+    RegisterObject(Result);
+  except
+    on e: Exception do
+      raise Exception.Create('Error on create thread factory -> ' + e.Message);
+  end;
+end;
+
+function TThreadFactoryRegistry.CreateThreadFactory(
+  const AThreadFactoryClass: TThreadFactoryClass): TThreadFactory;
+begin
+  try
+    Result := AThreadFactoryClass.Create(UnregThreadFactoyProc);
     RegisterObject(Result);
   except
     on e: Exception do

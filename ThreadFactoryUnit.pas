@@ -61,6 +61,9 @@ type
     FCriticalSection: TCriticalSection;
 
     FHoldEvent: TEvent;
+    FStopEvent: TEvent;
+    FEventHandlesArray: THandleObjectArray;
+
     FRegProc: TRegProc;
     FUnregProc: TUnRegProc;
     FExecProc: TExecProc;
@@ -115,6 +118,7 @@ type
     function GetThreadIsDeadEventRef: TEvent;
   protected
     procedure ExecHold;
+    procedure TerminatedSet; override;
     /// <summary>
     /// Execute переопределять НЕЛЬЗЯ.
     /// Для реализации логики потока переопределяйте InnerExecute.
@@ -250,7 +254,7 @@ type
   public
     procedure Init(const AUnregProc: TUnregFromThreadFactoryProc);
     constructor Create; overload;
-    constructor Create(const AUnregProc: TUnregFromThreadFactoryProc); overload;
+    constructor Create(const AUnregProc: TUnregFromThreadFactoryProc); overload; virtual;
     destructor Destroy; override;
 
     /// <summary>
@@ -410,6 +414,11 @@ begin
   FOnTerminateExternalHandler := nil;
 
   FHoldEvent := TEvent.Create(nil, true, not Suspended, '', false);
+  FStopEvent := TEvent.Create(nil, true, false, '');
+  SetLength(FEventHandlesArray, 2);
+  FEventHandlesArray[0] := FStopEvent;
+  FEventHandlesArray[1] := FHoldEvent;
+
   FIsHolded := false;
 
   FRegProc := ARegProc;
@@ -498,7 +507,11 @@ end;
 
 destructor TThreadExt.Destroy;
 begin
+  Terminate;
+  WaitFor;
+
   FreeAndNil(FHoldEvent);
+  FreeAndNil(FStopEvent);
   FreeAndNil(FCriticalSection);
 
   if FExceptionMessage.Length > 0 then
@@ -723,12 +736,22 @@ begin
 end;
 
 procedure TThreadExt.ExecHold;
+var
+  Signaled: THandleObject;
 begin
-  IsHolded := True;
+  IsHolded := true;
 
-  FHoldEvent.WaitFor(INFINITE);
+  THandleObject.WaitForMultiple(FEventHandlesArray, INFINITE, False, Signaled);
+
+//  if not Terminated then
+//    FHoldEvent.WaitFor(INFINITE);
 
   IsHolded := false;
+end;
+
+procedure TThreadExt.TerminatedSet;
+begin
+  FStopEvent.SetEvent;
 end;
 
 procedure TThreadExt.TryExcept(const AProc: TProc);
@@ -927,12 +950,17 @@ begin
 
   Log.d('TThreadFactory.CheckThreadZeroCount -> ' + ThreadFactory.ThreadFactoryName);
 
-  // Вызываем напрямую без постановки в оцередь
+  // Вызываем напрямую без постановки в очередь
   // Так или иначе выполняться будет в основном потоке
   // Вначале идет обработка внешнего вызова
   if Assigned(FOnAllThreadsAreDestroyed) then
     FOnAllThreadsAreDestroyed(ThreadFactory);
 
+  { TODO: возможно стоит поднять над
+    if Assigned(FOnAllThreadsAreDestroyed) then
+    FOnAllThreadsAreDestroyed(ThreadFactory);
+    Нужно проверить
+  }
   // Теперь идет финишная обработка, здесь фабрика отправляется на уничтожения
   if FFreeWhenAllThreadsDone then
     TThread.ForceQueue(nil,

@@ -17,6 +17,7 @@ uses
   , FMX.FormExtUnit
   , ThreadFactoryUnit
   , PopupMenuExt.Item
+  , SafeQueueThread
   ;
 
 type
@@ -28,6 +29,9 @@ type
     FAcviteForm: TPopupMenuExtForm;
 
     FPopupMenuThread: TPopupMenuExtThread;
+    FSafeQueueThreadSignalOwner: ISafeQueueThreadSignalOwner;
+
+    procedure StartPopup;
 
     function FindOpenedForm(
       const AOwnerComponent: TComponent;
@@ -45,12 +49,11 @@ type
     procedure StartPopupMenuThread(
       const AForm: TPopupMenuExtForm;
       const AStepDirection: TStepDirection);
-    // Поток может быть уничтожен отдельно от уничтожения меню
-    // Он уничтожается при закрытии формы через фабрику
-    // По этому везде проверяем жив ли поток
-    // В терминаторе заниливаем ссылку на него
-    procedure OnPopupMenuThreadTerminate(Sender: TObject);
+
+    procedure StopPopupMenuThread;
     procedure ForceQueueCloseAllForms;
+
+    procedure DoMainMenuFormDestroy(Sender: TObject);
   private
   public
     constructor Create(Owner: TComponent); reintroduce; overload;
@@ -137,6 +140,25 @@ begin
 end;
 
 { TPopupMenuExt }
+
+procedure TPopupMenuExt.StartPopup;
+begin
+  FSafeQueueThreadSignalOwner := TSafeQueueThreadSignal.Create;
+
+  FMainMenuForm := nil;
+  FAcviteForm := nil;
+
+  try
+    FPopupMenuThread := TPopupMenuExtThread.Create(
+      TStepDirection.sdForward,
+      true);
+    FPopupMenuThread.OnTimeIsOut := OnTimeIsOutHandler;
+    FPopupMenuThread.Start;
+  except
+    on e: Exception do
+      raise Exception.CreateFmt('TPopupMenuExt.Create - > ', [e.Message]);
+  end;
+end;
 
 function TPopupMenuExt.FindOpenedForm(
   const AOwnerComponent: TComponent;
@@ -229,7 +251,6 @@ constructor TPopupMenuExt.Create(Owner: TComponent);
 var
   Control: TControl;
   Form: TForm;
-  FormExt: TFormExt;
 begin
   if not (Owner is TControl) then
     raise Exception.Create(
@@ -251,53 +272,21 @@ begin
 
   inherited Create(Owner);
 
-  FormExt := Form as TFormExt;
-
-  FMainMenuForm := nil;
-  FAcviteForm := nil;
-
-  try
-    FPopupMenuThread := TPopupMenuExtThread.Create(
-      FormExt.ThreadFactory,
-      TStepDirection.sdForward,
-      true);
-    FPopupMenuThread.OnTimeIsOut := OnTimeIsOutHandler;
-    FPopupMenuThread.OnTerminate := OnPopupMenuThreadTerminate;
-    FPopupMenuThread.Start;
-  except
-    on e: Exception do
-      raise Exception.CreateFmt('TPopupMenuExt.Create - > ', [e.Message]);
-  end;
+  StartPopup;
 end;
 
 constructor TPopupMenuExt.Create(Owner: TFormExt);
-var
-  FormExt: TFormExt;
 begin
   inherited Create(Owner);
 
-  FormExt := Owner;
-
-  FMainMenuForm := nil;
-  FAcviteForm := nil;
-
-  try
-    FPopupMenuThread := TPopupMenuExtThread.Create(
-      FormExt.ThreadFactory,
-      TStepDirection.sdForward,
-      true);
-    FPopupMenuThread.OnTimeIsOut := OnTimeIsOutHandler;
-    FPopupMenuThread.OnTerminate := OnPopupMenuThreadTerminate;
-    FPopupMenuThread.Start;
-  except
-    on e: Exception do
-      raise Exception.CreateFmt('TPopupMenuExt.Create - > ', [e.Message]);
-  end;
+  StartPopup;
 end;
 
 destructor TPopupMenuExt.Destroy;
 begin
-  FPopupMenuThread := nil;
+  FSafeQueueThreadSignalOwner.Deactivate;
+
+  StopPopupMenuThread;
 
   Close;
 
@@ -477,6 +466,7 @@ begin
   begin
     PopupForm := TPopupMenuExtForm.CreateNew(Self);
     FMainMenuForm := PopupForm;
+    FMainMenuForm.OnDestroy := DoMainMenuFormDestroy;
   end
   else
   begin
@@ -531,21 +521,32 @@ begin
   end;
 end;
 
-procedure TPopupMenuExt.OnPopupMenuThreadTerminate(Sender: TObject);
+procedure TPopupMenuExt.StopPopupMenuThread;
 begin
-  FPopupMenuThread := nil;
+  if not Assigned(FPopupMenuThread) then
+    Exit;
+
+  FPopupMenuThread.Terminate;
+  FPopupMenuThread.WaitFor;
+  FreeAndNil(FPopupMenuThread);
 end;
 
 procedure TPopupMenuExt.ForceQueueCloseAllForms;
 begin
-  TThread.ForceQueue(nil,
+  TSafeQueueThread.SafeForceQueue(FSafeQueueThreadSignalOwner,
     procedure
     begin
       CloseAllForms;
     end);
 end;
 
-procedure TPopupMenuExt.OnPopupMenuExtFormCloseQuery(Sender: TObject; var CanClose: Boolean);
+procedure TPopupMenuExt.DoMainMenuFormDestroy(Sender: TObject);
+begin
+  FMainMenuForm := nil;
+end;
+
+procedure TPopupMenuExt.OnPopupMenuExtFormCloseQuery(
+  Sender: TObject; var CanClose: Boolean);
 var
   Form: TPopupMenuExtForm;
 begin
@@ -570,7 +571,8 @@ begin
   end;
 end;
 
-procedure TPopupMenuExt.OnPopupMenuExtFormClose(Sender: TObject; var Action: TCloseAction);
+procedure TPopupMenuExt.OnPopupMenuExtFormClose(
+  Sender: TObject; var Action: TCloseAction);
 var
   Form: TPopupMenuExtForm;
   FormOwner: TPopupMenuExtForm;
@@ -636,7 +638,7 @@ var
 begin
   while true do
   begin
-    Form := GetMaxChildForm;
+   Form := GetMaxChildForm;
     if Assigned(Form) then
       CloseForm(Form)
     else
@@ -649,9 +651,6 @@ end;
 procedure TPopupMenuExt.CloseForm(
   const AForm: TPopupMenuExtForm);
 begin
-  if Assigned(FPopupMenuThread) then
-    FPopupMenuThread.Form := nil;
-
   if not Assigned(AForm) then
     Exit;
 
