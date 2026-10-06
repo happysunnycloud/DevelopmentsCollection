@@ -181,14 +181,15 @@ type
     // Сама остановка выполняется через ExecHold
     procedure HoldThread;
     procedure UnHoldThread;
-
+    // Вытащили из protected и сделали public
+    // Позволяет обращаться к методу из потоков созданных как анонимные
     procedure Terminate;
+
+    property Terminated: Boolean read GetTerminated;
+    property OnTerminate: TNotifyEvent read GetOnTerminate write SetOnTerminate;
 
     property OnException: TExceptionProc read FOnException write FOnException;
     property ExceptionMessage: String read FExceptionMessage;
-    property Terminated: Boolean read GetTerminated;
-
-    property OnTerminate: TNotifyEvent read GetOnTerminate write SetOnTerminate;
 
     // Отображает, когда поток фактически вошел в ExecHold
     property IsHolded: Boolean read GetIsHolded write SetIsHolded;
@@ -507,9 +508,6 @@ end;
 
 destructor TThreadExt.Destroy;
 begin
-  Terminate;
-  WaitFor;
-
   FreeAndNil(FHoldEvent);
   FreeAndNil(FStopEvent);
   FreeAndNil(FCriticalSection);
@@ -552,12 +550,14 @@ end;
 
 function TThreadExt.GetTerminated: Boolean;
 begin
-  FCriticalSection.Enter;
-  try
-    Result := inherited Terminated;
-  finally
-    FCriticalSection.Leave;
-  end;
+  Result := inherited Terminated;
+
+//  FCriticalSection.Enter;
+//  try
+//    Result := inherited Terminated;
+//  finally
+//    FCriticalSection.Leave;
+//  end;
 end;
 
 function TThreadExt.GetThreadName: String;
@@ -659,20 +659,31 @@ begin
   if Terminated then
     Exit;
 
+  inherited Terminate;
+
+//  FCriticalSection.Enter;
+//  try
+//    inherited Terminate;
+//  finally
+//    FCriticalSection.Leave;
+//  end;
+end;
+
+procedure TThreadExt.TerminatedSet;
+begin
   FCriticalSection.Enter;
   try
-    inherited Terminate;
-
     if Assigned(FOnSetTerminate) then
       FOnSetTerminate(Self);
 
     if Assigned(FOnSetTerminateProcRef) then
       FOnSetTerminateProcRef();
-
-    UnHoldThread;
   finally
     FCriticalSection.Leave;
   end;
+
+  UnHoldThread;
+  FStopEvent.SetEvent;
 end;
 
 procedure TThreadExt.SetOnTerminate(const AOnTerminate: TNotifyEvent);
@@ -743,15 +754,7 @@ begin
 
   THandleObject.WaitForMultiple(FEventHandlesArray, INFINITE, False, Signaled);
 
-//  if not Terminated then
-//    FHoldEvent.WaitFor(INFINITE);
-
   IsHolded := false;
-end;
-
-procedure TThreadExt.TerminatedSet;
-begin
-  FStopEvent.SetEvent;
 end;
 
 procedure TThreadExt.TryExcept(const AProc: TProc);
