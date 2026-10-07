@@ -15,7 +15,8 @@ uses
   System.Classes,
   System.SysUtils,
   System.SyncObjs,
-  ThreadRegistryUnit
+  ThreadRegistryUnit,
+  HoldingThread
   ;
 
 type
@@ -56,13 +57,9 @@ type
       const AExceptionProc: TExceptionProc);
   end;
 
-  TThreadExt = class(TThread)
+  TThreadExt = class(THoldingThread)
   strict private
     FCriticalSection: TCriticalSection;
-
-    FHoldEvent: TEvent;
-    FStopEvent: TEvent;
-    FEventHandlesArray: THandleObjectArray;
 
     FRegProc: TRegProc;
     FUnregProc: TUnRegProc;
@@ -71,11 +68,10 @@ type
     FExceptionMessage: String;
     FOnException: TExceptionProc;
     FThreadName: String;
-    FIsHolded: Boolean;
 
-    // Выполняется при выставлении свойства Terminate потоку
-    FOnSetTerminate: TNotifyEvent;
-    FOnSetTerminateProcRef: TProc;
+//    // Выполняется при выставлении свойства Terminate потоку
+//    FOnSetTerminate: TNotifyEvent;
+//    FOnSetTerminateProcRef: TProc;
     // Выполняется во время вызова OnTerminate в главном потоке
     FOnTerminateExternalHandler: TNotifyEvent;
     // Ссылка на внешний эвент, если не nil,
@@ -101,38 +97,33 @@ type
     function GetThreadName: String;
     procedure SetThreadName(const AThreadName: String);
 
-    function GetIsHolded: Boolean;
-    procedure SetIsHolded(const AIsHolded: Boolean);
-
-    function GetIntentionHoldState: Boolean;
     // !!! Не путать OnTerminate c Terminated !!!
     procedure SetOnTerminate(const AOnTerminate: TNotifyEvent);
     function GetOnTerminate: TNotifyEvent;
 
-    procedure SetOnSetTerminate(const AOnSetTerminate: TNotifyEvent);
-    function GetOnSetTerminate: TNotifyEvent;
-    procedure SetOnSetTerminateProcRef(const AOnSetTerminateProcRef: TProc);
-    function GetOnSetTerminateProcRef: TProc;
+//    procedure SetOnSetTerminate(const AOnSetTerminate: TNotifyEvent);
+//    function GetOnSetTerminate: TNotifyEvent;
+//    procedure SetOnSetTerminateProcRef(const AOnSetTerminateProcRef: TProc);
+//    function GetOnSetTerminateProcRef: TProc;
 
     procedure SetThreadIsDeadEventRef(const AThreadIsDeadEventRef: TEvent);
     function GetThreadIsDeadEventRef: TEvent;
   protected
-    procedure ExecHold;
     procedure TerminatedSet; override;
     /// <summary>
     /// Execute переопределять НЕЛЬЗЯ.
     /// Для реализации логики потока переопределяйте InnerExecute.
     /// </summary>
-    procedure Execute; override; final;
-    procedure InnerExecute; virtual; abstract;
+    //procedure Execute; override; final;
+    procedure InnerExecute; override;
     procedure TryExcept(const AProc: TProc);
 
     property ThreadName: String
       read GetThreadName write SetThreadName;
-    property OnSetTerminate: TNotifyEvent
-      read GetOnSetTerminate write SetOnSetTerminate;
-    property OnSetTerminateProcRef: TProc
-      read GetOnSetTerminateProcRef write SetOnSetTerminateProcRef;
+//    property OnSetTerminate: TNotifyEvent
+//      read GetOnSetTerminate write SetOnSetTerminate;
+//    property OnSetTerminateProcRef: TProc
+//      read GetOnSetTerminateProcRef write SetOnSetTerminateProcRef;
   public
     /// <summary>
     ///   Создает автоименованный поток с исполняемым анонимным методом
@@ -166,21 +157,7 @@ type
       const AThreadName: String = '';
       const ASuspended: Boolean = false;
       const AFreeOnTerminate: Boolean = true); overload;
-//    /// <summary>
-//    ///   Создает автоименованный поток с перегрузкой Execute/InnerExecute
-//    ///   C указанием фабрики регистрирующей нить
-//    ///   Suspended = false, FreeOnTerminate = true
-//    /// </summary>
-//    constructor Create(
-//      const AThreadFactory: TThreadFactory;
-//      const ASuspended: Boolean = false;
-//      const AFreeOnTerminate: Boolean = true); overload;
-
     destructor Destroy; override;
-    // Это только намерение, не фактическая остановка
-    // Сама остановка выполняется через ExecHold
-    procedure HoldThread;
-    procedure UnHoldThread;
     // Вытащили из protected и сделали public
     // Позволяет обращаться к методу из потоков созданных как анонимные
     procedure Terminate;
@@ -191,11 +168,6 @@ type
     property OnException: TExceptionProc read FOnException write FOnException;
     property ExceptionMessage: String read FExceptionMessage;
 
-    // Отображает, когда поток фактически вошел в ExecHold
-    property IsHolded: Boolean read GetIsHolded write SetIsHolded;
-    // Отображает, состояние запроса на Hold
-    // Не означает, что поток в настоящий момент вошел в ExecHold
-    property IntentionHoldState: Boolean read GetIntentionHoldState;
     // Позволяет назначить внешний TEvent, для отслеживания завершения потока
     property ThreadIsDeadEventRef: TEvent
       read GetThreadIsDeadEventRef write SetThreadIsDeadEventRef;
@@ -409,18 +381,16 @@ begin
 
   FExecProc := AExecProc;
 
-  FOnSetTerminate := nil;
-  FOnSetTerminateProcRef := nil;
+//  FOnSetTerminate := nil;
+//  FOnSetTerminateProcRef := nil;
 
   FOnTerminateExternalHandler := nil;
 
-  FHoldEvent := TEvent.Create(nil, true, not Suspended, '', false);
-  FStopEvent := TEvent.Create(nil, true, false, '');
-  SetLength(FEventHandlesArray, 2);
-  FEventHandlesArray[0] := FStopEvent;
-  FEventHandlesArray[1] := FHoldEvent;
-
-  FIsHolded := false;
+//  FHoldEvent := TEvent.Create(nil, true, not Suspended, '', false);
+//  FStopEvent := TEvent.Create(nil, true, false, '');
+//  SetLength(FEventHandlesArray, 2);
+//  FEventHandlesArray[0] := FStopEvent;
+//  FEventHandlesArray[1] := FHoldEvent;
 
   FRegProc := ARegProc;
   FUnregProc := AUnregProc;
@@ -508,8 +478,8 @@ end;
 
 destructor TThreadExt.Destroy;
 begin
-  FreeAndNil(FHoldEvent);
-  FreeAndNil(FStopEvent);
+//  FreeAndNil(FHoldEvent);
+//  FreeAndNil(FStopEvent);
   FreeAndNil(FCriticalSection);
 
   if FExceptionMessage.Length > 0 then
@@ -581,38 +551,6 @@ begin
   end;
 end;
 
-function TThreadExt.GetIsHolded: Boolean;
-begin
-  FCriticalSection.Enter;
-  try
-    Result := FIsHolded;
-  finally
-    FCriticalSection.Leave;
-  end;
-end;
-
-procedure TThreadExt.SetIsHolded(const AIsHolded: Boolean);
-begin
-  FCriticalSection.Enter;
-  try
-    FIsHolded := AIsHolded;
-  finally
-    FCriticalSection.Leave;
-  end;
-end;
-
-function TThreadExt.GetIntentionHoldState: Boolean;
-begin
-  FCriticalSection.Enter;
-  try
-    Result := false;
-    if TWaitResult.wrTimeout = FHoldEvent.WaitFor(0) then
-      Result := true;
-  finally
-    FCriticalSection.Leave;
-  end;
-end;
-
 procedure TThreadExt.SetThreadIsDeadEventRef(const AThreadIsDeadEventRef: TEvent);
 begin
   FCriticalSection.Enter;
@@ -644,46 +582,28 @@ end;
 //  end;
 //end;
 
-procedure TThreadExt.HoldThread;
-begin
-  FHoldEvent.ResetEvent;
-end;
-
-procedure TThreadExt.UnHoldThread;
-begin
-  FHoldEvent.SetEvent;
-end;
-
 procedure TThreadExt.Terminate;
 begin
   if Terminated then
     Exit;
 
   inherited Terminate;
-
-//  FCriticalSection.Enter;
-//  try
-//    inherited Terminate;
-//  finally
-//    FCriticalSection.Leave;
-//  end;
 end;
 
 procedure TThreadExt.TerminatedSet;
 begin
-  FCriticalSection.Enter;
-  try
-    if Assigned(FOnSetTerminate) then
-      FOnSetTerminate(Self);
+  inherited;
 
-    if Assigned(FOnSetTerminateProcRef) then
-      FOnSetTerminateProcRef();
-  finally
-    FCriticalSection.Leave;
-  end;
-
-  UnHoldThread;
-  FStopEvent.SetEvent;
+//  FCriticalSection.Enter;
+//  try
+//    if Assigned(FOnSetTerminate) then
+//      FOnSetTerminate(Self);
+//
+//    if Assigned(FOnSetTerminateProcRef) then
+//      FOnSetTerminateProcRef();
+//  finally
+//    FCriticalSection.Leave;
+//  end;
 end;
 
 procedure TThreadExt.SetOnTerminate(const AOnTerminate: TNotifyEvent);
@@ -706,56 +626,56 @@ begin
   end;
 end;
 
-procedure TThreadExt.SetOnSetTerminate(const AOnSetTerminate: TNotifyEvent);
-begin
-  FCriticalSection.Enter;
-  try
-    FOnSetTerminate := AOnSetTerminate;
-  finally
-    FCriticalSection.Leave;
-  end;
-end;
+//procedure TThreadExt.SetOnSetTerminate(const AOnSetTerminate: TNotifyEvent);
+//begin
+//  FCriticalSection.Enter;
+//  try
+//    FOnSetTerminate := AOnSetTerminate;
+//  finally
+//    FCriticalSection.Leave;
+//  end;
+//end;
+//
+//function TThreadExt.GetOnSetTerminate: TNotifyEvent;
+//begin
+//  FCriticalSection.Enter;
+//  try
+//    Result := FOnSetTerminate;
+//  finally
+//    FCriticalSection.Leave;
+//  end;
+//end;
 
-function TThreadExt.GetOnSetTerminate: TNotifyEvent;
-begin
-  FCriticalSection.Enter;
-  try
-    Result := FOnSetTerminate;
-  finally
-    FCriticalSection.Leave;
-  end;
-end;
+//procedure TThreadExt.SetOnSetTerminateProcRef(const AOnSetTerminateProcRef: TProc);
+//begin
+//  FCriticalSection.Enter;
+//  try
+//    FOnSetTerminateProcRef := AOnSetTerminateProcRef;
+//  finally
+//    FCriticalSection.Leave;
+//  end;
+//end;
+//
+//function TThreadExt.GetOnSetTerminateProcRef: TProc;
+//begin
+//  FCriticalSection.Enter;
+//  try
+//    Result := FOnSetTerminateProcRef;
+//  finally
+//    FCriticalSection.Leave;
+//  end;
+//end;
 
-procedure TThreadExt.SetOnSetTerminateProcRef(const AOnSetTerminateProcRef: TProc);
-begin
-  FCriticalSection.Enter;
-  try
-    FOnSetTerminateProcRef := AOnSetTerminateProcRef;
-  finally
-    FCriticalSection.Leave;
-  end;
-end;
-
-function TThreadExt.GetOnSetTerminateProcRef: TProc;
-begin
-  FCriticalSection.Enter;
-  try
-    Result := FOnSetTerminateProcRef;
-  finally
-    FCriticalSection.Leave;
-  end;
-end;
-
-procedure TThreadExt.ExecHold;
-var
-  Signaled: THandleObject;
-begin
-  IsHolded := true;
-
-  THandleObject.WaitForMultiple(FEventHandlesArray, INFINITE, False, Signaled);
-
-  IsHolded := false;
-end;
+//procedure TThreadExt.ExecHold;
+//var
+//  Signaled: THandleObject;
+//begin
+//  IsHolded := true;
+//
+//  THandleObject.WaitForMultiple(FEventHandlesArray, INFINITE, False, Signaled);
+//
+//  IsHolded := false;
+//end;
 
 procedure TThreadExt.TryExcept(const AProc: TProc);
 begin
@@ -770,7 +690,7 @@ begin
   end;
 end;
 
-procedure TThreadExt.Execute;
+procedure TThreadExt.InnerExecute;
 begin
   TryExcept(
     procedure
