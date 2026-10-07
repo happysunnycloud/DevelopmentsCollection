@@ -127,7 +127,7 @@ type
     function GetOnGetData: TProc;
     function GetOnFinished: TProc;
 
-    procedure OnSetTerminatedHandler(Sender: TObject);
+    procedure DoAfterTerminatedSet(Sender: TObject);
   protected
     procedure InnerExecute; override;
   public
@@ -531,7 +531,7 @@ begin
 
   inherited Create(AThreadFactory, 'TSingleSoundThread', true);
 
-  OnSetTerminate := OnSetTerminatedHandler;
+  OnAfterTerminatedSet := DoAfterTerminatedSet;
 end;
 
 destructor TSingleSoundThread.Destroy;
@@ -589,7 +589,7 @@ begin
   end;
 end;
 
-procedure TSingleSoundThread.OnSetTerminatedHandler(Sender: TObject);
+procedure TSingleSoundThread.DoAfterTerminatedSet(Sender: TObject);
 begin
   OnGetData := nil;
   OnFinished := nil;
