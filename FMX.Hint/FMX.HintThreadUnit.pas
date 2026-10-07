@@ -44,7 +44,7 @@ type
     procedure SetMouseLeaveFixed(const AMouseLeaveFixed: Boolean);
     function GetMouseLeaveFixed: Boolean;
 
-    procedure OnSetTerminatedHandler(Sender: TObject);
+    procedure DoAfterTerminatedSet(Sender: TObject);
 
 //    function IsMouseOverControl: Boolean;
   protected
@@ -96,7 +96,7 @@ begin
 
   inherited Create(AThreadFactory, 'THintThread', true);
 
-  OnSetTerminate := OnSetTerminatedHandler;
+  OnAfterTerminatedSet := DoAfterTerminatedSet;
 end;
 
 destructor THintThread.Destroy;
@@ -238,7 +238,7 @@ begin
   end;
 end;
 
-procedure THintThread.OnSetTerminatedHandler(Sender: TObject);
+procedure THintThread.DoAfterTerminatedSet(Sender: TObject);
 begin
   FShowHideHintEventEvent.SetEvent;
   FHoldEvent.SetEvent;
