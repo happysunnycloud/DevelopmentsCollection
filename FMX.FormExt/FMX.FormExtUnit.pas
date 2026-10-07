@@ -148,6 +148,11 @@ type
     procedure OnKeyUpInternalHandler(Sender: TObject; var Key: Word; var KeyChar: Char;
       Shift: TShiftState); virtual;
     {$IFDEF MSWINDOWS}
+    procedure CreateTrayIcon;
+
+    function GetTrayIconVisible: Boolean;
+    procedure SetTrayIconVisible(const ATrayIconVisible: Boolean);
+
     function GetClientWidth: Integer;
     function GetClientHeight: Integer;
 
@@ -189,6 +194,8 @@ type
     property ToDoClose: Boolean read FToDoClose write FToDoClose;
     property Theme: TTheme read FTheme;
     property ScreenScale: Single read FScreenScale;
+
+    property ModalResult: TModalResult read FModalResult write FModalResult;
     {$IFDEF MSWINDOWS}
     // Флаг SaveFormStateFlag позволяет не сохранять состояние формы
     // При создании формы, если ее настройки не найдены во внешнем файле,
@@ -216,6 +223,9 @@ type
       read FTrayIconMouseLeftButtonDown write FTrayIconMouseLeftButtonDown;
     property OnFormStateLoadedProc: TProc<TFormExt>
       read FOnFormStateLoadedProc write FOnFormStateLoadedProc;
+
+    property TrayIconVisible: Boolean
+      read GetTrayIconVisible write SetTrayIconVisible;
 
     procedure Rollup;
     procedure Rolldown;
@@ -415,6 +425,9 @@ var
   PCloseMethodAddr: PCloseMethod;
   PKeyUpAddr: PCloseMethod;
   Method: TMethod;
+  {$IFDEF MSWINDOWS}
+  _Self: TFormExt;
+  {$ENDIF}
 begin
   inherited Create(AOwner);
 
@@ -473,23 +486,22 @@ begin
 
   FBorderFrame.OnBorderFrameMaxupButtonClick := OnBorderFrameMaxupButtonClickHandler;
 
-  FTrayIcon := TCustomTrayIcon.Create(Self);
-  FTrayIcon.Hint := Caption;
-  FTrayIcon.OnMouseDown := InnerTrayIconMouseDown;
-  FTrayIcon.Visible := true;
-  FTrayIconMouseRightButtonDown := nil;
-  FTrayIconMouseLeftButtonDown := nil;
+  CreateTrayIcon;
 
+  _Self := Self;
   TThread.ForceQueue(nil,
     procedure
     begin
       TFormStateHelper.LoadFormState(
         FORM_SETTINGS_FILE_NAME,
-        Self,
+        _Self,
         FLastFormStateRec);
 
       if Assigned(FOnFormStateLoadedProc) then
-        FOnFormStateLoadedProc(Self);
+        FOnFormStateLoadedProc(_Self);
+
+      if Application.MainForm = _Self then
+        TrayIconVisible := true;
     end);
   {$ENDIF}
 end;
@@ -513,6 +525,34 @@ begin
 end;
 
 {$IFDEF MSWINDOWS}
+procedure TFormExt.CreateTrayIcon;
+begin
+  FTrayIcon := TCustomTrayIcon.Create(Self);
+  FTrayIcon.Hint := Caption;
+  FTrayIcon.OnMouseDown := InnerTrayIconMouseDown;
+  FTrayIcon.Visible := false;
+  FTrayIconMouseRightButtonDown := nil;
+  FTrayIconMouseLeftButtonDown := nil;
+end;
+
+function TFormExt.GetTrayIconVisible: Boolean;
+begin
+  Result := false;
+
+  if not Assigned(FTrayIcon) then
+    Exit;
+
+  Result := FTrayIcon.Visible;
+end;
+
+procedure TFormExt.SetTrayIconVisible(const ATrayIconVisible: Boolean);
+begin
+  if not Assigned(FTrayIcon) then
+    Exit;
+
+  FTrayIcon.Visible := ATrayIconVisible;
+end;
+
 procedure TFormExt.Resize;
 begin
   inherited;
