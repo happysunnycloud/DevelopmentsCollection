@@ -128,13 +128,6 @@ type
     FOnFormStateLoadedProc: TProc<TFormExt>;
     {$ENDIF}
 
-    // Нарочно вводим переменную, так как мы всегда используем Close для формы
-    // При этом нужно иметь ввиду, что:
-    // Вызов Close для модальной формы по умолчанию устанавливает ее
-    // ModalResult в mrCancel, что может перезаписать наше собственное значение.
-    // Таким образом мы обходим сброс ModalResult в Close
-    FModalResult: TModalResult;
-
     procedure OnDestroyedAllFactoriesHandler(Sender: TObject);
 
     function GetOnCloseQuery: TCloseQueryMethod;
@@ -177,10 +170,23 @@ type
     function GetCaption: String;
     procedure SetCaption(const ACaption: String);
     {$ENDIF}
+  strict private
+    // Нарочно вводим переменную, так как мы всегда используем Close для формы
+    // При этом нужно иметь ввиду, что:
+    // Вызов Close для штатной модальной формы по умолчанию устанавливает ее
+    // ModalResult в mrCancel, что может перезаписать наше собственное значение
+    // Таким образом мы обходим сброс ModalResult в Close
+    // Так же мы устанавливаем дефолтное значение ModalResult = mrNone,
+    // что на наш взгляд практичнее
+    FModalResult: TModalResult;
+    procedure SetModalResult(const AModalResult: TModalResult);
   protected
     {$IFDEF MSWINDOWS}
     procedure Resize; override;
     {$ENDIF}
+  public
+    property ModalResult: TModalResult read FModalResult write SetModalResult;
+    function ShowModal: TModalResult;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -194,8 +200,6 @@ type
     property ToDoClose: Boolean read FToDoClose write FToDoClose;
     property Theme: TTheme read FTheme;
     property ScreenScale: Single read FScreenScale;
-
-    property ModalResult: TModalResult read FModalResult write FModalResult;
     {$IFDEF MSWINDOWS}
     // Флаг SaveFormStateFlag позволяет не сохранять состояние формы
     // При создании формы, если ее настройки не найдены во внешнем файле,
@@ -244,6 +248,7 @@ implementation
 uses
     System.SyncObjs
   , System.IOUtils
+//  , FMX.Platform
   {$IFDEF MSWINDOWS}
   , Winapi.Windows
   , FMX.Platform.Win
@@ -784,12 +789,12 @@ begin
         OnDestroyedAllFactoriesHandler;
       FThreadFactoryRegistry.DestroyAllThreadFactories;
 
-      // Сохраняем значение, что бы восстановить его в OnCloseInternalHandler
-      // Так как при вызове Close для модалок оно сбрасывается
-      if ModalResult <> mrNone then
-        FModalResult := ModalResult
-      else
-        FModalResult := mrCancel;
+//      // Сохраняем значение, что бы восстановить его в OnCloseInternalHandler
+//      // Так как при вызове Close для модалок оно сбрасывается
+//      if ModalResult <> mrNone then
+//        FModalResult := ModalResult
+//      else
+//        FModalResult := mrCancel;
     end;
   end;
 end;
@@ -797,7 +802,7 @@ end;
 procedure TFormExt.OnCloseInternalHandler(Sender: TObject; var Action: TCloseAction);
 begin
   // Восстанавливаем значение, что бы передать на выход ShowModal
-  ModalResult := FModalResult;
+//  ModalResult := FModalResult;
 
   Action := TCloseAction.caFree;
 
@@ -870,6 +875,20 @@ begin
   {$ENDIF}
   Fill.Kind := TBrushKind.Solid;
   Fill.Color := FTheme.FormSettings.BackgroundColor;
+end;
+
+function TFormExt.ShowModal: TModalResult;
+begin
+  inherited ShowModal;
+
+  Result := Self.ModalResult;
+end;
+
+procedure TFormExt.SetModalResult(const AModalResult: TModalResult);
+begin
+  FModalResult := AModalResult;
+
+  Close;
 end;
 
 class procedure TFormExt.CloseChildForms;
