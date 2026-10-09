@@ -1,5 +1,17 @@
 ﻿unit FMX.Alarm.Android;
 
+// Версия 1.1 (поддержка Android 9-15)
+// Что изменилось по сравнению с 1.0:
+//  - приёмник событий регистрируется ДО запуска AlarmEngine (чтобы не пропустить STATUS=READY);
+//  - добавлен приём диагностических статусов AlarmEngine (action ...STATUS): READY, ALARM_SET,
+//    ALARM_REJECTED, ALARM_STOPPED, ALARM_DISMISSED; они пишутся в лог и доступны через
+//    TAndroidAlarm.OnEngineStatus / EngineReady / EngineInfo;
+//  - в запуск AlarmEngine передаётся extra reply_package (кому слать статусы);
+//  - исключения при запуске больше не глотаются молча - пишутся в лог;
+//  - Uninit корректно сбрасывает состояние, повторный Init не создаёт второй приёмник;
+//  - добавлен HandleNewIntent (для обработки onNewIntent у activity с launchMode=singleTask).
+// Формат JSON (version = 1) не менялся.
+
 interface
 
 uses
@@ -21,6 +33,9 @@ const
 
 type
   TJsonParserProc = procedure (const AJson: String = '') of Object;
+
+  // Диагностический статус от AlarmEngine (AStatus: READY / ALARM_SET / ...)
+  TEngineStatusProc = procedure (const AStatus, ADetail: String) of Object;
 
   TAlarmData = class
   private
@@ -70,20 +85,29 @@ type
   const
     acmSetAlarm  = 'SET_ALARM';
     acmStopAlarm = 'STOP_ALARM';
+    // Android -> Delphi
+    acmStatus    = 'STATUS';
   strict private
     class var FIsEngineInitialized: Boolean;
+    class var FEngineReady: Boolean;
+    class var FEngineInfo: String;
     class var FAlarmData: TAlarmData;
     class var FReceiver: TAlarmReceiver;
     class var FBroadcastReceiver: JFMXBroadcastReceiver;
+    class var FReceiverRegistered: Boolean;
     class var FLastIntentJson: String;
     class var FJsonParserProc: TJsonParserProc;
+    class var FOnEngineStatus: TEngineStatusProc;
     // Запускает минимальный активити, что бы получить
     // автоматическое разрешение на отображение уведомлений
+    // и вывести AlarmEngine из состояния "остановлено"
     class function StartNotificationEngine: Boolean;
 
     class procedure CheckInit;
+    class procedure DoLog(const AMessage: String);
   private
     class procedure FirstInit;
+    class procedure HandleEngineStatus(const AStatus, ADetail: String);
   public
     class function Init(
       const ANotifyCode: Integer;
@@ -91,6 +115,8 @@ type
     class procedure Uninit;
 
     class procedure HandleIntent;
+    // Вызвать из обработчика onNewIntent (если он есть), чтобы разобрать alarm_json
+    class procedure HandleNewIntent(const AIntent: JIntent);
     class procedure SendToAlarmEngine(
       const ACommand: String;
       const AJson: String = '');
@@ -99,6 +125,14 @@ type
     class procedure CancelAlarm;
 
     class property AlarmData: TAlarmData read FAlarmData write FAlarmData;
+
+    // AlarmEngine подтвердил запуск (STATUS=READY). Для диагностики; на работу команд не влияет.
+    class property EngineReady: Boolean read FEngineReady;
+    // Строка диагностики от AlarmEngine: sdk=..;notifications=..;fullScreenIntent=..;exactAlarms=..
+    class property EngineInfo: String read FEngineInfo;
+    // Необязательный обработчик статусов (вызывается в главном потоке)
+    class property OnEngineStatus: TEngineStatusProc
+      read FOnEngineStatus write FOnEngineStatus;
   end;
 
 implementation
@@ -106,6 +140,7 @@ implementation
 uses
     System.SysUtils
   , System.DateUtils
+  , FMX.Types
   ;
 
 procedure RaiseNotInit;
@@ -178,8 +213,21 @@ end;
 
 procedure TAlarmReceiver.onReceive(context: JContext; intent: JIntent);
 var
+  Action: String;
   Json: string;
 begin
+  Action := JStringToString(intent.getAction);
+
+  // Диагностический статус от AlarmEngine
+  if Action = APP_PACKAGE + '.' + TAndroidAlarm.acmStatus then
+  begin
+    TAndroidAlarm.HandleEngineStatus(
+      JStringToString(intent.getStringExtra(StringToJString('status'))),
+      JStringToString(intent.getStringExtra(StringToJString('detail'))));
+    Exit;
+  end;
+
+  // Событие "будильник сработал" (как и раньше)
   Json := JStringToString(
     intent.getStringExtra(StringToJString('alarm_json'))
   );
@@ -192,6 +240,11 @@ end;
 
 { TAndroidAlarm }
 
+class procedure TAndroidAlarm.DoLog(const AMessage: String);
+begin
+  Log.d('%s', ['AlarmEngine: ' + AMessage]);
+end;
+
 class function TAndroidAlarm.Init(
   const ANotifyCode: Integer;
   const AJsonParserProc: TJsonParserProc): Boolean;
@@ -201,19 +254,26 @@ var
   Pkg: String;
   Cls: String;
 begin
+  Result := False;
+
   try
     if not Assigned(AJsonParserProc) then
       raise Exception.Create('TAndroidAlarm.Init -> AJsonParserProc is nil');
 
-    FIsEngineInitialized := StartNotificationEngine;
-    if not FIsEngineInitialized then
+    // Повторный Init: только обновляем обработчик, второй приёмник не создаём
+    if FIsEngineInitialized and FReceiverRegistered then
+    begin
+      FJsonParserProc := AJsonParserProc;
+      Result := True;
       Exit;
+    end;
 
     Pkg := JStringToString(TAndroidHelper.Context.getPackageName);
     Cls := JStringToString(TAndroidHelper.Activity.getClass.getName);
 
     BellTime := Now;
 
+    FreeAndNil(FAlarmData);
     FAlarmData := TAlarmData.Create;
     FAlarmData.Version := 1;
     FAlarmData.Id := 1;
@@ -230,39 +290,69 @@ begin
     FJsonParserProc := AJsonParserProc;
 
     FLastIntentJson := '';
+    FEngineReady := False;
+    FEngineInfo := '';
 
-    // ✔ receiver listener
+    // Если приёмник остался от неудачного Init - снимаем и создаём заново
+    if FReceiverRegistered then
+    begin
+      try
+        TAndroidHelper.Context.getApplicationContext.unregisterReceiver(
+          FBroadcastReceiver);
+      except
+        // ignore
+      end;
+      FReceiverRegistered := False;
+    end;
+
+    // receiver listener
     FReceiver := TAlarmReceiver.Create(FJsonParserProc);
 
-    // ✔ FMX bridge receiver
+    // FMX bridge receiver
     FBroadcastReceiver := TJFMXBroadcastReceiver.JavaClass.init(FReceiver);
 
-    // ✔ filter
+    // filter: событие будильника + диагностические статусы
     Filter := TJIntentFilter.JavaClass.init;
     Filter.addAction(StringToJString(APP_PACKAGE + '.EVENT'));
+    Filter.addAction(StringToJString(APP_PACKAGE + '.' + acmStatus));
 
-    // ✔ register
+    // register (ДО запуска AlarmEngine, чтобы не пропустить STATUS=READY)
     TAndroidHelper.Context.getApplicationContext.registerReceiver(
-  //  TAndroidHelper.Activity.registerReceiver(
       FBroadcastReceiver,
       Filter);
-  finally
-    Result := FIsEngineInitialized;
+    FReceiverRegistered := True;
+
+    // запуск AlarmEngine (выводит пакет из состояния "остановлено")
+    FIsEngineInitialized := StartNotificationEngine;
+    DoLog('Init: engine started = ' + BoolToStr(FIsEngineInitialized, True));
+  except
+    on E: Exception do
+    begin
+      DoLog('Init failed: ' + E.ClassName + ': ' + E.Message);
+      FIsEngineInitialized := False;
+    end;
   end;
+
+  Result := FIsEngineInitialized;
 end;
 
 class procedure TAndroidAlarm.Uninit;
 begin
-  CheckInit;
-
-  FreeAndNil(FAlarmData);
-
   try
-    TAndroidHelper.Context.getApplicationContext.unregisterReceiver(
-      FBroadcastReceiver);
+    if FReceiverRegistered then
+      TAndroidHelper.Context.getApplicationContext.unregisterReceiver(
+        FBroadcastReceiver);
   except
     // ignore
   end;
+
+  FReceiverRegistered := False;
+  FIsEngineInitialized := False;
+  FEngineReady := False;
+  FBroadcastReceiver := nil;
+  FReceiver := nil;
+
+  FreeAndNil(FAlarmData);
 end;
 
 class function TAndroidAlarm.StartNotificationEngine: Boolean;
@@ -280,27 +370,52 @@ begin
       StringToJString(APP_PACKAGE),
       StringToJString(APP_PACKAGE + '.MainActivity'));
     Intent.addFlags(TJIntent.JavaClass.FLAG_ACTIVITY_NEW_TASK);
+    // Кому AlarmEngine пришлёт STATUS=READY
+    Intent.putExtra(
+      StringToJString('reply_package'),
+      TAndroidHelper.Context.getPackageName);
+
     TAndroidHelper.Context.startActivity(Intent);
 
     Result := true;
   except
-    // void
+    on E: Exception do
+      DoLog('StartNotificationEngine failed: ' + E.ClassName + ': ' + E.Message);
   end;
 end;
 
+class procedure TAndroidAlarm.HandleEngineStatus(const AStatus, ADetail: String);
+begin
+  DoLog('status ' + AStatus + ' (' + ADetail + ')');
+
+  if AStatus = 'READY' then
+  begin
+    FEngineReady := True;
+    FEngineInfo := ADetail;
+  end;
+
+  if Assigned(FOnEngineStatus) then
+    FOnEngineStatus(AStatus, ADetail);
+end;
+
 class procedure TAndroidAlarm.HandleIntent;
+begin
+  CheckInit;
+
+  HandleNewIntent(TAndroidHelper.Activity.getIntent);
+end;
+
+class procedure TAndroidAlarm.HandleNewIntent(const AIntent: JIntent);
 var
-  Intent: JIntent;
   Json: string;
 begin
   CheckInit;
 
-  Intent := TAndroidHelper.Activity.getIntent;
-  if not Assigned(Intent) then
+  if not Assigned(AIntent) then
     Exit;
 
   Json := JStringToString(
-    Intent.getStringExtra(StringToJString('alarm_json'))
+    AIntent.getStringExtra(StringToJString('alarm_json'))
   );
 
   if Json = '' then
@@ -337,6 +452,7 @@ begin
                     StringToJString(AJson));
 
   TAndroidHelper.Context.sendBroadcast(Intent);
+  DoLog('sent ' + ACommand);
 end;
 
 class procedure TAndroidAlarm.RechargeAlarm(const AAlarmDateTime: TDateTime);
@@ -376,6 +492,8 @@ end;
 class procedure TAndroidAlarm.FirstInit;
 begin
   FIsEngineInitialized := false;
+  FEngineReady := false;
+  FReceiverRegistered := false;
 end;
 
 class procedure TAndroidAlarm.CheckInit;
