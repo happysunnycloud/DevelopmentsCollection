@@ -40,11 +40,12 @@ type
   strict private
     FDelayShowThread: TDelayShowThread;
     FPopupMenu: TPopupMenuExt;
-    FOnModalResultAfterClose: TModalResultAfterCloseProcRef;
 
     procedure BuildPopupMenu;
     procedure DoMessageLabelMouseDown(Sender: TObject;
       Button: TMouseButton; Shift: TShiftState; X, Y: Single);
+
+    procedure _DoClose(Sender: TObject; var Action: TCloseAction);
   private
   public
     constructor Create(
@@ -53,16 +54,11 @@ type
       const AMessage: String;
       const ACaption: String;
       const AButtonSet: TButtonSet); reintroduce;
-    destructor Destroy; override;
-
-    procedure HideAndFree;
 
     procedure RunTimer(const ADelayTimeSec: Integer);
+    procedure ChangeMessage(const AMessage: String);
 
     property PopupMenu: TPopupMenuExt read FPopupMenu;
-
-    property OnModalResultAfterClose: TModalResultAfterCloseProcRef
-      write FOnModalResultAfterClose;
   end;
 
   TFormsList = TList<TMessageBoxForm>;
@@ -73,14 +69,14 @@ type
     class var FTheme: TTheme;
     class var FMessageBoxForm: TMessageBoxForm;
 
-    class procedure DoClose(Sender: TObject; var Action: TCloseAction);
     class procedure DoDestroy(Sender: TObject);
   private
     class function CreateAndShow(
       const ADelayShowSec: Integer;
       const AMessage: String;
       const ACaption: String = '';
-      const AButtonSet: TButtonSet = bsOk): TMessageBoxForm;
+      const AButtonSet: TButtonSet = bsOk;
+      const AIsModalMode: Boolean = true): TMessageBoxForm;
   public
     class function Show(
       const AMessage: String;
@@ -134,19 +130,6 @@ end;
 
 { TMessageBox }
 
-class procedure TMessageBox.DoClose(Sender: TObject; var Action: TCloseAction);
-var
-  Form: TMessageBoxForm;
-begin
-  Action := TCloseAction.caFree;
-
-  Form := TMessageBoxForm(Sender);
-
-  FFormRegistry.Remove(Form);
-
-  Form.HideAndFree;
-end;
-
 class procedure TMessageBox.DoDestroy(Sender: TObject);
 var
   Form: TMessageBoxForm;
@@ -154,22 +137,20 @@ begin
   Form := TMessageBoxForm(Sender);
 
   FFormRegistry.Remove(Form);
-
-  Form.HideAndFree;
 end;
 
 class function TMessageBox.CreateAndShow(
   const ADelayShowSec: Integer;
   const AMessage: String;
   const ACaption: String = '';
-  const AButtonSet: TButtonSet = bsOk): TMessageBoxForm;
+  const AButtonSet: TButtonSet = bsOk;
+  const AIsModalMode: Boolean = true): TMessageBoxForm;
 var
   Form: TMessageBoxForm;
 begin
   FMessageBoxForm := TMessageBoxForm.Create(
     nil, ADelayShowSec, AMessage, ACaption, AButtonSet);
 
-//  FMessageBoxForm.OnClose := DoClose;
   FMessageBoxForm.OnDestroy := DoDestroy;
   FMessageBoxForm.Caption := ACaption;
   FMessageBoxForm.Position := TFormPosition.ScreenCenter;
@@ -211,15 +192,18 @@ begin
 
   if ADelayShowSec = 0 then
   begin
-    TThread.ForceQueue(nil,
+    TThread.Queue(nil,
       procedure
       begin
-        TThread.ForceQueue(nil,
+        TThread.Queue(nil,
           procedure
           begin
             FMessageBoxForm.BringToFront;
           end);
-        FMessageBoxForm.ShowModal;
+        if AIsModalMode then
+          FMessageBoxForm.ShowModal
+        else
+          FMessageBoxForm.Show;
       end);
   end
   else
@@ -239,7 +223,7 @@ begin
   if not ACaption.IsEmpty then
     _Caption := ACaption;
 
-  Result := CreateAndShow(ADelayShowSec, AMessage, _Caption);
+  Result := CreateAndShow(ADelayShowSec, AMessage, _Caption, bsOk, false);
 end;
 
 class function TMessageBox.ShowOkCancel(
@@ -278,7 +262,7 @@ begin
   begin
     if Form = AMessageBoxForm then
     begin
-      Form.HideAndFree;
+      Form.Close;
 
       Break;
     end;
@@ -326,12 +310,13 @@ constructor TMessageBoxForm.Create(
   const ACaption: String;
   const AButtonSet: TButtonSet);
 begin
-  FOnModalResultAfterClose := nil;
   FDelayShowThread := nil;
 
   BuildPopupMenu;
 
   inherited Create(AOwner);
+
+  OnClose := _DoClose;
 
   SaveFormStateFlag := false;
   MessageLabel.OnMouseDown := DoMessageLabelMouseDown;
@@ -360,22 +345,26 @@ begin
     end);
 end;
 
-destructor TMessageBoxForm.Destroy;
+procedure TMessageBoxForm.RunTimer(const ADelayTimeSec: Integer);
 begin
-  if Assigned(FOnModalResultAfterClose) then
-  begin
-    TThread.ForceQueue(nil,
-      procedure
-      begin
-        FOnModalResultAfterClose(ModalResult);
-      end);
-  end;
-
-  inherited;
+  FDelayShowThread := TDelayShowThread.Create(
+    Self,
+    ADelayTimeSec);
 end;
 
-procedure TMessageBoxForm.HideAndFree;
+procedure TMessageBoxForm.ChangeMessage(const AMessage: String);
 begin
+  TThread.Queue(nil,
+    procedure
+    begin
+      Self.MessageLabel.Text := AMessage;
+    end);
+end;
+
+procedure TMessageBoxForm._DoClose(Sender: TObject; var Action: TCloseAction);
+begin
+  Action := TCloseAction.caFree;
+
   Visible := false;
 
   if Assigned(FDelayShowThread) then
@@ -384,15 +373,6 @@ begin
     FDelayShowThread.WaitFor;
     FreeAndNil(FDelayShowThread);
   end;
-
-//  Close;
-end;
-
-procedure TMessageBoxForm.RunTimer(const ADelayTimeSec: Integer);
-begin
-  FDelayShowThread := TDelayShowThread.Create(
-    Self,
-    ADelayTimeSec);
 end;
 
 procedure TMessageBoxForm.BuildPopupMenu;
@@ -432,11 +412,6 @@ end;
 procedure TMessageBoxForm.OkButtonClick(Sender: TObject);
 begin
   ModalResult := mrOk;
-//  TThread.Queue(nil,
-//    procedure
-//    begin
-//      HideAndFree;
-//    end);
 end;
 
 procedure TMessageBoxForm.Ok_OkCancelButtonClick(Sender: TObject);

@@ -89,7 +89,42 @@ type
   TKeyUpMethod = procedure(Sender: TObject; var Key: Word; var KeyChar: Char;
     Shift: TShiftState) of object;
 
+  TModalResultProcRef = reference to
+    procedure (const AModalResult: TModalResult);
+
   TFormExt = class(FMX.Forms.TForm)
+  strict private
+    FIsModalMode: Boolean;
+    FOnModalResultProcRef: TModalResultProcRef;
+
+    // Нарочно вводим переменную, так как мы всегда используем Close для формы
+    // При этом нужно иметь ввиду, что:
+    // Вызов Close для штатной модальной формы по умолчанию устанавливает ее
+    // ModalResult в mrCancel, что может перезаписать наше собственное значение
+    // Таким образом мы обходим сброс ModalResult в Close
+    // Так же мы устанавливаем дефолтное значение ModalResult = mrNone,
+    // что на наш взгляд практичнее
+    FModalResult: TModalResult;
+
+    procedure SetModalResult(const AModalResult: TModalResult);
+
+    /// <summary>
+    ///   Блокируут/разблокирует ввод для формы
+    ///   Позволяет имитировать блокировку форм
+    ///   приложения при вызове модальной формы
+    /// </summary>
+    procedure BlockFormInput(
+      const AForm: TCommonCustomForm; const ABlock: Boolean);
+    procedure SetModalMode(
+      const AModalMode: Boolean; const AExcludingForm: TCommonCustomForm = nil);
+
+    property IsModalMode: Boolean
+      read FIsModalMode write FIsModalMode default false;
+  public
+    property OnModalResultProcRef: TModalResultProcRef
+      write FOnModalResultProcRef default nil;
+    property ModalResult: TModalResult read FModalResult write SetModalResult;
+    procedure ShowModal;
   strict private
     /// <summary>
     ///   Реестр фабрик нитей
@@ -116,8 +151,6 @@ type
 
     {$IFDEF MSWINDOWS}
     FBorderFrame: TBorderFrame;
-    { TODO: Проверить, нужен ли FBorderFrameKind: TBorderFrameKind или это анахронизм }
-    FBorderFrameKind: TBorderFrameKind;
 
     FTrayIcon: TCustomTrayIcon;
     FTrayIconMouseRightButtonDown: TMouseEvent;
@@ -170,25 +203,14 @@ type
     function GetCaption: String;
     procedure SetCaption(const ACaption: String);
     {$ENDIF}
-  strict private
-    // Нарочно вводим переменную, так как мы всегда используем Close для формы
-    // При этом нужно иметь ввиду, что:
-    // Вызов Close для штатной модальной формы по умолчанию устанавливает ее
-    // ModalResult в mrCancel, что может перезаписать наше собственное значение
-    // Таким образом мы обходим сброс ModalResult в Close
-    // Так же мы устанавливаем дефолтное значение ModalResult = mrNone,
-    // что на наш взгляд практичнее
-    FModalResult: TModalResult;
-    procedure SetModalResult(const AModalResult: TModalResult);
   protected
     {$IFDEF MSWINDOWS}
     procedure Resize; override;
     {$ENDIF}
   public
-    property ModalResult: TModalResult read FModalResult write SetModalResult;
-    function ShowModal: TModalResult;
-  public
+    procedure Init(const AOwner: TComponent; const ACreateNew: Boolean);
     constructor Create(AOwner: TComponent); override;
+    constructor CreateNew(AOwner: TComponent; Dummy: NativeInt = 0); override;
     destructor Destroy; override;
 
     property ThreadFactoryRegistry: TThreadFactoryRegistry read FThreadFactoryRegistry;
@@ -424,7 +446,7 @@ end;
 
 { TFormExt }
 
-constructor TFormExt.Create(AOwner: TComponent);
+procedure TFormExt.Init(const AOwner: TComponent; const ACreateNew: Boolean);
 var
   PCloseQueryMethodAddr: PCloseQueryMethod;
   PCloseMethodAddr: PCloseMethod;
@@ -434,16 +456,21 @@ var
   _Self: TFormExt;
   {$ENDIF}
 begin
-  inherited Create(AOwner);
+  if not ACreateNew then
+    inherited Create(AOwner)
+  else
+    inherited CreateNew(AOwner);
 
   inherited OnCloseQuery := OnCloseQueryInternalHandler;
   inherited OnClose := OnCloseInternalHandler;
   inherited OnKeyUp := OnKeyUpInternalHandler;
 
+  FIsModalMode := false;
+  FOnModalResultProcRef := nil;
+  FModalResult := mrNone;
+
   FScreenScale := Canvas.Scale;
   FSaveFormStateFlag := true;
-
-  FModalResult := mrNone;
 
   FToDoClose := false;
   FCanClose := false;
@@ -473,8 +500,6 @@ begin
   FTheme := TTheme.Create;
 
   {$IFDEF MSWINDOWS}
-  FBorderFrame := nil;
-
   FLastFormStateRec.Left := Left;
   FLastFormStateRec.Top := Top;
   FLastFormStateRec.Width := Width;
@@ -509,6 +534,16 @@ begin
         TrayIconVisible := true;
     end);
   {$ENDIF}
+end;
+
+constructor TFormExt.Create(AOwner: TComponent);
+begin
+  Init(AOwner, false);
+end;
+
+constructor TFormExt.CreateNew(AOwner: TComponent; Dummy: NativeInt = 0);
+begin
+  Init(AOwner, true);
 end;
 
 destructor TFormExt.Destroy;
@@ -603,7 +638,7 @@ function TFormExt.GetClientWidth: Integer;
 begin
   Result := inherited ClientWidth;
 
-  if FBorderFrameKind > TBorderFrameKind.bfkNone then
+  if FBorderFrame.Kind > TBorderFrameKind.bfkNone then
     Result := FBorderFrame.ClientWidth;
 end;
 
@@ -611,7 +646,7 @@ function TFormExt.GetClientHeight: Integer;
 begin
   Result := inherited ClientHeight;
 
-  if FBorderFrameKind > TBorderFrameKind.bfkNone then
+  if FBorderFrame.Kind > TBorderFrameKind.bfkNone then
     Result := FBorderFrame.ClientHeight;
 end;
 
@@ -619,7 +654,7 @@ procedure TFormExt.SetClientWidth(const AClientWidth: Integer);
 begin
   inherited ClientWidth := AClientWidth;
 
-  if FBorderFrameKind > TBorderFrameKind.bfkNone then
+  if FBorderFrame.Kind > TBorderFrameKind.bfkNone then
     FBorderFrame.ClientWidth := AClientWidth;
 end;
 
@@ -627,7 +662,7 @@ procedure TFormExt.SetClientHeight(const AClientHeight: Integer);
 begin
   inherited ClientHeight := AClientHeight;
 
-  if FBorderFrameKind > TBorderFrameKind.bfkNone then
+  if FBorderFrame.Kind > TBorderFrameKind.bfkNone then
     FBorderFrame.ClientHeight := AClientHeight;
 end;
 
@@ -635,7 +670,7 @@ function TFormExt.GetMinClientWidth: Integer;
 begin
   Result := 0;
 
-  if FBorderFrameKind > TBorderFrameKind.bfkNone then
+  if FBorderFrame.Kind > TBorderFrameKind.bfkNone then
     Result := FBorderFrame.MinClientWidth;
 end;
 
@@ -643,19 +678,19 @@ function TFormExt.GetMinClientHeight: Integer;
 begin
   Result := 0;
 
-  if FBorderFrameKind > TBorderFrameKind.bfkNone then
+  if FBorderFrame.Kind > TBorderFrameKind.bfkNone then
     Result := FBorderFrame.MinClientHeight;
 end;
 
 procedure TFormExt.SetMinClientWidth(const AMinClientWidth: Integer);
 begin
-  if FBorderFrameKind > TBorderFrameKind.bfkNone then
+  if FBorderFrame.Kind > TBorderFrameKind.bfkNone then
     FBorderFrame.MinClientWidth := AMinClientWidth;
 end;
 
 procedure TFormExt.SetMinClientHeight(const AMinClientHeight: Integer);
 begin
-  if FBorderFrameKind > TBorderFrameKind.bfkNone then
+  if FBorderFrame.Kind > TBorderFrameKind.bfkNone then
     FBorderFrame.MinClientHeight := AMinClientHeight;
 end;
 
@@ -663,7 +698,7 @@ function TFormExt.GetMaxClientWidth: Integer;
 begin
   Result := 0;
 
-  if FBorderFrameKind > TBorderFrameKind.bfkNone then
+  if FBorderFrame.Kind > TBorderFrameKind.bfkNone then
     Result := FBorderFrame.MaxClientWidth;
 end;
 
@@ -671,19 +706,19 @@ function TFormExt.GetMaxClientHeight: Integer;
 begin
   Result := 0;
 
-  if FBorderFrameKind > TBorderFrameKind.bfkNone then
+  if FBorderFrame.Kind > TBorderFrameKind.bfkNone then
     Result := FBorderFrame.MinClientHeight;
 end;
 
 procedure TFormExt.SetMaxClientWidth(const AMaxClientWidth: Integer);
 begin
-  if FBorderFrameKind > TBorderFrameKind.bfkNone then
+  if FBorderFrame.Kind > TBorderFrameKind.bfkNone then
     FBorderFrame.MaxClientWidth := AMaxClientWidth;
 end;
 
 procedure TFormExt.SetMaxClientHeight(const AMaxClientHeight: Integer);
 begin
-  if FBorderFrameKind > TBorderFrameKind.bfkNone then
+  if FBorderFrame.Kind > TBorderFrameKind.bfkNone then
     FBorderFrame.MaxClientHeight := AMaxClientHeight;
 end;
 
@@ -804,6 +839,18 @@ begin
   // Восстанавливаем значение, что бы передать на выход ShowModal
 //  ModalResult := FModalResult;
 
+  if IsModalMode then
+  begin
+    SetModalMode(false);
+
+    if Assigned(FOnModalResultProcRef) then
+      TThread.ForceQueue(nil,
+        procedure
+        begin
+          FOnModalResultProcRef(ModalResult)
+        end);
+  end;
+
   Action := TCloseAction.caFree;
 
   if Assigned(FOnCloseExternalHandler) then
@@ -834,6 +881,35 @@ end;
 function TFormExt.GetOnCloseQuery: TCloseQueryMethod;
 begin
   Result := OnCloseQuery;
+end;
+
+procedure TFormExt.BlockFormInput(const AForm: TCommonCustomForm; const ABlock: Boolean);
+var
+  H: HWND;
+begin
+  H := WindowHandleToPlatform(AForm.Handle).Wnd;
+  EnableWindow(H, not ABlock);      // False = окно заблокировано
+  if not ABlock then
+    SetForegroundWindow(H);         // вернуть фокус после разблокировки
+end;
+
+procedure TFormExt.SetModalMode(
+  const AModalMode: Boolean;
+  const AExcludingForm: TCommonCustomForm = nil);
+var
+  i: Integer;
+  Form: TCommonCustomForm;
+begin
+  IsModalMode := AModalMode;
+
+  for i := 0 to Pred(Screen.FormCount) do
+  begin
+    Form := Screen.Forms[i];
+    if Form = AExcludingForm then
+      Continue;
+
+    BlockFormInput(Form, AModalMode);
+  end;
 end;
 
 procedure TFormExt.OnDestroyedAllFactoriesHandler(Sender: TObject);
@@ -877,11 +953,11 @@ begin
   Fill.Color := FTheme.FormSettings.BackgroundColor;
 end;
 
-function TFormExt.ShowModal: TModalResult;
+procedure TFormExt.ShowModal;
 begin
-  inherited ShowModal;
+  SetModalMode(true, Self);
 
-  Result := Self.ModalResult;
+  Show;
 end;
 
 procedure TFormExt.SetModalResult(const AModalResult: TModalResult);
