@@ -170,7 +170,7 @@ class procedure TFileTools.RecursiveFileSearch(
     Result := false;
     for i := 0 to Pred(Length(AExtArr)) do
     begin
-      if (ExtractFileExt(AFileName) = '.' + AExtArr[i]) or
+      if (UpperCase(ExtractFileExt(AFileName)) = '.' + UpperCase(AExtArr[i])) or
          (AExt[i] = '*')
       then
         Exit(true);
