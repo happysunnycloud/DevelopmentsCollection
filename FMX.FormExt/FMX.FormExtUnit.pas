@@ -16,6 +16,7 @@ uses
   , ThreadFactoryUnit
   , FMX.Theme
   {$IFDEF MSWINDOWS}
+  , System.Types
   , FMX.Types
   , FMX.TrayIcon.Win
   , BorderFrameUnit
@@ -92,8 +93,11 @@ type
   TModalResultProcRef = reference to
     procedure (const AModalResult: TModalResult);
 
+  TFirstTimePaintProcRef = reference to procedure;
+
   TFormExt = class(FMX.Forms.TForm)
   strict private
+    {$IFDEF MSWINDOWS}
     FIsModalMode: Boolean;
     FOnModalResultProcRef: TModalResultProcRef;
 
@@ -125,6 +129,7 @@ type
       write FOnModalResultProcRef default nil;
     property ModalResult: TModalResult read FModalResult write SetModalResult;
     procedure ShowModal;
+    {$ENDIF}
   strict private
     /// <summary>
     ///   Реестр фабрик нитей
@@ -150,6 +155,9 @@ type
     FSaveFormStateFlag: Boolean;
 
     {$IFDEF MSWINDOWS}
+    FOnFirstTimePaintProcRef: TFirstTimePaintProcRef;
+    FIsFirstTimePaintDone: Boolean;
+
     FBorderFrame: TBorderFrame;
 
     FTrayIcon: TCustomTrayIcon;
@@ -159,22 +167,11 @@ type
     FOnWindowsStateChanged: TWindowStateChangedProcRef;
     FLastFormStateRec: TLastFormStateRec;
     FOnFormStateLoadedProc: TProc<TFormExt>;
-    {$ENDIF}
 
-    procedure OnDestroyedAllFactoriesHandler(Sender: TObject);
-
-    function GetOnCloseQuery: TCloseQueryMethod;
-    procedure SetOnCloseQuery(const AOnCloseQuery: TCloseQueryMethod);
-
-    function GetOnClose: TCloseMethod;
-    procedure SetOnClose(const AOnCloseHandler: TCloseMethod);
-
-    procedure OnCloseQueryInternalHandler(Sender: TObject; var CanClose: Boolean); virtual;
-    procedure OnCloseInternalHandler(Sender: TObject; var Action: TCloseAction); virtual;
-    procedure OnKeyUpInternalHandler(Sender: TObject; var Key: Word; var KeyChar: Char;
-      Shift: TShiftState); virtual;
-    {$IFDEF MSWINDOWS}
     procedure CreateTrayIcon;
+
+    procedure SetOnFirstTimePaintProcRef(
+      const AOnFirstTimePaintProcRef: TFirstTimePaintProcRef);
 
     function GetTrayIconVisible: Boolean;
     procedure SetTrayIconVisible(const ATrayIconVisible: Boolean);
@@ -203,9 +200,23 @@ type
     function GetCaption: String;
     procedure SetCaption(const ACaption: String);
     {$ENDIF}
+
+    procedure OnDestroyedAllFactoriesHandler(Sender: TObject);
+
+    function GetOnCloseQuery: TCloseQueryMethod;
+    procedure SetOnCloseQuery(const AOnCloseQuery: TCloseQueryMethod);
+
+    function GetOnClose: TCloseMethod;
+    procedure SetOnClose(const AOnCloseHandler: TCloseMethod);
+
+    procedure OnCloseQueryInternalHandler(Sender: TObject; var CanClose: Boolean); virtual;
+    procedure OnCloseInternalHandler(Sender: TObject; var Action: TCloseAction); virtual;
+    procedure OnKeyUpInternalHandler(Sender: TObject; var Key: Word; var KeyChar: Char;
+      Shift: TShiftState); virtual;
   protected
     {$IFDEF MSWINDOWS}
     procedure Resize; override;
+    procedure DoPaint(const Canvas: TCanvas; const ARect: TRectF); override;
     {$ENDIF}
   public
     procedure Init(const AOwner: TComponent; const ACreateNew: Boolean);
@@ -223,6 +234,9 @@ type
     property Theme: TTheme read FTheme;
     property ScreenScale: Single read FScreenScale;
     {$IFDEF MSWINDOWS}
+    property OnFirstTimePaintProcRef: TFirstTimePaintProcRef
+      read FOnFirstTimePaintProcRef write SetOnFirstTimePaintProcRef;
+
     // Флаг SaveFormStateFlag позволяет не сохранять состояние формы
     // При создании формы, если ее настройки не найдены во внешнем файле,
     // то никаких исключений вызвано не будет
@@ -464,11 +478,14 @@ begin
   inherited OnCloseQuery := OnCloseQueryInternalHandler;
   inherited OnClose := OnCloseInternalHandler;
   inherited OnKeyUp := OnKeyUpInternalHandler;
+  {$IFDEF MSWINDOWS}
+  FOnFirstTimePaintProcRef := nil;
+  FIsFirstTimePaintDone := false;
 
   FIsModalMode := false;
   FOnModalResultProcRef := nil;
   FModalResult := mrNone;
-
+  {$ENDIF}
   FScreenScale := Canvas.Scale;
   FSaveFormStateFlag := true;
 
@@ -575,6 +592,13 @@ begin
   FTrayIconMouseLeftButtonDown := nil;
 end;
 
+procedure TFormExt.SetOnFirstTimePaintProcRef(
+  const AOnFirstTimePaintProcRef: TFirstTimePaintProcRef);
+begin
+  FOnFirstTimePaintProcRef := AOnFirstTimePaintProcRef;
+  FIsFirstTimePaintDone := false;
+end;
+
 function TFormExt.GetTrayIconVisible: Boolean;
 begin
   Result := false;
@@ -598,6 +622,25 @@ begin
   inherited;
 
   FBorderFrame.FormResized;
+end;
+
+procedure TFormExt.DoPaint;
+begin
+  inherited;
+
+  if FIsFirstTimePaintDone then
+    Exit;
+
+  if Assigned(FOnFirstTimePaintProcRef) then
+    // Ставим в очередь именно через ForceQueue
+    // Тогда окно уже скорее всего будет отрисовано на экране
+    TThread.ForceQueue(nil,
+      procedure
+      begin
+        FOnFirstTimePaintProcRef();
+      end);
+
+  FIsFirstTimePaintDone := true;
 end;
 
 procedure TFormExt.OnBorderFrameMaxupButtonClickHandler;
@@ -836,9 +879,7 @@ end;
 
 procedure TFormExt.OnCloseInternalHandler(Sender: TObject; var Action: TCloseAction);
 begin
-  // Восстанавливаем значение, что бы передать на выход ShowModal
-//  ModalResult := FModalResult;
-
+  {$IFDEF MSWINDOWS}
   if IsModalMode then
   begin
     SetModalMode(false);
@@ -850,6 +891,7 @@ begin
           FOnModalResultProcRef(ModalResult)
         end);
   end;
+  {$ENDIF}
 
   Action := TCloseAction.caFree;
 
@@ -882,7 +924,7 @@ function TFormExt.GetOnCloseQuery: TCloseQueryMethod;
 begin
   Result := OnCloseQuery;
 end;
-
+{$IFDEF MSWINDOWS}
 procedure TFormExt.BlockFormInput(const AForm: TCommonCustomForm; const ABlock: Boolean);
 var
   H: HWND;
@@ -911,7 +953,7 @@ begin
     BlockFormInput(Form, AModalMode);
   end;
 end;
-
+{$ENDIF}
 procedure TFormExt.OnDestroyedAllFactoriesHandler(Sender: TObject);
 var
   Form: TFormExt;
@@ -952,7 +994,7 @@ begin
   Fill.Kind := TBrushKind.Solid;
   Fill.Color := FTheme.FormSettings.BackgroundColor;
 end;
-
+{$IFDEF MSWINDOWS}
 procedure TFormExt.ShowModal;
 begin
   SetModalMode(true, Self);
@@ -966,7 +1008,7 @@ begin
 
   Close;
 end;
-
+{$ENDIF}
 class procedure TFormExt.CloseChildForms;
 var
   i: Integer;
