@@ -88,17 +88,22 @@ type
     procedure OkButtonClick(Sender: TObject);
     procedure YesButtonClick(Sender: TObject);
     procedure NoButtonClick(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
   strict private
     FTheme: TTheme;
 
     class var FThemeOfClass: TTheme;
+    class var FNoteIdent: TNoteIdent;
     class var FNoteIdentList: TNoteIdentList;
+    class var FIdentIndex: Integer;
+    class var FVisibleState: Boolean;
+    class var FOnModalResultProcRef: TModalResultProcRef;
 
     class function ShowNote(
       var ANoteIdent: TNoteIdent;
       const AYesButtonText: String = '';
       const ANoButtonText: String = '';
-      const AOkButtonText: String = ''): TModalResult;
+      const AOkButtonText: String = ''): TNoteForm;
   private
     class property ThemeOfClass: TTheme read FThemeOfClass write FThemeOfClass;
   public
@@ -115,20 +120,23 @@ type
 
     class procedure GenerateTemplate(const ANoteIdentsTemplateFileName: String);
 
-    class function Show(
-      const AIdent: String): TModalResult; overload;
+    class procedure Show(
+      const AIdent: String); overload;
     class function Show(
       const ACaption: String;
       const AText: String): TModalResult;  overload;
 
-    class function ShowOk(
+    class procedure ShowOk(
       const ACaption: String;
-      const AText: String): TModalResult;
+      const AText: String);
     class function ShowYesNo(
       const ACaption: String = '';
       const AText: String = '';
       const AYesButtonText: String = '';
       const ANoButtonText: String = ''): TModalResult;
+
+    class property OnModalResultProcRef: TModalResultProcRef
+      read FOnModalResultProcRef write FOnModalResultProcRef;
   end;
 
 var
@@ -646,6 +654,7 @@ begin
   inherited Create(AOwner);
 
   FTheme := TTheme.Create;
+  FVisibleState := true;
 
   if Assigned(ATheme) then
     FTheme.CopyFrom(ATheme);
@@ -747,54 +756,62 @@ class function TNoteForm.ShowNote(
   var ANoteIdent: TNoteIdent;
   const AYesButtonText: String = '';
   const ANoButtonText: String = '';
-  const AOkButtonText: String = ''): TModalResult;
+  const AOkButtonText: String = ''): TNoteForm;
 var
   NoteForm: TNoteForm;
-  ModalResult: TModalResult;
-  VisibleState: Boolean;
 begin
   if not ANoteIdent.ShowNextTime then
-    Exit(ANoteIdent.DefaultResult);
+    Exit(nil);
 
   NoteForm := TNoteForm.Create(nil, ANoteIdent, ThemeOfClass);
+
+  if AYesButtonText.Length > 0 then
+    NoteForm.YesButton.Text := AYesButtonText;
+  if ANoButtonText.Length > 0 then
+    NoteForm.NoButton.Text := ANoButtonText;
+  if AOkButtonText.Length > 0 then
+    NoteForm.OkButton.Text := AOkButtonText;
+
+  // Если приложение было свернуто в трэй, тогда необходимо его показать
+  FVisibleState := IsWindowVisible(ApplicationHwnd);
+  if not FVisibleState then
+    ShowWindow(ApplicationHwnd, SW_SHOW);
+
+  NoteForm.ShowModal;
+
+  Result := NoteForm;
+end;
+
+procedure TNoteForm.FormClose(Sender: TObject; var Action: TCloseAction);
+var
+  ModalResult: TModalResult;
+begin
+  ModalResult := Self.ModalResult;
+
   try
-    if AYesButtonText.Length > 0 then
-      NoteForm.YesButton.Text := AYesButtonText;
-    if ANoButtonText.Length > 0 then
-      NoteForm.NoButton.Text := ANoButtonText;
-    if AOkButtonText.Length > 0 then
-      NoteForm.OkButton.Text := AOkButtonText;
-
-    // Если приложение было свернуто в трэй, тогда необходимо его показать
-    VisibleState := IsWindowVisible(ApplicationHwnd);
-    if not VisibleState then
-      ShowWindow(ApplicationHwnd, SW_SHOW);
-
-    ModalResult := NoteForm.ShowModal;
-    Result := ModalResult;
-
     // После принудительного показа, возвращаем приложение в исходное состояние
-    if not VisibleState then
+    if not FVisibleState then
       ShowWindow(ApplicationHwnd, SW_HIDE);
 
-    if Result in [
+    if ModalResult in [
       mrCancel, mrAbort,
       mrRetry,  mrIgnore,
       mrNo   ,  mrClose,
       mrHelp ,  mrTryAgain,
       mrNoToAll] then
     begin
-      NoteForm.DontShowNextTimeCheckBox.IsChecked := false;
+      DontShowNextTimeCheckBox.IsChecked := false;
 
       Exit;
     end;
 
-    ANoteIdent.ShowNextTime := not NoteForm.DontShowNextTimeCheckBox.IsChecked;
-    if not ANoteIdent.ShowNextTime then
-      ANoteIdent.DefaultResult := Result;
+    FNoteIdent.ShowNextTime := not DontShowNextTimeCheckBox.IsChecked;
+    if not FNoteIdent.ShowNextTime then
+      FNoteIdent.DefaultResult := ModalResult;
+    FNoteIdentList.Items[FIdentIndex] := FNoteIdent;
   finally
-    //if not Assigned(NoteForm.Owner) then
-    NoteForm.ReleaseForm;
+    if Assigned(TNoteForm.OnModalResultProcRef) then
+      TNoteForm.OnModalResultProcRef(ModalResult);
   end;
 end;
 
@@ -805,6 +822,11 @@ begin
   FThemeOfClass := TTheme.Create;
   if Assigned(ATheme) then
     FThemeOfClass.CopyFrom(ATheme);
+
+  FNoteIdent := Default(TNoteIdent);
+  FIdentIndex := -1;
+  FVisibleState := true;
+  FOnModalResultProcRef := nil;
 
   FNoteIdentList := TNoteIdentList.Create;
   try
@@ -868,18 +890,17 @@ begin
   end;
 end;
 
-class function TNoteForm.Show(
-  const AIdent: String): TModalResult;
+class procedure TNoteForm.Show(const AIdent: String);
 var
-  NoteIdent: TNoteIdent;
-  IdentIndex: Integer;
+  NoteForm: TNoteForm;
 begin
-  IdentIndex := FNoteIdentList._IndexOf[AIdent];
-  NoteIdent := FNoteIdentList.Items[IdentIndex];
+  FIdentIndex := FNoteIdentList._IndexOf[AIdent];
+  FNoteIdent := FNoteIdentList.Items[FIdentIndex];
 
-  Result := ShowNote(NoteIdent);
-
-  FNoteIdentList.Items[IdentIndex] := NoteIdent;
+  NoteForm := ShowNote(FNoteIdent);
+  if not Assigned(NoteForm) then
+    if Assigned(TNoteForm.OnModalResultProcRef) then
+      TNoteForm.OnModalResultProcRef(FNoteIdent.DefaultResult);
 end;
 
 class function TNoteForm.Show(
@@ -887,6 +908,7 @@ class function TNoteForm.Show(
   const AText: String): TModalResult;
 var
   NoteIdent: TNoteIdent;
+  NoteForm: TNoteForm;
 begin
   NoteIdent.Ident := '';
   NoteIdent.Caption := ACaption;
@@ -894,14 +916,20 @@ begin
   NoteIdent.ButtonKind := TButtonKind.bkNone;
   NoteIdent.ShowNextTime := true;
   NoteIdent.CheckboxText := '';
-  Result := ShowNote(NoteIdent);
+  NoteForm := ShowNote(NoteIdent);
+  NoteForm.OnModalResultProcRef :=
+    procedure (const AModalResult: TModalResult)
+    begin
+      NoteForm.Release;
+    end;
 end;
 
-class function TNoteForm.ShowOk(
+class procedure TNoteForm.ShowOk(
   const ACaption: String;
-  const AText: String): TModalResult;
+  const AText: String);
 var
   NoteIdent: TNoteIdent;
+  NoteForm: TNoteForm;
 begin
   NoteIdent.Ident := '';
   NoteIdent.Caption := ACaption;
@@ -909,7 +937,7 @@ begin
   NoteIdent.ButtonKind := TButtonKind.bkOk;
   NoteIdent.ShowNextTime := true;
   NoteIdent.CheckboxText := '';
-  Result := ShowNote(NoteIdent);
+  NoteForm := ShowNote(NoteIdent);
 end;
 
 class function TNoteForm.ShowYesNo(
@@ -919,6 +947,7 @@ class function TNoteForm.ShowYesNo(
   const ANoButtonText: String = ''): TModalResult;
 var
   NoteIdent: TNoteIdent;
+  NoteForm: TNoteForm;
 begin
   NoteIdent.Ident := '';
   NoteIdent.Caption := ACaption;
@@ -926,7 +955,12 @@ begin
   NoteIdent.ButtonKind := TButtonKind.bkYesNo;
   NoteIdent.ShowNextTime := true;
   NoteIdent.CheckboxText := '';
-  Result := ShowNote(NoteIdent, AYesButtonText, ANoButtonText);
+  NoteForm := ShowNote(NoteIdent, AYesButtonText, ANoButtonText);
+  NoteForm.OnModalResultProcRef :=
+    procedure (const AModalResult: TModalResult)
+    begin
+      NoteForm.Release;
+    end;
 end;
 
 initialization

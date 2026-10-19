@@ -12,6 +12,9 @@ uses
   ;
 
 type
+  TExternalProcRef = reference to
+    procedure (const ASender: TObject; var AIsOnClickHandled: Boolean);
+
   TOnClickReplacer = class
   strict private
     type
@@ -25,8 +28,7 @@ type
       end;
     class var
       FSenderList: TList<TSenderRec>;
-      FExternalProc: TProc;
-    class procedure InnerOnClickHandler(Sender: TObject);
+      FExternalProc: TExternalProcRef;
 
     class function IsArrayContainsControl(
       const AControlsArray: array of TControl;
@@ -42,18 +44,14 @@ type
     class procedure Replace(
       const AOwner: TFmxObject;
       const AExcludedControls: array of TControl;
-      const AExternalProc: TProc);
-
-//    class procedure AdditionalReplace(
-//      const AOwner: TFmxObject;
-//      const AExcludedControls: array of TControl);
+      const AExternalProc: TExternalProcRef);
 
     class procedure Restore;
 
     class function HasReplaced: Boolean;
 
     class function IsContainsControl(const AControl: TControl): Boolean;
-    class procedure DoOnClickHandler(Sender: TObject);
+    class procedure DoClick(Sender: TObject);
   end;
 
 implementation
@@ -101,11 +99,6 @@ begin
       Result := true;
 end;
 
-class procedure TOnClickReplacer.DoOnClickHandler(Sender: TObject);
-begin
-  InnerOnClickHandler(Sender);
-end;
-
 class procedure TOnClickReplacer.DoReplace(
   const AOwner: TFmxObject;
   const AExcludedControls: array of TControl);
@@ -133,7 +126,7 @@ begin
       begin
         _Sender.Sender := AControl;
         _Sender.NotifyEvent := AControl.OnClick;
-        AControl.OnClick := InnerOnClickHandler;
+        AControl.OnClick := DoClick;
         FSenderList.Add(_Sender);
       end;
     end);
@@ -142,26 +135,12 @@ end;
 class procedure TOnClickReplacer.Replace(
   const AOwner: TFmxObject;
   const AExcludedControls: array of TControl;
-  const AExternalProc: TProc);
+  const AExternalProc: TExternalProcRef);
 begin
   FExternalProc := AExternalProc;
 
   DoReplace(AOwner, AExcludedControls);
 end;
-
-//class procedure TOnClickReplacer.AdditionalReplace(
-//  const AOwner: TFmxObject;
-//  const AExcludedControls: array of TControl);
-//begin
-//  if FSenderList.Count = 0 then
-//    Exit;
-//
-////    raise Exception.Create(
-////      'There is nowhere to add, you need to initialize ' +
-////      'the list through a call Replace method');
-//
-//  DoReplace(AOwner, AExcludedControls);
-//end;
 
 class function TOnClickReplacer.HasReplaced: Boolean;
 begin
@@ -185,50 +164,25 @@ begin
   end;
 end;
 
-class procedure TOnClickReplacer.InnerOnClickHandler(Sender: TObject);
+class procedure TOnClickReplacer.DoClick(Sender: TObject);
+var
+  IsOnClickHandled: Boolean;
 begin
-  Restore;
-
-  if Assigned(FExternalProc) then
-    FExternalProc;
+  IsOnClickHandled := false;
 
   if not (Sender is TControl) then
     raise Exception.Create('Sender is not TControl class');
 
+  Restore;
+
+  if Assigned(FExternalProc) then
+    FExternalProc(Sender, IsOnClickHandled);
+
+  if IsOnClickHandled then
+    Exit;
+
   TControl(Sender).OnClick(Sender);
 end;
-
-//var
-//  _Sender: TControl;
-//  _OnClick: TNotifyEvent;
-//  i: Integer;
-//begin
-//  _Sender := nil;
-//  _OnClick := nil;
-//
-//  i := FSenderList.Count;
-//  while i > 0 do
-//  begin
-//    Dec(i);
-//
-//    if FSenderList[i].Sender = Sender then
-//    begin
-//      _Sender := FSenderList[i].Sender;
-//      _OnClick := FSenderList[i].NotifyEvent;
-//
-//      Break;
-//    end;
-//  end;
-//
-//  if Assigned(FExternalProc) then
-//    FExternalProc;
-//
-//  if not Assigned(_Sender) or not Assigned(_OnClick) then
-//    raise Exception.
-//      Create('TOnClickReplacer.InnerOnClickHandler: can`t execute OnClick event');
-//
-//  _OnClick(_Sender);
-//end;
 
 initialization
   TOnClickReplacer.Init;

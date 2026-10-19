@@ -34,7 +34,7 @@ type
     procedure TerminatedSet; override;
     procedure DoExecute; virtual;
     procedure InnerExecute; virtual; abstract;
-    function ExecHold: Boolean;
+    procedure ExecHold;
 
     property StopEvent: TEvent
       read FStopEvent write FStopEvent;
@@ -176,9 +176,8 @@ begin
   end;
 end;
 
-function THoldingThread.ExecHold: Boolean;
+procedure THoldingThread.ExecHold;
 begin
-  Result := false;
   IsHolded := true;
   try
     TMonitor.Enter(FLock);

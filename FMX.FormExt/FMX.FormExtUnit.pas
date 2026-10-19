@@ -16,6 +16,7 @@ uses
   , ThreadFactoryUnit
   , FMX.Theme
   {$IFDEF MSWINDOWS}
+  , System.Generics.Collections
   , System.Types
   , FMX.Types
   , FMX.TrayIcon.Win
@@ -95,9 +96,16 @@ type
 
   TFirstTimePaintProcRef = reference to procedure;
 
+  TModalFormList = TList<TFormExt>;
+
   TFormExt = class(FMX.Forms.TForm)
+  private
+    class var FModalFormList: TModalFormList;
+    class procedure ClassInit;
+    class procedure ClassUnInit;
   strict private
     {$IFDEF MSWINDOWS}
+
     FIsModalMode: Boolean;
     FOnModalResultProcRef: TModalResultProcRef;
 
@@ -119,15 +127,15 @@ type
     /// </summary>
     procedure BlockFormInput(
       const AForm: TCommonCustomForm; const ABlock: Boolean);
-    procedure SetModalMode(
-      const AModalMode: Boolean; const AExcludingForm: TCommonCustomForm = nil);
-
-    property IsModalMode: Boolean
-      read FIsModalMode write FIsModalMode default false;
+    procedure SetModalMode(const AModalMode: Boolean);
+    procedure EnterModalMode;
+    procedure ExitModalMode;
   public
     property OnModalResultProcRef: TModalResultProcRef
-      write FOnModalResultProcRef default nil;
+      write FOnModalResultProcRef;
     property ModalResult: TModalResult read FModalResult write SetModalResult;
+    property IsModalMode: Boolean
+      read FIsModalMode write FIsModalMode;
     procedure ShowModal;
     {$ENDIF}
   strict private
@@ -879,19 +887,8 @@ end;
 
 procedure TFormExt.OnCloseInternalHandler(Sender: TObject; var Action: TCloseAction);
 begin
-  {$IFDEF MSWINDOWS}
-  if IsModalMode then
-  begin
-    SetModalMode(false);
-
-    if Assigned(FOnModalResultProcRef) then
-      TThread.ForceQueue(nil,
-        procedure
-        begin
-          FOnModalResultProcRef(ModalResult)
-        end);
-  end;
-  {$ENDIF}
+  if FIsModalMode then
+    ExitModalMode;
 
   Action := TCloseAction.caFree;
 
@@ -935,23 +932,44 @@ begin
     SetForegroundWindow(H);         // вернуть фокус после разблокировки
 end;
 
-procedure TFormExt.SetModalMode(
-  const AModalMode: Boolean;
-  const AExcludingForm: TCommonCustomForm = nil);
+procedure TFormExt.SetModalMode(const AModalMode: Boolean);
 var
   i: Integer;
   Form: TCommonCustomForm;
 begin
-  IsModalMode := AModalMode;
-
   for i := 0 to Pred(Screen.FormCount) do
   begin
     Form := Screen.Forms[i];
-    if Form = AExcludingForm then
+    if Form = Self then
       Continue;
 
     BlockFormInput(Form, AModalMode);
   end;
+end;
+
+procedure TFormExt.EnterModalMode;
+begin
+  FIsModalMode := true;
+  FModalFormList.Add(Self);
+
+  SetModalMode(FIsModalMode);
+end;
+
+procedure TFormExt.ExitModalMode;
+var
+  Form: TCommonCustomForm;
+begin
+  FIsModalMode := false;
+  FModalFormList.Remove(Self);
+  if FModalFormList.Count > 0 then
+  begin
+    Form := FModalFormList.Last;
+    BlockFormInput(Form, FIsModalMode);
+
+    Exit;
+  end;
+
+  SetModalMode(FIsModalMode);
 end;
 {$ENDIF}
 procedure TFormExt.OnDestroyedAllFactoriesHandler(Sender: TObject);
@@ -997,7 +1015,7 @@ end;
 {$IFDEF MSWINDOWS}
 procedure TFormExt.ShowModal;
 begin
-  SetModalMode(true, Self);
+  EnterModalMode;
 
   Show;
 end;
@@ -1006,7 +1024,18 @@ procedure TFormExt.SetModalResult(const AModalResult: TModalResult);
 begin
   FModalResult := AModalResult;
 
-  Close;
+  if Assigned(FOnModalResultProcRef) then
+    TThread.ForceQueue(nil,
+      procedure
+      begin
+        FOnModalResultProcRef(ModalResult)
+      end);
+
+  TThread.ForceQueue(nil,
+    procedure
+    begin
+      Close;
+    end);
 end;
 {$ENDIF}
 class procedure TFormExt.CloseChildForms;
@@ -1077,5 +1106,23 @@ begin
 
   CheckingThread.Start;
 end;
+
+class procedure TFormExt.ClassInit;
+begin
+  FModalFormList := TModalFormList.Create;
+end;
+
+class procedure TFormExt.ClassUnInit;
+begin
+  FreeAndNil(FModalFormList);
+end;
+
+initialization
+  TFormExt.ClassInit;
+
+finalization
+  TFormExt.ClassUnInit;
+
+
 
 end.

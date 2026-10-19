@@ -61,7 +61,7 @@ type
     // По этому всегда используем кэшированное значение
     FVolume: Single;
 
-    FOnGetDataExternalHandler: TDataProc;
+    FOnGetData: TDataProc;
 
     procedure SetFileName(const AFileName: String);
     function GetFileName: String;
@@ -75,7 +75,7 @@ type
     function GetDuration: TMediaTime;
     function GetMediaState: TMediaState;
     procedure SaveLastValues;
-    procedure OnGetDataInternalHandler;
+    procedure DoGetData;
     procedure SetOnFinishedProcRef(const AOnFinishedProcRef: TProc);
     procedure SingleSoundThreadOnTerminateHandler(Sender: TObject);
 
@@ -96,7 +96,7 @@ type
     property Duration: TMediaTime read GetDuration;
     property MediaState: TMediaState read GetMediaState;
 
-    property OnGetData: TDataProc write FOnGetDataExternalHandler;
+    property OnGetData: TDataProc write FOnGetData;
     property OnFinishedProcRef: TProc write SetOnFinishedProcRef;
 
     procedure Play; overload;
@@ -229,11 +229,11 @@ begin
 
     FCriticalSection := TCriticalSection.Create;
 
-    FOnGetDataExternalHandler := nil;
+    FOnGetData := nil;
 
     FMediaPlayer := TMediaPlayer.Create(nil);
     FSingleSoundThread := TSingleSoundThread.Create(AThreadFactory, Self);
-    FSingleSoundThread.OnGetData := OnGetDataInternalHandler;
+    FSingleSoundThread.OnGetData := DoGetData;
     FSingleSoundThread.OnFinished := nil;
     FSingleSoundThread.UnHoldThread;
     FSingleSoundThread.Start;
@@ -471,7 +471,7 @@ begin
   end;
 end;
 
-procedure TSingleSound.OnGetDataInternalHandler;
+procedure TSingleSound.DoGetData;
 var
   FileName: String;
   CurrentTime: TMediaTime;
@@ -492,11 +492,11 @@ begin
     FCriticalSection.Leave;
   end;
 
-  if Assigned(FOnGetDataExternalHandler) then
+  if Assigned(FOnGetData) then
     TThread.Queue(nil,
       procedure
       begin
-        FOnGetDataExternalHandler(
+        FOnGetData(
           FileName,
           CurrentTime,
           Duration,
