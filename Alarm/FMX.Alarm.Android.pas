@@ -1,6 +1,12 @@
 ﻿unit FMX.Alarm.Android;
 
-// Версия 1.1 (поддержка Android 9-15)
+// Версия 1.2 (поддержка Android 9-15)
+// Что нового в 1.2: перед каждой командой проверяется, что AlarmEngine жив (недавно прислал
+// STATUS=READY). Если процесс убит системой (Xiaomi убивает его через ~9 с после запуска),
+// AlarmEngine перезапускается, а SET_ALARM / STOP_ALARM уходят по очереди после READY
+// (если READY не пришёл за 2 с - команды отправляются как раньше).
+//
+// Версия 1.1
 // Что изменилось по сравнению с 1.0:
 //  - приёмник событий регистрируется ДО запуска AlarmEngine (чтобы не пропустить STATUS=READY);
 //  - добавлен приём диагностических статусов AlarmEngine (action ...STATUS): READY, ALARM_SET,
@@ -36,6 +42,12 @@ type
 
   // Диагностический статус от AlarmEngine (AStatus: READY / ALARM_SET / ...)
   TEngineStatusProc = procedure (const AStatus, ADetail: String) of Object;
+
+  // Команда, ожидающая запуска AlarmEngine
+  TPendingCmd = record
+    Command: String;
+    Json: String;
+  end;
 
   TAlarmData = class
   private
@@ -87,6 +99,10 @@ type
     acmStopAlarm = 'STOP_ALARM';
     // Android -> Delphi
     acmStatus    = 'STATUS';
+    // сколько после READY считаем AlarmEngine "живым", мс
+    engineAliveMs = 5000;
+    // сколько ждём READY после запуска AlarmEngine, мс
+    launchTimeoutMs = 2000;
   strict private
     class var FIsEngineInitialized: Boolean;
     class var FEngineReady: Boolean;
@@ -95,6 +111,10 @@ type
     class var FReceiver: TAlarmReceiver;
     class var FBroadcastReceiver: JFMXBroadcastReceiver;
     class var FReceiverRegistered: Boolean;
+    class var FLastReady: TDateTime;
+    class var FLaunching: Boolean;
+    class var FLaunchSeq: Integer;
+    class var FPending: TArray<TPendingCmd>;
     class var FLastIntentJson: String;
     class var FJsonParserProc: TJsonParserProc;
     class var FOnEngineStatus: TEngineStatusProc;
@@ -105,6 +125,11 @@ type
 
     class procedure CheckInit;
     class procedure DoLog(const AMessage: String);
+    class function EngineAlive: Boolean;
+    class procedure DoSendToEngine(const ACommand, AJson: String);
+    class procedure FlushPending;
+    class procedure ScheduleLaunchTimeout;
+    class procedure OnLaunchTimeout(const ASeq: Integer);
   private
     class procedure FirstInit;
     class procedure HandleEngineStatus(const AStatus, ADetail: String);
@@ -140,6 +165,7 @@ implementation
 uses
     System.SysUtils
   , System.DateUtils
+  , System.Classes
   , FMX.Types
   ;
 
@@ -254,7 +280,7 @@ var
   Pkg: String;
   Cls: String;
 begin
-  Result := False;
+//  Result := False;
 
   try
     if not Assigned(AJsonParserProc) then
@@ -349,6 +375,10 @@ begin
   FReceiverRegistered := False;
   FIsEngineInitialized := False;
   FEngineReady := False;
+  FLastReady := 0;
+  FLaunching := False;
+  Inc(FLaunchSeq);
+  FPending := nil;
   FBroadcastReceiver := nil;
   FReceiver := nil;
 
@@ -377,6 +407,10 @@ begin
 
     TAndroidHelper.Context.startActivity(Intent);
 
+    // ждём STATUS=READY; если не придёт - через launchTimeoutMs отправим очередь как есть
+    FLaunching := True;
+    ScheduleLaunchTimeout;
+
     Result := true;
   except
     on E: Exception do
@@ -392,6 +426,10 @@ begin
   begin
     FEngineReady := True;
     FEngineInfo := ADetail;
+    FLastReady := Now;
+    FLaunching := False;
+    Inc(FLaunchSeq); // отменяем ожидающий таймаут
+    FlushPending;
   end;
 
   if Assigned(FOnEngineStatus) then
@@ -433,11 +471,38 @@ end;
 class procedure TAndroidAlarm.SendToAlarmEngine(
   const ACommand: String;
   const AJson: String = '');
-var
-  Intent: JIntent;
 begin
   CheckInit;
 
+  // AlarmEngine недавно подтвердил запуск - шлём сразу
+  if EngineAlive then
+  begin
+    FlushPending;
+    DoSendToEngine(ACommand, AJson);
+    Exit;
+  end;
+
+  // Иначе AlarmEngine мог быть убит системой: ставим команду в очередь и поднимаем его.
+  SetLength(FPending, Length(FPending) + 1);
+  FPending[High(FPending)].Command := ACommand;
+  FPending[High(FPending)].Json := AJson;
+  DoLog('queued ' + ACommand + ' (waiting for READY)');
+
+  if not FLaunching then
+    if not StartNotificationEngine then
+      FlushPending; // запустить не удалось - отправляем как раньше
+end;
+
+class function TAndroidAlarm.EngineAlive: Boolean;
+begin
+  Result := (FLastReady > 0) and
+    (MilliSecondsBetween(Now, FLastReady) < engineAliveMs);
+end;
+
+class procedure TAndroidAlarm.DoSendToEngine(const ACommand, AJson: String);
+var
+  Intent: JIntent;
+begin
   Intent := TJIntent.JavaClass.init;
   if not Assigned(Intent) then
     Exit;
@@ -453,6 +518,51 @@ begin
 
   TAndroidHelper.Context.sendBroadcast(Intent);
   DoLog('sent ' + ACommand);
+end;
+
+class procedure TAndroidAlarm.FlushPending;
+var
+  Cmds: TArray<TPendingCmd>;
+  I: Integer;
+begin
+  if Length(FPending) = 0 then
+    Exit;
+
+  Cmds := FPending;
+  FPending := nil;
+
+  for I := 0 to High(Cmds) do
+    DoSendToEngine(Cmds[I].Command, Cmds[I].Json);
+end;
+
+class procedure TAndroidAlarm.ScheduleLaunchTimeout;
+var
+  Seq: Integer;
+begin
+  Inc(FLaunchSeq);
+  Seq := FLaunchSeq;
+
+  TThread.CreateAnonymousThread(
+    procedure
+    begin
+      Sleep(launchTimeoutMs);
+      TThread.Queue(nil,
+        procedure
+        begin
+          TAndroidAlarm.OnLaunchTimeout(Seq);
+        end);
+    end).Start;
+end;
+
+class procedure TAndroidAlarm.OnLaunchTimeout(const ASeq: Integer);
+begin
+  // READY уже пришёл (или был новый запуск) - таймаут устарел
+  if (ASeq <> FLaunchSeq) or (not FLaunching) then
+    Exit;
+
+  FLaunching := False;
+  DoLog('READY timeout - sending pending commands anyway');
+  FlushPending;
 end;
 
 class procedure TAndroidAlarm.RechargeAlarm(const AAlarmDateTime: TDateTime);
@@ -494,6 +604,10 @@ begin
   FIsEngineInitialized := false;
   FEngineReady := false;
   FReceiverRegistered := false;
+  FLastReady := 0;
+  FLaunching := false;
+  FLaunchSeq := 0;
+  FPending := nil;
 end;
 
 class procedure TAndroidAlarm.CheckInit;

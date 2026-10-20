@@ -1069,9 +1069,9 @@ end;
 class procedure TControlTools.ScreenSizeDelta(const AForm: TForm);
 begin
   if AForm.Left + AForm.Width > Screen.Width then
-    AForm.Left := Screen.Width - AForm.Width;
+    AForm.Left := Round(Screen.Width - AForm.Width);
   if AForm.Top + AForm.Height > Screen.Height then
-    AForm.Top := Screen.Height - AForm.Height;
+    AForm.Top := Round(Screen.Height - AForm.Height);
 end;
 
 class function TControlTools.IsMouseOverForm(const AForm: TForm): Boolean;

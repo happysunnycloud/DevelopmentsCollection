@@ -667,8 +667,8 @@ begin
 
     Left := 0;
     Top := 0;
-    Width := Screen.Width;
-    Height := Screen.Height;
+    Width := Round(Screen.Width);
+    Height := Round(Screen.Height);
   end;
 
   Self.Invalidate;

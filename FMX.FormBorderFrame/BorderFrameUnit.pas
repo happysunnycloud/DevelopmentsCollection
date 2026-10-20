@@ -995,7 +995,7 @@ var
   XDelta: Integer;
   YDelta: Integer;
 begin
-  if not fIsMouseDown then
+  if not FIsMouseDown then
     Exit;
 
   XDelta := Trunc(X - FStartX);
@@ -1034,7 +1034,7 @@ end;
 
 procedure TBorderFrame.RightBottomLayoutMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Single);
 begin
-  if not fIsMouseDown then
+  if not FIsMouseDown then
     Exit;
 
   RightConstraint(X);
