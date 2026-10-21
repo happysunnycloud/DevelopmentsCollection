@@ -132,6 +132,9 @@ type
     FMaxToolButtonMouseOverBackgroundColor: TAlphaColor;
     FMinToolButtonMouseOverBackgroundColor: TAlphaColor;
 
+    FOnBorderMouseDown: TMouseEvent;
+    FOnBorderMouseUp: TMouseEvent;
+
     procedure ShowMaxupIcon(const AIsMaxedup: Boolean);
 
     procedure LeftConstraint(const X: Single);
@@ -179,9 +182,9 @@ type
 
     procedure SetBorderFrameIcons(const ABorderFrameIcons: TBorderFrameIcons);
 
-    procedure BorderMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Single);
-    procedure BorderMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Single);
-    procedure BorderMouseLeave(Sender: TObject);
+    procedure DoBorderMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Single);
+    procedure DoBorderMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Single);
+    procedure DoBorderMouseLeave(Sender: TObject);
 
     procedure Mount;
     procedure UnMount;
@@ -202,6 +205,11 @@ type
       AToolButtonColor: TAlphaColor = TAlphaColorRec.White;
       AToolButtonMouseOverColor: TAlphaColor = TAlphaColorRec.Skyblue
       ); reintroduce; overload;
+
+    property OnBorderMouseDown: TMouseEvent
+      read FOnBorderMouseDown write FOnBorderMouseDown;
+    property OnBorderMouseUp: TMouseEvent
+      read FOnBorderMouseUp write FOnBorderMouseUp;
 
     property MinWidth: Integer read FMinWidth write SetMinWidth;
     property MinHeight: Integer read FMinHeight write SetMinHeight;
@@ -598,6 +606,9 @@ begin
 
   FIsMouseDown := false;
 
+  FOnBorderMouseDown := nil;
+  FOnBorderMouseUp := nil;
+
   for Control in [CaptionLayout,
                   CaptionText,
                   LeftTopLayout,
@@ -610,9 +621,9 @@ begin
                   TopLayout]
   do
   begin
-    Control.OnMouseDown := BorderMouseDown;
-    Control.OnMouseUp := BorderMouseUp;
-    Control.OnMouseLeave := BorderMouseLeave;
+    Control.OnMouseDown := DoBorderMouseDown;
+    Control.OnMouseUp := DoBorderMouseUp;
+    Control.OnMouseLeave := DoBorderMouseLeave;
   end;
 
   FBorderColor := ABorderColor;
@@ -917,19 +928,31 @@ end;
 //  Result := CaptionText;
 //end;
 
-procedure TBorderFrame.BorderMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Single);
+procedure TBorderFrame.DoBorderMouseDown(
+  Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Single);
 begin
   FIsMouseDown := true;
   TControl(Sender).AutoCapture := true;
 
   FStartX := X;
   FStartY := Y;
+
+  if Assigned(FOnBorderMouseDown) then
+    FOnBorderMouseDown(
+      Sender, Button,
+      Shift, X, Y);
 end;
 
-procedure TBorderFrame.BorderMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Single);
+procedure TBorderFrame.DoBorderMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Single);
 begin
   FIsMouseDown := false;
   TControl(Sender).AutoCapture := false;
+
+  if Assigned(FOnBorderMouseUp) then
+    FOnBorderMouseUp(
+      Sender, Button,
+      Shift, X, Y);
 end;
 
 procedure TBorderFrame.BottomLayoutMouseEnter(Sender: TObject);
@@ -946,7 +969,7 @@ begin
   BottomConstraint(Y);
 end;
 
-procedure TBorderFrame.BorderMouseLeave(Sender: TObject);
+procedure TBorderFrame.DoBorderMouseLeave(Sender: TObject);
 begin
   FIsMouseDown := false;
   TControl(Sender).AutoCapture := false;
