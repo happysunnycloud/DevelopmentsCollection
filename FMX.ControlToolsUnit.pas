@@ -190,6 +190,9 @@ type
 
   TScrollBoxHelper = class helper for TScrollBox
   public
+    procedure ContentControlsEnumerator(
+      const AControlEnumeratorCallbackProc:
+        TControlEnumeratorCallbackProc);
     procedure ControlsEnumerator(
       const AControlEnumeratorCallbackProc:
         TControlEnumeratorCallbackProc); overload;
@@ -252,6 +255,24 @@ uses
   ;
 
 { TScrollBoxHelper }
+
+procedure TScrollBoxHelper.ContentControlsEnumerator(
+  const AControlEnumeratorCallbackProc:
+    TControlEnumeratorCallbackProc);
+var
+  i: Integer;
+  Control: TControl;
+begin
+  i := Content.ControlsCount;
+  while i > 0 do
+  begin
+    Dec(i);
+
+    Control := Content.Controls[i];
+
+    AControlEnumeratorCallbackProc(Control);
+  end;
+end;
 
 procedure TScrollBoxHelper.ControlsEnumerator(
   const AControlEnumeratorCallbackProc: TControlEnumeratorCallbackProc);
