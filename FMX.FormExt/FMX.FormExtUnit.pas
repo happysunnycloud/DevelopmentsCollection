@@ -96,16 +96,15 @@ type
 
   TFirstTimePaintProcRef = reference to procedure;
 
-  TModalFormList = TList<TFormExt>;
+  TFormList = TList<TCommonCustomForm>;
 
   TFormExt = class(FMX.Forms.TForm)
   private
-    class var FModalFormList: TModalFormList;
+    class var FModalFormList: TFormList;
     class procedure ClassInit;
     class procedure ClassUnInit;
   strict private
     {$IFDEF MSWINDOWS}
-
     FIsModalMode: Boolean;
     FOnModalResultProcRef: TModalResultProcRef;
 
@@ -936,14 +935,40 @@ procedure TFormExt.SetModalMode(const AModalMode: Boolean);
 var
   i: Integer;
   Form: TCommonCustomForm;
+  FormList: TFormList;
 begin
-  for i := 0 to Pred(Screen.FormCount) do
+  if AModalMode then
   begin
-    Form := Screen.Forms[i];
-    if Form = Self then
-      Continue;
+    // Блокируем формы так же через Screen
+    for i := 0 to Pred(Screen.FormCount) do
+    begin
+      Form := Screen.Forms[i];
+      if Form = Self then
+        Continue;
 
-    BlockFormInput(Form, AModalMode);
+      BlockFormInput(Form, AModalMode);
+    end;
+  end
+  else
+  begin
+    // Разблокируем формы так же через Screen
+    // Формы, попавшие под блокировку,
+    // могли быть уничтожены к моменту разблокирования
+    // При снятии блокировки с окна происходит переупорядочивание
+    // списка форма внутри Screen.Forms
+    FormList := TFormList.Create;
+    try
+      for i := 0 to Pred(Screen.FormCount) do
+      begin
+        Form := Screen.Forms[i];
+        FormList.Add(Form)
+      end;
+
+      for Form in FormList do
+        BlockFormInput(Form, AModalMode);
+    finally
+      FreeAndNil(FormList);
+    end;
   end;
 end;
 
@@ -1109,7 +1134,7 @@ end;
 
 class procedure TFormExt.ClassInit;
 begin
-  FModalFormList := TModalFormList.Create;
+  FModalFormList := TFormList.Create;
 end;
 
 class procedure TFormExt.ClassUnInit;
