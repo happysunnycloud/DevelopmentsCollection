@@ -18,6 +18,7 @@ uses
   , FMX.Types
   , FMX.Graphics
   , FMX.Objects
+  , FMX.Edit
   , FMX.ControlToolsUnit
   , FMX.Theme.Types
   , ParamsExtUnit
@@ -33,6 +34,7 @@ type
   TPopUpMenuSettings = class;
   THintSettings = class;
   TButtonSettings = class;
+  TControlSettings = class;
 
   TCustomTextSettingsApplyProcRef = reference to
     procedure (const AControl: TControl; const ACustomTextSettings: TCustomTextSettings);
@@ -46,6 +48,8 @@ type
     procedure (const AHintSettings: THintSettings);
   TButtonSettingsApplyProcRef = reference to
     procedure (const AControl: TControl; const AButtonSettings: TButtonSettings);
+  TControlSettingsApplyProcRef = reference to
+    procedure (const AControl: TControl; const AControlSettings: TControlSettings);
 
   TCommonProperties = class
   strict private
@@ -341,7 +345,36 @@ type
     procedure Apply; override;
   end;
 
-  // Контейнер для хранения настроек кнопок
+  // Контейнер для хранения базовых настроек TPresentedControl
+  TControlSettings = class(TBaseSettings)
+  strict private
+    FNormalBackgroundColor: TAlphaColor;
+    FFocusedBackgroundColor: TAlphaColor;
+    FNormalFrameColor: TAlphaColor;
+    FFocusedFrameColor: TAlphaColor;
+
+    FOnApplyProcRef: TControlSettingsApplyProcRef;
+  public
+    constructor Create;
+
+    procedure CopyFrom(const AControlSettings: TControlSettings); reintroduce;
+
+    property NormalBackgroundColor: TAlphaColor
+      read FNormalBackgroundColor write FNormalBackgroundColor;
+    property FocusedBackgroundColor: TAlphaColor
+      read FFocusedBackgroundColor write FFocusedBackgroundColor;
+    property NormalFrameColor: TAlphaColor
+      read FNormalFrameColor write FNormalFrameColor;
+    property FocusedFrameColor: TAlphaColor
+      read FFocusedFrameColor write FFocusedFrameColor;
+
+    property OnApplyProcRef: TControlSettingsApplyProcRef
+      read FOnApplyProcRef write FOnApplyProcRef;
+
+    procedure Apply; override;
+  end;
+
+  // Контейнер для хранения настроек TButton
   TButtonSettings = class(TBaseSettings)
   strict private
     FNormalBackgroundColor: TAlphaColor;
@@ -369,6 +402,35 @@ type
 
     procedure Apply; override;
   end;
+
+//  // Контейнер для хранения настроек TEdit
+//  TEditSettings = class(TBaseSettings)
+//  strict private
+//    FNormalBackgroundColor: TAlphaColor;
+//    FFocusedBackgroundColor: TAlphaColor;
+//    FNormalFrameColor: TAlphaColor;
+//    FFocusedFrameColor: TAlphaColor;
+//
+//    FOnApplyProcRef: TButtonSettingsApplyProcRef;
+//  public
+//    constructor Create;
+//
+//    procedure CopyFrom(const AButtonSettings: TButtonSettings); reintroduce;
+//
+//    property NormalBackgroundColor: TAlphaColor
+//      read FNormalBackgroundColor write FNormalBackgroundColor;
+//    property FocusedBackgroundColor: TAlphaColor
+//      read FFocusedBackgroundColor write FFocusedBackgroundColor;
+//    property NormalFrameColor: TAlphaColor
+//      read FNormalFrameColor write FNormalFrameColor;
+//    property FocusedFrameColor: TAlphaColor
+//      read FFocusedFrameColor write FFocusedFrameColor;
+//
+//    property OnApplyProcRef: TButtonSettingsApplyProcRef
+//      read FOnApplyProcRef write FOnApplyProcRef;
+//
+//    procedure Apply; override;
+//  end;
 
   TTheme = class
   strict private
@@ -404,9 +466,11 @@ type
     procedure LoadFromFile(const AFileName: String);
     procedure SaveToFile(const AFileName: String);
   public
-    // Метод декорировани стандартной кнопки
-    // Добавляет свойства позволяющие применить к кнопке настройки Темы
+    // Методы добавления свойст для применения настроек Темы
+    // Метод декорирования стандартной кнопки
     procedure DecorateButton(const AButton: TButton);
+    // Метод декорирования стандартного поля ввода
+    procedure DecorateEdit(const AEdit: TEdit);
   public
     property DarkBackgroundColor: TAlphaColor
       read FDarkBackgroundColor write FDarkBackgroundColor;
@@ -435,7 +499,8 @@ uses
   , BinFileTypes
   , FMX.Styles
   , FMX.FormExtUnit
-  , FMX.ButtonDecorator
+  , FMX.Controls.Presentation
+  , FMX.ControlDecorator
   ;
 
 var
@@ -1116,6 +1181,66 @@ begin
   end;
 end;
 
+{ TControlSettings }
+
+constructor TControlSettings.Create;
+begin
+  inherited Create(ClassName);
+
+  FOnApplyProcRef := nil;
+
+  FNormalBackgroundColor := NORMAL_BACKGOUND_COLOR;
+  FFocusedBackgroundColor := FOCUSED_BACKGOUND_COLOR;
+
+  FNormalFrameColor := NORMAL_FRAME_COLOR;
+  FFocusedFrameColor := FOCUSED_FRAME_COLOR;
+end;
+
+procedure TControlSettings.CopyFrom(
+  const AControlSettings: TControlSettings);
+begin
+  inherited CopyFrom(AControlSettings);
+
+  FNormalBackgroundColor := AControlSettings.NormalBackgroundColor;
+  FFocusedBackgroundColor := AControlSettings.FocusedBackgroundColor;
+
+  FNormalFrameColor := AControlSettings.NormalFrameColor;
+  FFocusedFrameColor := AControlSettings.FocusedBackgroundColor;
+end;
+
+procedure TControlSettings.Apply;
+var
+  Control: TControl;
+  PresentedControl: TPresentedControl;
+  Decorator: TControlDecorator;
+begin
+  if not Assigned(FContainer) then
+    Exit;
+
+  CollectObjects;
+
+  if FControlsCollection.Count = 0 then
+    Exit;
+
+  for Control in FControlsCollection do
+  begin
+    if Control is TPresentedControl then
+    begin
+      PresentedControl := TPresentedControl(Control);
+      TControlDecorator.TryGetDecorator(PresentedControl, Decorator);
+      if Assigned(Decorator) then
+      begin
+        Decorator.NormalBackgroundColor := FNormalBackgroundColor;
+        Decorator.FocusedBackgroundColor := FFocusedBackgroundColor;
+        Decorator.NormalFrameColor := FNormalFrameColor;
+        Decorator.FocusedFrameColor := FFocusedFrameColor;
+
+        CustomTextSettings.ApplyTo(PresentedControl);
+      end;
+    end;
+  end;
+end;
+
 { TButtonSettings }
 
 constructor TButtonSettings.Create;
@@ -1124,11 +1249,11 @@ begin
 
   FOnApplyProcRef := nil;
 
-  FNormalBackgroundColor := NORMAL_BUTTON_BACKGOUND_COLOR;
-  FFocusedBackgroundColor := FOCUSED_BUTTON_BACKGOUND_COLOR;
+  FNormalBackgroundColor := NORMAL_BACKGOUND_COLOR;
+  FFocusedBackgroundColor := FOCUSED_BACKGOUND_COLOR;
 
-  FNormalFrameColor := NORMAL_BUTTON_FRAME_COLOR;
-  FFocusedFrameColor := FOCUSED_BUTTON_FRAME_COLOR;
+  FNormalFrameColor := NORMAL_FRAME_COLOR;
+  FFocusedFrameColor := FOCUSED_FRAME_COLOR;
 end;
 
 procedure TButtonSettings.CopyFrom(
@@ -1147,7 +1272,7 @@ procedure TButtonSettings.Apply;
 var
   Control: TControl;
   Button: TButton;
-  Decorator: TButtonDecorator;
+  Decorator: TControlDecorator;
 begin
   if not Assigned(FContainer) then
     Exit;
@@ -1162,7 +1287,7 @@ begin
     if Control is TButton then
     begin
       Button := TButton(Control);
-      TButtonDecorator.TryGetDecorator(Button, Decorator);
+      TControlDecorator.TryGetDecorator(Button, Decorator);
       if Assigned(Decorator) then
       begin
         Decorator.NormalBackgroundColor := FNormalBackgroundColor;
@@ -1170,7 +1295,7 @@ begin
         Decorator.NormalFrameColor := FNormalFrameColor;
         Decorator.FocusedFrameColor := FFocusedFrameColor;
 
-        CustomTextSettings.ApplyTo(Decorator.TextLabel);
+        CustomTextSettings.ApplyTo(Button);
       end;
     end;
   end;
@@ -1372,7 +1497,12 @@ end;
 
 procedure TTheme.DecorateButton(const AButton: TButton);
 begin
-  TButtonDecorator.Decorate(AButton);
+  TControlDecorator.Decorate(AButton);
+end;
+
+procedure TTheme.DecorateEdit(const AEdit: TEdit);
+begin
+  TControlDecorator.Decorate(AEdit);
 end;
 
 initialization

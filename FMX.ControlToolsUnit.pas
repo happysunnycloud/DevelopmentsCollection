@@ -46,6 +46,8 @@ type
     StyleLookup     = 'StyleLookup';
   end;
 
+  TEnumDirection = (edForward, edBackward);
+
   TControlEnumeratorCallbackProc = reference to
     procedure (const AControl: TControl);
   TBreakingControlEnumeratorCallbackProc = reference to
@@ -191,6 +193,7 @@ type
   TScrollBoxHelper = class helper for TScrollBox
   public
     procedure ContentControlsEnumerator(
+      const AEnumDirection: TEnumDirection;
       const AControlEnumeratorCallbackProc:
         TControlEnumeratorCallbackProc);
     procedure ControlsEnumerator(
@@ -257,20 +260,37 @@ uses
 { TScrollBoxHelper }
 
 procedure TScrollBoxHelper.ContentControlsEnumerator(
+  const AEnumDirection: TEnumDirection;
   const AControlEnumeratorCallbackProc:
     TControlEnumeratorCallbackProc);
 var
   i: Integer;
   Control: TControl;
 begin
-  i := Content.ControlsCount;
-  while i > 0 do
+  if AEnumDirection = edForward then
   begin
-    Dec(i);
+    i := 0;
+    while i < Content.ControlsCount do
+    begin
+      Control := Content.Controls[i];
 
-    Control := Content.Controls[i];
+      AControlEnumeratorCallbackProc(Control);
 
-    AControlEnumeratorCallbackProc(Control);
+      Inc(i);
+    end;
+  end
+  else
+  if AEnumDirection = edBackward then
+  begin
+    i := Content.ControlsCount;
+    while i > 0 do
+    begin
+      Dec(i);
+
+      Control := Content.Controls[i];
+
+      AControlEnumeratorCallbackProc(Control);
+    end;
   end;
 end;
 
