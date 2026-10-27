@@ -37,6 +37,9 @@ type
     ///  Добавляет ADigitDepth символа '0' в начало числа, представленного в виде строки
     /// </summary>
     class function StrZeroAlignment(const AStrDigit: String; const ADigitDepth: Byte = 2): String;
+
+    class procedure CopyToClipboard(const AText: String);
+    class function PastFromClipboard: String;
   end;
 
 implementation
@@ -45,6 +48,7 @@ uses
     System.SysUtils
   , System.SyncObjs
   , System.Classes
+  , FMX.Platform
   ;
 
 { TStringTools }
@@ -223,6 +227,28 @@ begin
       Result := '0' + Result;
     end;
   end
+end;
+
+class procedure TStringTools.CopyToClipboard(const AText: String);
+var
+  ClipboardService: IFMXClipboardService;
+begin
+  if TPlatformServices.Current.SupportsPlatformService(
+    IFMXClipboardService, ClipboardService)
+  then
+    ClipboardService.SetClipboard(AText);
+end;
+
+class function TStringTools.PastFromClipboard: String;
+var
+  ClipboardService: IFMXClipboardService;
+begin
+  Result := '';
+
+  if TPlatformServices.Current.SupportsPlatformService(
+    IFMXClipboardService, ClipboardService)
+  then
+    Result := ClipboardService.GetClipboard.ToString;
 end;
 
 initialization
