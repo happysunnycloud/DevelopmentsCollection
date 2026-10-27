@@ -15,8 +15,8 @@ uses
   , ThreadFactoryRegistryUnit
   , ThreadFactoryUnit
   , FMX.Theme
-  {$IFDEF MSWINDOWS}
   , System.Generics.Collections
+  {$IFDEF MSWINDOWS}
   , System.Types
   , FMX.Types
   , FMX.TrayIcon.Win
@@ -104,7 +104,6 @@ type
     class procedure ClassInit;
     class procedure ClassUnInit;
   strict private
-    {$IFDEF MSWINDOWS}
     FIsModalMode: Boolean;
     FOnModalResultProcRef: TModalResultProcRef;
 
@@ -119,6 +118,9 @@ type
 
     procedure SetModalResult(const AModalResult: TModalResult);
 
+    procedure EnterModalMode;
+    procedure ExitModalMode;
+    {$IFDEF MSWINDOWS}
     /// <summary>
     ///   Блокируут/разблокирует ввод для формы
     ///   Позволяет имитировать блокировку форм
@@ -127,8 +129,7 @@ type
     procedure BlockFormInput(
       const AForm: TCommonCustomForm; const ABlock: Boolean);
     procedure SetModalMode(const AModalMode: Boolean);
-    procedure EnterModalMode;
-    procedure ExitModalMode;
+    {$ENDIF}
   public
     property OnModalResultProcRef: TModalResultProcRef
       write FOnModalResultProcRef;
@@ -136,7 +137,7 @@ type
     property IsModalMode: Boolean
       read FIsModalMode write FIsModalMode;
     procedure ShowModal;
-    {$ENDIF}
+//    {$ENDIF}
   strict private
     /// <summary>
     ///   Реестр фабрик нитей
@@ -971,20 +972,25 @@ begin
     end;
   end;
 end;
-
+{$ENDIF}
 procedure TFormExt.EnterModalMode;
 begin
   FIsModalMode := true;
+  {$IFDEF MSWINDOWS}
   FModalFormList.Add(Self);
 
   SetModalMode(FIsModalMode);
+  {$ENDIF}
 end;
 
 procedure TFormExt.ExitModalMode;
+{$IFDEF MSWINDOWS}
 var
   Form: TCommonCustomForm;
+{$ENDIF}
 begin
   FIsModalMode := false;
+  {$IFDEF MSWINDOWS}
   FModalFormList.Remove(Self);
   if FModalFormList.Count > 0 then
   begin
@@ -995,8 +1001,9 @@ begin
   end;
 
   SetModalMode(FIsModalMode);
+  {$ENDIF}
 end;
-{$ENDIF}
+
 procedure TFormExt.OnDestroyedAllFactoriesHandler(Sender: TObject);
 var
   Form: TFormExt;
@@ -1037,7 +1044,7 @@ begin
   Fill.Kind := TBrushKind.Solid;
   Fill.Color := FTheme.FormSettings.BackgroundColor;
 end;
-{$IFDEF MSWINDOWS}
+//{$IFDEF MSWINDOWS}
 procedure TFormExt.ShowModal;
 begin
   EnterModalMode;
@@ -1062,7 +1069,7 @@ begin
       Close;
     end);
 end;
-{$ENDIF}
+//{$ENDIF}
 class procedure TFormExt.CloseChildForms;
 var
   i: Integer;

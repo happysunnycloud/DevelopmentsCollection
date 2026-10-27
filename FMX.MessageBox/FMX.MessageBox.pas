@@ -121,17 +121,10 @@ implementation
 {$R *.fmx}
 
 uses
-    FMX.Platform
-  , FMX.ControlToolsUnit
+    FMX.ControlToolsUnit
+  , StringToolsUnit
+  , DebugUnit
   ;
-procedure CopyToClipboard(const AText: String);
-var
-  ClipboardService: IFMXClipboardService;
-begin
-  if TPlatformServices.Current.SupportsPlatformService(
-    IFMXClipboardService, ClipboardService) then
-    ClipboardService.SetClipboard(AText);
-end;
 
 { TMessageBox }
 
@@ -153,6 +146,7 @@ class function TMessageBox.CreateAndShow(
 var
   MessageBoxForm: TMessageBoxForm;
   Form: TMessageBoxForm;
+  Top, Left: Integer;
 begin
   MessageBoxForm := TMessageBoxForm.Create(
     nil, ADelayShowSec, AMessage, ACaption, AButtonSet);
@@ -185,15 +179,13 @@ begin
   begin
     Form := FFormRegistry.Items[FFormRegistry.Count - 1];
 
-    MessageBoxForm.Top :=
-      Round(Form.Top + Form.BorderFrame.CaptionLayout.Height + 10);
-    MessageBoxForm.Left :=
-      Round(Form.Left + Form.BorderFrame.CaptionLayout.Height + 10);
+    Top := Round(Form.Top + Form.BorderFrame.CaptionLayout.Height + 10);
+    Left := Round(Form.Left + Form.BorderFrame.CaptionLayout.Height + 10);
   end
   else
   begin
-    MessageBoxForm.Top := (Screen.Height div 2) - (MessageBoxForm.Height div 2);
-    MessageBoxForm.Left := (Screen.Width div 2) - (MessageBoxForm.Width div 2);
+    Top := Round((Screen.Height / 2) - (MessageBoxForm.Height / 2));
+    Left := Round((Screen.Width / 2) - (MessageBoxForm.Width / 2));
   end;
 
   FFormRegistry.Add(MessageBoxForm);
@@ -208,6 +200,9 @@ begin
         MessageBoxForm.BringToFront;
       end);
     MessageBoxForm.ShowModal;
+    // Выставлять позицию окна нужно после показа
+    MessageBoxForm.Top := Top;
+    MessageBoxForm.Left := Left;
   end
   else
     MessageBoxForm.RunTimer(ADelayShowSec);
@@ -406,7 +401,7 @@ begin
   MenuItem.OnClickProcRef :=
     procedure
     begin
-      CopyToClipboard(Self.MessageLabel.Text);
+      TStringTools.CopyToClipboard(Self.MessageLabel.Text);
     end;
   FPopupMenu.Add(MenuItem);
 end;

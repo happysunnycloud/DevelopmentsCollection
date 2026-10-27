@@ -17,6 +17,8 @@ const
   NORMAL_FRAME_COLOR = $FFADADAD;
   FOCUSED_FRAME_COLOR = $FF0078D7;
   STYLE_NAME = 'runtime_background';
+  FOCUS_FRAME_THINCKNESS = 1;
+  FOCUSED_FOCUS_FRAME_THINCKNESS = 2;
 
 type
   /// <summary>
@@ -52,7 +54,7 @@ type
     procedure SetFocusedFrameColor(const AFocusedFrameColor: TAlphaColor);
   public
     class procedure Decorate(const AControl: TPresentedControl);
-    class function GetDecorator(const AButton: TButton): TControlDecorator;
+    class function GetDecorator(const AControl: TPresentedControl): TControlDecorator;
     class procedure TryGetDecorator(
       const AControl: TPresentedControl; var ADecorator: TControlDecorator);
   public
@@ -89,19 +91,19 @@ begin
 
   TryGetDecorator(AControl, Decorator);
   if Assigned(Decorator) then
-    raise Exception.Create('Decorator exists');
+    Exit;
 
   Decorator := TControlDecorator.Create(AControl);
   AControl.AddObject(Decorator);
 end;
 
 class function TControlDecorator.GetDecorator(
-  const AButton: TButton): TControlDecorator;
+  const AControl: TPresentedControl): TControlDecorator;
 begin
-  TryGetDecorator(AButton, Result);
+  TryGetDecorator(AControl, Result);
 
   if not Assigned(Result) then
-    raise Exception.Create('AButton does not have a decorator');
+    raise Exception.Create('AControl does not have a decorator');
 end;
 
 class procedure TControlDecorator.TryGetDecorator(
@@ -159,7 +161,7 @@ end;
 
 procedure TControlDecorator.DoEnter(Sender: TObject);
 begin
-  FBackgroundRectangle.Stroke.Thickness := 2;
+  FBackgroundRectangle.Stroke.Thickness := FOCUSED_FOCUS_FRAME_THINCKNESS;
   FBackgroundRectangle.Stroke.Color := FFocusedFrameColor;
 
   if Assigned(FOnEnter) then
@@ -168,7 +170,7 @@ end;
 
 procedure TControlDecorator.DoExit(Sender: TObject);
 begin
-  FBackgroundRectangle.Stroke.Thickness := 1;
+  FBackgroundRectangle.Stroke.Thickness := FOCUS_FRAME_THINCKNESS;
   FBackgroundRectangle.Stroke.Color := FNormalFrameColor;
 
   if Assigned(FOnExit) then
@@ -178,7 +180,7 @@ end;
 procedure TControlDecorator.DoMouseEnter(Sender: TObject);
 begin
   FBackgroundRectangle.Fill.Color := FFocusedBackgroundColor;
-  FBackgroundRectangle.Stroke.Thickness := 1;
+  FBackgroundRectangle.Stroke.Thickness := FOCUS_FRAME_THINCKNESS;
   FBackgroundRectangle.Stroke.Color := FFocusedFrameColor;
 
   if Assigned(FOnMouseEnter) then
@@ -193,7 +195,7 @@ begin
 
   if FOwner.IsFocused then
   begin
-    FBackgroundRectangle.Stroke.Thickness := 2;
+    FBackgroundRectangle.Stroke.Thickness := FOCUSED_FOCUS_FRAME_THINCKNESS;
     FBackgroundRectangle.Stroke.Color := FFocusedFrameColor;
   end;
 

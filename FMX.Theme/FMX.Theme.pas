@@ -46,8 +46,8 @@ type
     procedure (const AControl: TControl; const APopUpMenuSettings: TPopUpMenuSettings);
   THintSettingsApplyProcRef = reference to
     procedure (const AHintSettings: THintSettings);
-  TButtonSettingsApplyProcRef = reference to
-    procedure (const AControl: TControl; const AButtonSettings: TButtonSettings);
+//  TButtonSettingsApplyProcRef = reference to
+//    procedure (const AControl: TControl; const AButtonSettings: TButtonSettings);
   TControlSettingsApplyProcRef = reference to
     procedure (const AControl: TControl; const AControlSettings: TControlSettings);
 
@@ -375,62 +375,18 @@ type
   end;
 
   // Контейнер для хранения настроек TButton
-  TButtonSettings = class(TBaseSettings)
+  TButtonSettings = class(TControlSettings)
   strict private
-    FNormalBackgroundColor: TAlphaColor;
-    FFocusedBackgroundColor: TAlphaColor;
-    FNormalFrameColor: TAlphaColor;
-    FFocusedFrameColor: TAlphaColor;
-
-    FOnApplyProcRef: TButtonSettingsApplyProcRef;
   public
-    constructor Create;
-
-    procedure CopyFrom(const AButtonSettings: TButtonSettings); reintroduce;
-
-    property NormalBackgroundColor: TAlphaColor
-      read FNormalBackgroundColor write FNormalBackgroundColor;
-    property FocusedBackgroundColor: TAlphaColor
-      read FFocusedBackgroundColor write FFocusedBackgroundColor;
-    property NormalFrameColor: TAlphaColor
-      read FNormalFrameColor write FNormalFrameColor;
-    property FocusedFrameColor: TAlphaColor
-      read FFocusedFrameColor write FFocusedFrameColor;
-
-    property OnApplyProcRef: TButtonSettingsApplyProcRef
-      read FOnApplyProcRef write FOnApplyProcRef;
-
     procedure Apply; override;
   end;
 
-//  // Контейнер для хранения настроек TEdit
-//  TEditSettings = class(TBaseSettings)
-//  strict private
-//    FNormalBackgroundColor: TAlphaColor;
-//    FFocusedBackgroundColor: TAlphaColor;
-//    FNormalFrameColor: TAlphaColor;
-//    FFocusedFrameColor: TAlphaColor;
-//
-//    FOnApplyProcRef: TButtonSettingsApplyProcRef;
-//  public
-//    constructor Create;
-//
-//    procedure CopyFrom(const AButtonSettings: TButtonSettings); reintroduce;
-//
-//    property NormalBackgroundColor: TAlphaColor
-//      read FNormalBackgroundColor write FNormalBackgroundColor;
-//    property FocusedBackgroundColor: TAlphaColor
-//      read FFocusedBackgroundColor write FFocusedBackgroundColor;
-//    property NormalFrameColor: TAlphaColor
-//      read FNormalFrameColor write FNormalFrameColor;
-//    property FocusedFrameColor: TAlphaColor
-//      read FFocusedFrameColor write FFocusedFrameColor;
-//
-//    property OnApplyProcRef: TButtonSettingsApplyProcRef
-//      read FOnApplyProcRef write FOnApplyProcRef;
-//
-//    procedure Apply; override;
-//  end;
+  // Контейнер для хранения настроек TEdit
+  TEditSettings = class(TControlSettings)
+  strict private
+  public
+    procedure Apply; override;
+  end;
 
   TTheme = class
   strict private
@@ -447,6 +403,7 @@ type
     FPopUpMenuSettings: TPopUpMenuSettings;
     FHintSettings: THintSettings;
     FButtonSettings: TButtonSettings;
+    FEditSettings: TEditSettings;
 
     FOnApply: TNotifyEvent;
     FOnApplyProcRef: TProc;
@@ -485,6 +442,7 @@ type
     property HintTheme: THintSettings read FHintSettings;
     property PopUpMenuTheme: TPopUpMenuSettings read FPopUpMenuSettings;
     property ButtonSettings: TButtonSettings read FButtonSettings;
+    property EditSettings: TEditSettings read FEditSettings;
 
     property OnApply: TNotifyEvent read FOnApply write FOnApply;
     property OnApplyProcRef: TProc read FOnApplyProcRef write FOnApplyProcRef;
@@ -1243,31 +1201,6 @@ end;
 
 { TButtonSettings }
 
-constructor TButtonSettings.Create;
-begin
-  inherited Create(ClassName);
-
-  FOnApplyProcRef := nil;
-
-  FNormalBackgroundColor := NORMAL_BACKGOUND_COLOR;
-  FFocusedBackgroundColor := FOCUSED_BACKGOUND_COLOR;
-
-  FNormalFrameColor := NORMAL_FRAME_COLOR;
-  FFocusedFrameColor := FOCUSED_FRAME_COLOR;
-end;
-
-procedure TButtonSettings.CopyFrom(
-  const AButtonSettings: TButtonSettings);
-begin
-  inherited CopyFrom(AButtonSettings);
-
-  FNormalBackgroundColor := AButtonSettings.NormalBackgroundColor;
-  FFocusedBackgroundColor := AButtonSettings.FocusedBackgroundColor;
-
-  FNormalFrameColor := AButtonSettings.NormalFrameColor;
-  FFocusedFrameColor := AButtonSettings.FFocusedBackgroundColor;
-end;
-
 procedure TButtonSettings.Apply;
 var
   Control: TControl;
@@ -1290,12 +1223,47 @@ begin
       TControlDecorator.TryGetDecorator(Button, Decorator);
       if Assigned(Decorator) then
       begin
-        Decorator.NormalBackgroundColor := FNormalBackgroundColor;
-        Decorator.FocusedBackgroundColor := FFocusedBackgroundColor;
-        Decorator.NormalFrameColor := FNormalFrameColor;
-        Decorator.FocusedFrameColor := FFocusedFrameColor;
+        Decorator.NormalBackgroundColor := NormalBackgroundColor;
+        Decorator.FocusedBackgroundColor := FocusedBackgroundColor;
+        Decorator.NormalFrameColor := NormalFrameColor;
+        Decorator.FocusedFrameColor := FocusedFrameColor;
 
         CustomTextSettings.ApplyTo(Button);
+      end;
+    end;
+  end;
+end;
+
+{ TEditSettings }
+
+procedure TEditSettings.Apply;
+var
+  Control: TControl;
+  Edit: TEdit;
+  Decorator: TControlDecorator;
+begin
+  if not Assigned(FContainer) then
+    Exit;
+
+  CollectObjects;
+
+  if FControlsCollection.Count = 0 then
+    Exit;
+
+  for Control in FControlsCollection do
+  begin
+    if Control is TEdit then
+    begin
+      Edit := TEdit(Control);
+      TControlDecorator.TryGetDecorator(Edit, Decorator);
+      if Assigned(Decorator) then
+      begin
+        Decorator.NormalBackgroundColor := NormalBackgroundColor;
+        Decorator.FocusedBackgroundColor := FocusedBackgroundColor;
+        Decorator.NormalFrameColor := NormalFrameColor;
+        Decorator.FocusedFrameColor := FocusedFrameColor;
+
+        CustomTextSettings.ApplyTo(Edit);
       end;
     end;
   end;
@@ -1311,6 +1279,7 @@ begin
   PopUpMenuTheme.FromParams(AParams);
   HintTheme.FromParams(AParams);
   ButtonSettings.FromParams(AParams);
+  EditSettings.FromParams(AParams);
 end;
 
 procedure TTheme.SettingsToParams(const AParams: TParamsExt);
@@ -1336,6 +1305,9 @@ begin
 
     ButtonSettings.ToParams(ParamsTmp);
     AParams.AddFrom(ParamsTmp);
+
+    EditSettings.ToParams(ParamsTmp);
+    AParams.AddFrom(ParamsTmp);
   finally
     FreeAndNil(ParamsTmp);
   end;
@@ -1356,6 +1328,7 @@ begin
   FPopUpMenuSettings := TPopUpMenuSettings.Create;
   FHintSettings := THintSettings.Create;
   FButtonSettings := TButtonSettings.Create;
+  FEditSettings := TEditSettings.Create;
 
   FStyleBookMemoryStream := TMemoryStream.Create;
 
@@ -1373,6 +1346,7 @@ begin
   FreeAndNil(FCommonSettings);
   FreeAndNil(FStyleBookMemoryStream);
   FreeAndNil(FButtonSettings);
+  FreeAndNil(FEditSettings);
 end;
 
 procedure TTheme.LoadStyleBookFrom(const AStyleBook: TStyleBook);
@@ -1457,6 +1431,8 @@ begin
     FPopUpMenuSettings.Apply;
   if Assigned(FButtonSettings.Container) then
     FButtonSettings.Apply;
+  if Assigned(FEditSettings.Container) then
+    FEditSettings.Apply;
 end;
 
 procedure TTheme.LoadFromFile(const AFileName: String);
