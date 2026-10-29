@@ -761,11 +761,6 @@ begin
   if Assigned(FOnAllThreadsAreDestroyed) then
     FOnAllThreadsAreDestroyed(ThreadFactory);
 
-  { TODO: возможно стоит поднять над
-    if Assigned(FOnAllThreadsAreDestroyed) then
-    FOnAllThreadsAreDestroyed(ThreadFactory);
-    Нужно проверить
-  }
   // Теперь идет финишная обработка, здесь фабрика отправляется на уничтожения
   if FFreeWhenAllThreadsDone then
     TThread.ForceQueue(nil,

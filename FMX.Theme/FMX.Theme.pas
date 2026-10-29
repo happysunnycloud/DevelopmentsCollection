@@ -211,20 +211,8 @@ type
   // Контейнер для хранения настроек самой формы
   TFormSettings = class(TBaseClass)
   strict private
-//    FCaptionTextSettings: TCustomTextSettings;
     {$IFDEF MSWINDOWS}
     FBorderFrameSettings: TBorderFrameSettings;
-//    FBorderFrameKind: TBorderFrameKind;
-//    FBorderFrameColor: TAlphaColor;
-//    FBorderFrameToolButtonColor: TAlphaColor;
-//    { TODO: видимо это свойство больше не нужно, оно заменено на
-//            FBorderFrameCloseToolButtonMouseOverBackgroundColor: TAlphaColor;
-//            FBorderFrameMaxToolButtonMouseOverBackgroundColor: TAlphaColor;
-//            FBorderFrameMinToolButtonMouseOverBackgroundColor: TAlphaColor; }
-//    FBorderFrameToolButtonMouseOverColor: TAlphaColor;
-//    FBorderFrameCloseToolButtonMouseOverBackgroundColor: TAlphaColor;
-//    FBorderFrameMaxToolButtonMouseOverBackgroundColor: TAlphaColor;
-//    FBorderFrameMinToolButtonMouseOverBackgroundColor: TAlphaColor;
     {$ENDIF}
   protected
     procedure SetContainer(const AFmxObject: TFmxObject); override;
@@ -234,36 +222,10 @@ type
 
     procedure CopyFrom(const AFormSettings: TFormSettings); reintroduce;
 
-//    property CaptionTextSettings: TCustomTextSettings
-//      read FCaptionTextSettings
-//      write FCaptionTextSettings;
-
     {$IFDEF MSWINDOWS}
     property BorderFrameSettings: TBorderFrameSettings
       read FBorderFrameSettings
       write FBorderFrameSettings;
-
-//    property BorderFrameKind: TBorderFrameKind
-//      read FBorderFrameKind write FBorderFrameKind;
-//    property BorderFrameColor: TAlphaColor
-//      read FBorderFrameColor write FBorderFrameColor;
-//
-//    property BorderFrameToolButtonColor: TAlphaColor
-//      read FBorderFrameToolButtonColor
-//      write FBorderFrameToolButtonColor;
-//    property BorderFrameToolButtonMouseOverColor: TAlphaColor
-//      read FBorderFrameToolButtonMouseOverColor
-//      write FBorderFrameToolButtonMouseOverColor;
-//
-//    property BorderFrameCloseToolButtonMouseOverBackgroundColor: TAlphaColor
-//      read FBorderFrameCloseToolButtonMouseOverBackgroundColor
-//      write FBorderFrameCloseToolButtonMouseOverBackgroundColor;
-//    property BorderFrameMaxToolButtonMouseOverBackgroundColor: TAlphaColor
-//      read FBorderFrameMaxToolButtonMouseOverBackgroundColor
-//      write FBorderFrameMaxToolButtonMouseOverBackgroundColor;
-//    property BorderFrameMinToolButtonMouseOverBackgroundColor: TAlphaColor
-//      read FBorderFrameMinToolButtonMouseOverBackgroundColor
-//      write FBorderFrameMinToolButtonMouseOverBackgroundColor;
     {$ENDIF}
 
     procedure Apply; override;

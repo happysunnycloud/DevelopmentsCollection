@@ -1325,10 +1325,6 @@ procedure TParamsExt.GetDef<T>(
   const ADefVal: T);
 const
   METHOD = 'GetDef';
-var
-  i: Integer;
-  Val: T;
-  VT: TVarType;
 begin
   if not TryGet<T>(AVal, AParamIndex) then
     AVal := ADefVal;
@@ -1340,10 +1336,6 @@ procedure TParamsExt.GetDef<T>(
   const ADefVal: T);
 const
   METHOD = 'GetDef';
-var
-  i: Integer;
-  Val: T;
-  VT: TVarType;
 begin
   if not TryGet<T>(AVal, AParamIdent) then
     AVal := ADefVal;
@@ -1378,8 +1370,6 @@ function TParamsExt.TryGet<T>(
 var
   i: Integer;
 begin
-  Result := true;
-
   if not TryIndexBy(AParamIdent, i) then
     Exit(false);
 
@@ -2064,8 +2054,6 @@ class function TTypesManager.TypeToVarType<T>: TVarType;
 const
   METHOD = 'TypeToVarType';
 begin
-  Result := varUnknown;
-
   if TypeInfo(T) = TypeInfo(Byte) then
     Result := varByte
   else

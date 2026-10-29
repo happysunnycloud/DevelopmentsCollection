@@ -5,6 +5,9 @@ interface
 {$IFDEF MSWINDOWS}
 uses
   Winapi.Windows;
+{$ELSE IFDEF ANDROID}
+uses
+  FMX.Types;
 {$ENDIF}
 
 type
@@ -19,10 +22,12 @@ implementation
 
 class procedure TDebug.ODS(const Msg: String);
 begin
-{$IFDEF MSWINDOWS}
 {$IFDEF DEBUG}
-  OutputDebugString(PChar(Msg));
-{$ENDIF}
+  {$IFDEF MSWINDOWS}
+    OutputDebugString(PChar(Msg));
+  {$ELSE IFDEF ANDROID}
+    Log.d(Msg);
+  {$ENDIF}
 {$ENDIF}
 end;
 
