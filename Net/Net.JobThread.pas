@@ -22,7 +22,7 @@ type
     FContext: TIdContext;
     FOnJobIsDone: TJobIsDoneEvent;
 
-    procedure Execute; override;
+    procedure InnerExecute; override;
     procedure DoJob(const ARequest: TRequest); virtual; abstract;
   public
     constructor Create(
@@ -78,9 +78,11 @@ end;
 destructor TNetJobThread.Destroy;
 begin
   FreeAndNil(FDataWaiter);
+
+  inherited;
 end;
 
-procedure TNetJobThread.Execute;
+procedure TNetJobThread.InnerExecute;
 var
   DataContainer: TDataContainer;
 begin

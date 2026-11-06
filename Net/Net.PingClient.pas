@@ -55,7 +55,6 @@ type
       const AHostName: String;
       const AIP: String;
       const APort: Word);
-    destructor Destroy; override;
 
     procedure Connect(
       const ALogin: String;
@@ -92,11 +91,6 @@ constructor TNetPingClient.Create(
 begin
   FClientThread := nil;
 
-  inherited;
-end;
-
-destructor TNetPingClient.Destroy;
-begin
   inherited;
 end;
 

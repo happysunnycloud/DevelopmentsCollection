@@ -15,6 +15,9 @@ type
     FStopEvent: TEvent;  // для прерываемых ожиданий
     FIsHolded: Integer;  // отображает, когда поток фактически вошел в ExecHold
 
+    FQueueLock: TObject;   // аналогично механизму ExecHold
+    FQueueIsDone: Boolean; // но отвечает за ожидание выполнения Queue
+
     FOnAfterTerminatedSet: TNotifyEvent;
     FOnAfterTerminatedSetProcRef: TProc;
 
@@ -33,8 +36,10 @@ type
     procedure Execute; override; final;
     procedure TerminatedSet; override;
     procedure DoExecute; virtual;
+    { TODO: переехать с названия InnerExecute на DoExecute. так красивее }
     procedure InnerExecute; virtual; abstract;
-    procedure ExecHold;
+    procedure ExecHold;         // ожидание для потока
+    procedure WaitForQueueDone; // ожидание фозвращения из Queue
 
     property StopEvent: TEvent
       read FStopEvent write FStopEvent;
@@ -42,10 +47,13 @@ type
     constructor Create(const ASuspended: Boolean);
     destructor Destroy; override;
 
-    procedure UnHoldThread;
-    procedure HoldThread;
+    procedure UnHoldThread;       // выставляем намерение отправить в холд
+    procedure HoldThread;         // снимаем с холда
 
-    property IsHolded: Boolean
+    procedure QueueIsDone;        // выставляем намерение ожидать
+    procedure StartWaitQueueDone; // снимаем с ожидания
+
+    property IsHolded: Boolean    // флаг ходла потока
       read GetIsHolded write SetIsHolded;
 
     property OnAfterTerminatedSet: TNotifyEvent
@@ -65,6 +73,9 @@ begin
   FStopEvent := TEvent.Create(nil, True, False, '');
   IsHolded   := ASuspended;
 
+  FQueueLock := TObject.Create;
+  FQueueIsDone := false;
+
   FOnAfterTerminatedSet := nil;
   FOnAfterTerminatedSetProcRef := nil;
 
@@ -75,6 +86,8 @@ destructor THoldingThread.Destroy;
 begin
   FreeAndNil(FStopEvent);
   FreeAndNil(FLock);
+
+  FreeAndNil(FQueueLock);
 
   FreeAndNil(FCriticalSection);
 
@@ -136,12 +149,9 @@ end;
 procedure THoldingThread.TerminatedSet;
 begin
   FStopEvent.SetEvent;
-  TMonitor.Enter(FLock);
-  try
-    TMonitor.PulseAll(FLock);     // разбудить поток, если он на паузе
-  finally
-    TMonitor.Exit(FLock);
-  end;
+
+  QueueIsDone;
+  UnHoldThread;
 
   FCriticalSection.Enter;
   try
@@ -189,6 +199,38 @@ begin
     end;
   finally
     IsHolded := false;
+  end;
+end;
+
+procedure THoldingThread.QueueIsDone;
+begin
+  TMonitor.Enter(FQueueLock);
+  try
+    FQueueIsDone := true;
+    TMonitor.PulseAll(FQueueLock);
+  finally
+    TMonitor.Exit(FQueueLock);
+  end;
+end;
+
+procedure THoldingThread.StartWaitQueueDone;
+begin
+  TMonitor.Enter(FQueueLock);
+  try
+    FQueueIsDone := false;
+  finally
+    TMonitor.Exit(FQueueLock);
+  end;
+end;
+
+procedure THoldingThread.WaitForQueueDone;
+begin
+  TMonitor.Enter(FQueueLock);
+  try
+    while FQueueIsDone and not Terminated do
+      TMonitor.Wait(FQueueLock, INFINITE);
+  finally
+    TMonitor.Exit(FQueueLock);
   end;
 end;
 

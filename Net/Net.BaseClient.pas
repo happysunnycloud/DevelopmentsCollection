@@ -94,8 +94,10 @@ type
     property OnException: TClientExceptionEvent
       read GetOnException write SetOnException;
 
-    property ResponseStack: TResponseStack read FResponseStack;
+    { Props }
 
+    property Port: Word write FPort;
+    property ResponseStack: TResponseStack read FResponseStack;
     property IsConnected: Boolean read GetIsConnected;
   end;
 

@@ -17,9 +17,8 @@ type
   TPopupMenuExtThread = class(TSafeQueueThread)
   strict private
     FCriticalSection: TCriticalSection;
-    FHoldEvent: TEvent;
     FStepDirection: TStepDirection;
-    FDoneEvent: TEvent;
+
     FCountDown: Integer;
     FTimeout: Integer;
 
@@ -57,14 +56,12 @@ type
 
     function IsMouseOverForm: Boolean;
   protected
-    procedure Execute; override;
+    procedure InnerExecute; override;
   public
     constructor Create(
       const AStepDirection: TStepDirection;
       const ASuspended: Boolean);
     destructor Destroy; override;
-
-    procedure Terminate;
 
     property TimeIsOutFixed: Boolean read GetTimeIsOutFixed write SetTimeIsOutFixed;
     property ClickFixed: Boolean read GetClickFixed write SetClickFixed;
@@ -93,9 +90,7 @@ constructor TPopupMenuExtThread.Create(
   const ASuspended: Boolean);
 begin
   FCriticalSection := TCriticalSection.Create;
-  FHoldEvent := TEvent.Create(nil, true, false, '');
   FStepDirection := AStepDirection;
-  FDoneEvent := TEvent.Create(nil, true, false, '', false);
   FTimeIsOutFixed := false;
   FClickFixed := false;
   FGoBackClickFixed := false;
@@ -115,18 +110,9 @@ destructor TPopupMenuExtThread.Destroy;
 begin
   Form := nil;
 
-  FreeAndNil(FDoneEvent);
-  FreeAndNil(FHoldEvent);
   FreeAndNil(FCriticalSection);
 
   inherited Destroy;
-end;
-
-procedure TPopupMenuExtThread.Terminate;
-begin
-  FHoldEvent.SetEvent;
-
-  inherited Terminate;
 end;
 
 procedure TPopupMenuExtThread.SetClickedItem(const AClickedItem: TObject);
@@ -157,7 +143,7 @@ begin
   try
     FGoBackClickFixed := AGoBackClickFixed;
 
-    FHoldEvent.ResetEvent;
+    HoldThread;
   finally
     FCriticalSection.Leave;
   end;
@@ -237,7 +223,7 @@ begin
       FTimeIsOutFixed := false;
       FClickFixed := false;
 
-      FHoldEvent.SetEvent;
+      UnHoldThread;
     end
     else
     begin
@@ -331,18 +317,17 @@ begin
   end;
 end;
 
-procedure TPopupMenuExtThread.Execute;
+procedure TPopupMenuExtThread.InnerExecute;
 var
   OnTimeIsOut: TNotifyEvent;
 begin
-  FDoneEvent.ResetEvent;
-  FHoldEvent.ResetEvent;
-  FHoldEvent.WaitFor(INFINITE);
+  HoldThread;
+  ExecHold;
 
   while not Terminated do
   begin
     if not Terminated then
-      FHoldEvent.ResetEvent;
+      HoldThread;
 
     while not Terminated and not ClickFixed and not TimeIsOutFixed do
     begin
@@ -389,8 +374,7 @@ begin
       end;
     end;
 
-    if not Terminated then
-      FHoldEvent.WaitFor(INFINITE);
+    ExecHold;
   end;
 end;
 

@@ -114,9 +114,8 @@ type
   strict private
     FCriticalSection: TCriticalSection;
     FSingleSound: TSingleSound;
-//    FHoldEvent: TEvent;
-    FDoneEvent: TEvent;
-    FGetDataEvent: TEvent;
+//    FDoneEvent: TEvent;
+//    FGetDataEvent: TEvent;
 
     FOnGetData: TProc;
     FOnFinished: TProc;
@@ -136,19 +135,13 @@ type
       const ASingleSound: TSingleSound);
     destructor Destroy; override;
 
-    procedure WaitForDone;
+    //procedure WaitForDone;
 
     property OnGetData: TProc read GetOnGetData write SetOnGetData;
     property OnFinished: TProc read GetOnFinished write SetOnFinished;
-
-//    property HoldEvent: TEvent read FHoldEvent;
   end;
 
 implementation
-
-//uses
-//    DebugUnit
-//  ;
 
 { TSingleSound }
 
@@ -413,7 +406,6 @@ begin
   SaveLastValues;
 
   FSingleSoundThread.HoldThread;
-//  FSingleSoundThread.HoldEvent.ResetEvent;
 
   FMediaPlayer.Stop;
 
@@ -522,9 +514,8 @@ begin
 
   FSingleSound := ASingleSound;
 
-  //FHoldEvent := TEvent.Create(nil, true, false, '', false);
-  FDoneEvent := TEvent.Create(nil, true, false, '', false);
-  FGetDataEvent := TEvent.Create(nil, true, false, '', false);
+//  FDoneEvent := TEvent.Create(nil, true, false, '', false);
+//  FGetDataEvent := TEvent.Create(nil, true, false, '', false);
 
   FOnGetData := nil;
   FOnFinished := nil;
@@ -536,18 +527,17 @@ end;
 
 destructor TSingleSoundThread.Destroy;
 begin
-  FreeAndNil(FGetDataEvent);
-//  FreeAndNil(FHoldEvent);
-  FreeAndNil(FDoneEvent);
+//  FreeAndNil(FGetDataEvent);
+//  FreeAndNil(FDoneEvent);
   FreeAndNil(FCriticalSection);
 
   inherited;
 end;
 
-procedure TSingleSoundThread.WaitForDone;
-begin
-  FDoneEvent.WaitFor(INFINITE);
-end;
+//procedure TSingleSoundThread.WaitForDone;
+//begin
+//  FDoneEvent.WaitFor(INFINITE);
+//end;
 
 procedure TSingleSoundThread.SetOnGetData(const AProc: TProc);
 begin
@@ -594,9 +584,8 @@ begin
   OnGetData := nil;
   OnFinished := nil;
 
-  FGetDataEvent.SetEvent;
-  UnHoldThread;
-//  FHoldEvent.SetEvent;
+//  FGetDataEvent.SetEvent;
+//  UnHoldThread;
 end;
 
 procedure TSingleSoundThread.InnerExecute;
@@ -605,14 +594,17 @@ var
   Duration: TMediaTime;
   MediaState: TMediaState;
 begin
-  FDoneEvent.ResetEvent;
+//  FDoneEvent.ResetEvent;
   HoldThread;
   ExecHold;
-  try
+//  try
     while not Terminated do
     begin
+//      if not Terminated then
+//        FGetDataEvent.ResetEvent;
+
       if not Terminated then
-        FGetDataEvent.ResetEvent;
+        StartWaitQueueDone;
 
       TThread.Queue(nil,
         procedure
@@ -638,11 +630,15 @@ begin
             end;
           end;
 
-          FGetDataEvent.SetEvent;
+          //FGetDataEvent.SetEvent;
+
+          QueueIsDone;
         end);
 
-      if not Terminated then
-        FGetDataEvent.WaitFor(INFINITE);
+        WaitForQueueDone;
+
+//      if not Terminated then
+//        FGetDataEvent.WaitFor(INFINITE);
 
       if not Terminated then
         ExecHold;
@@ -650,9 +646,9 @@ begin
       if not Terminated then
         Sleep(100);
     end;
-  finally
-    FDoneEvent.SetEvent;
-  end;
+//  finally
+//    FDoneEvent.SetEvent;
+//  end;
 end;
 
 initialization

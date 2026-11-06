@@ -80,6 +80,8 @@ type
 
     function GetIsOnDisconnectedHandled: Boolean;
 
+    procedure SetPort(const APort: Word);
+
     property IsOnDisconnectedHandled: Boolean read GetIsOnDisconnectedHandled;
   public
     constructor Create(
@@ -116,6 +118,8 @@ type
       write FLogin;
     property Password: String
       write FPassword;
+    property Port: Word
+      write SetPort;
   end;
 
 implementation
@@ -356,6 +360,12 @@ end;
 function TNetClient.GetIsOnDisconnectedHandled: Boolean;
 begin
   Result := TInterlocked.CompareExchange(FIsOnDisconnectedHandled, 1, 1) = 1;
+end;
+
+procedure TNetClient.SetPort(const APort: Word);
+begin
+  FPingClient.Port := APort;
+  FDataClient.Port := APort;
 end;
 
 end.

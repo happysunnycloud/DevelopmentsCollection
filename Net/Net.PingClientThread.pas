@@ -74,7 +74,6 @@ type
       const AReadTimeout: Integer;
       const ALogin: String;
       const APassword: String); override;
-    destructor Destroy; override;
 
     function IsPingTimeout: Boolean;
 
@@ -148,11 +147,6 @@ begin
     AReadTimeout,
     '',
     '');
-end;
-
-destructor TNetPingClientThread.Destroy;
-begin
-  inherited;
 end;
 
 procedure TNetPingClientThread.ActivateHeartBeatThread;

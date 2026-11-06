@@ -26,7 +26,7 @@ type
 
     function GetOnLoginTimeout: TLoginTimeoutEvent;
   protected
-    procedure Execute; override;
+    procedure InnerExecute; override;
   public
     constructor Create; reintroduce;
     destructor Destroy; override;
@@ -71,6 +71,8 @@ end;
 destructor TNetLoginTimeoutThread.Destroy;
 begin
   FreeAndNil(FCriticalSection);
+
+  inherited;
 end;
 
 { Setters }
@@ -98,9 +100,9 @@ begin
   end;
 end;
 
-procedure TNetLoginTimeoutThread.Execute;
+procedure TNetLoginTimeoutThread.InnerExecute;
 const
-  METHOD = 'Execute';
+  METHOD = 'InnerExecute';
 var
   i: Word;
   InnerTimeout: Byte;

@@ -109,7 +109,7 @@ type
     FForm: TMessageBoxForm;
     FDelayTimeSec: Integer;
   protected
-    procedure Execute; override;
+    procedure InnerExecute; override;
   public
     constructor Create(
       const AForm: TMessageBoxForm;
@@ -446,7 +446,7 @@ begin
   inherited Create(false);
 end;
 
-procedure TDelayShowThread.Execute;
+procedure TDelayShowThread.InnerExecute;
 var
   Countdown: Integer;
 begin

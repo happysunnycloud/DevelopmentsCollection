@@ -29,6 +29,8 @@ type
       const ARootName: String;
       const ASplitter: String = '_'): String; overload;
     class function ExtractFromBrackets(const ASource: String): String;
+    class function ExtractFileName(
+      const APath: String; const ASplitter: Char): String;
     /// <summary>
     ///  Добавляет ADigitDepth символа '0' в начало числа, при преобразовании его в строку
     /// </summary>
@@ -192,6 +194,26 @@ begin
 
     if (i > 1) and (BracketCount = 0) and OpeningBracetFound then
       Exit;
+  end;
+end;
+
+class function TStringTools.ExtractFileName(
+  const APath: String; const ASplitter: Char): String;
+var
+  Parts: TStringList;
+begin
+  Result := '';
+
+  Parts := TStringList.Create;
+  try
+    Parts.Delimiter := ASplitter;
+    Parts.StrictDelimiter := True;
+    Parts.DelimitedText := APath;
+
+    if Parts.Count > 0 then
+      Result := Parts[Pred(Parts.Count)];
+  finally
+    FreeAndNil(Parts);
   end;
 end;
 

@@ -84,7 +84,7 @@ type
     procedure DoPingTimeout(const AContext: TIdContext);
 
     procedure DoClientAuthorized(const AContext: TIdContext);
-    procedure DoExecute(AContext: TIdContext);
+    procedure InnerExecute(AContext: TIdContext);
   strict private
     function GetPort: Word;
     procedure SetPort(const APort: Word);
@@ -172,7 +172,7 @@ begin
   FConnection                   := TIdTCPServer.Create(nil);
   FConnection.DefaultPort       := APort;
   FConnection.OnContextCreated  := DoContextCreated;
-  FConnection.OnExecute         := DoExecute;
+  FConnection.OnExecute         := InnerExecute;
   FConnection.OnDisconnect      := DoDisconnect;
 
   FAllowedConnectionCount       := 0;
@@ -677,7 +677,7 @@ begin
   end;
 end;
 
-procedure TNetServer.DoExecute(AContext: TIdContext);
+procedure TNetServer.InnerExecute(AContext: TIdContext);
 const
   METHOD = 'DoExecute';
 var

@@ -21,7 +21,7 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    function RegisterObject(const AObject: T): Boolean;
+    procedure RegisterObject(const AObject: T);
     function UnRegisterObject(const AObject: T): Word;
 
     function ObjectByIndex(const AIndex: Word): T;
@@ -52,17 +52,13 @@ begin
   inherited;
 end;
 
-function TObjectRegistry<T>.RegisterObject(const AObject: T): Boolean;
+procedure TObjectRegistry<T>.RegisterObject(const AObject: T);
 var
   ObjectList: TList<T>;
 begin
-  Result := false;
-
   ObjectList := FObjectList.LockList;
   try
     ObjectList.Add(AObject);
-
-    Result := true;
   finally
     FObjectList.UnlockList;
   end;
@@ -117,7 +113,6 @@ end;
 procedure TObjectRegistry<T>.Enumerator(const ACallbackProc: TEnumCallbackProc);
 var
   ObjectList: TList<T>;
-  _Object: T;
   i: Word;
   _Break: Boolean;
 begin
@@ -141,7 +136,6 @@ end;
 procedure TObjectRegistry<T>.ForwardEnumerator(const ACallbackProc: TEnumCallbackProc);
 var
   ObjectList: TList<T>;
-  _Object: T;
   i: Word;
   _Break: Boolean;
 begin
@@ -165,7 +159,6 @@ end;
 procedure TObjectRegistry<T>.BackwardEnumerator(const ACallbackProc: TEnumCallbackProc);
 var
   ObjectList: TList<T>;
-  _Object: T;
   i: Word;
   _Break: Boolean;
 begin

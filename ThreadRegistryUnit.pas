@@ -21,7 +21,7 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    function RegisterThread(const AThread: T): Boolean;
+    procedure RegisterThread(const AThread: T);
     function UnRegisterThread(const AThread: T): Word;
 
     function ThreadByIndex(const AIndex: Word): T;
@@ -49,17 +49,13 @@ begin
   inherited;
 end;
 
-function TThreadRegistry<T>.RegisterThread(const AThread: T): Boolean;
+procedure TThreadRegistry<T>.RegisterThread(const AThread: T);
 var
   ThreadList: TList<T>;
 begin
-  Result := false;
-
   ThreadList := FThreadList.LockList;
   try
     ThreadList.Add(AThread);
-
-    Result := true;
   finally
     FThreadList.UnlockList;
   end;
@@ -100,7 +96,6 @@ end;
 procedure TThreadRegistry<T>.Enumerator(const ACallbackProc: TCallbackProc);
 var
   ThreadList: TList<T>;
-  Thread: T;
   i: Word;
 begin
   ThreadList := FThreadList.LockList;
@@ -121,7 +116,6 @@ procedure TThreadRegistry<T>.Enumerator(
   const ABreakingCallbackProc: TBreakingCallbackProc);
 var
   ThreadList: TList<T>;
-  Thread: T;
   i: Word;
   DoBreak: Boolean;
 begin

@@ -28,7 +28,7 @@ type
 
     function GetTimeout: Word;
   protected
-    procedure Execute; override;
+    procedure InnerExecute; override;
   public
     constructor Create; reintroduce;
     destructor  Destroy; override;
@@ -76,6 +76,8 @@ end;
 destructor TNetPingTimeoutThread.Destroy;
 begin
   FreeAndNil(FCriticalSection);
+
+  inherited;
 end;
 
 procedure TNetPingTimeoutThread.ResetTimeout;
@@ -118,9 +120,9 @@ begin
   end;
 end;
 
-procedure TNetPingTimeoutThread.Execute;
+procedure TNetPingTimeoutThread.InnerExecute;
 const
-  METHOD = 'Execute';
+  METHOD = 'InnerExecute';
 var
   i: Word;
   InnerTimeout: Byte;

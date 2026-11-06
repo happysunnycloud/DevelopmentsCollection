@@ -40,6 +40,7 @@ uses
     System.Classes
   , System.SysUtils
   , SafeQueueThreadSignal
+  , HoldingThread
   ;
 
 type
@@ -47,7 +48,7 @@ type
   ISafeQueueThreadSignalOwner = SafeQueueThreadSignal.ISafeQueueThreadSignalOwner;
   TSafeQueueThreadSignal = SafeQueueThreadSignal.TSafeQueueThreadSignal;
 
-  TSafeQueueThread = class(TThread)
+  TSafeQueueThread = class(THoldingThread)
   strict private
     FSafeQueueThreadSignal: ISafeQueueThreadSignal;
     // Только для собственного сигнала; для внешнего nil
