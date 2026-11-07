@@ -63,7 +63,7 @@ type
     procedure DoOnDisconnected(Sender: TObject); override;
 
     procedure ParseIncomingData; override;
-    procedure Execute; override;
+    procedure InnerExecute; override;
   public
     constructor Create(
       const AHostName: String;
@@ -307,7 +307,7 @@ begin
   TDebug.ODS('ParseIncomingData 2');
 end;
 
-procedure TNetPingClientThread.Execute;
+procedure TNetPingClientThread.InnerExecute;
 const
   METHOD = 'Execute';
 var

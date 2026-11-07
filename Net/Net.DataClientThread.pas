@@ -41,7 +41,7 @@ type
     procedure DoOnDisconnected(Sender: TObject); override;
 
     procedure ParseIncomingData; override;
-    procedure Execute; override;
+    procedure InnerExecute; override;
   public
     constructor Create(
       const AHostName: String;
@@ -186,7 +186,7 @@ begin
   end;
 end;
 
-procedure TNetDataClientThread.Execute;
+procedure TNetDataClientThread.InnerExecute;
 const
   METHOD = 'Execute';
 var

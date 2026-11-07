@@ -121,7 +121,7 @@ begin
   // Деактивируем до inherited: TThread.Destroy ждёт завершения рабочего
   // потока, и в это время главный поток разбирает очередь. Deactivate
   // дожидается выполняющейся процедуры, после него ни одна не выполнится.
-  if FOwnedSignal <> nil then
+  if Assigned(FOwnedSignal) then
     FOwnedSignal.Deactivate;
 
   // Поля сигнала не обнуляем: рабочий поток может обращаться к ним до конца
@@ -131,7 +131,7 @@ end;
 
 procedure TSafeQueueThread.DeactivateQueue;
 begin
-  if FOwnedSignal = nil then
+  if not Assigned(FOwnedSignal) then
     raise EInvalidOperation.Create(
       'TSafeQueueThread: сигнал внешний, его деактивирует владелец сигнала');
 

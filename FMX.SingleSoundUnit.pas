@@ -11,7 +11,7 @@ uses
   , System.Classes
   , System.SysUtils
   , FMX.Media
-  , ThreadFactoryUnit
+  , SafeQueueThread
   ;
 
 type
@@ -77,14 +77,13 @@ type
     procedure SaveLastValues;
     procedure DoGetData;
     procedure SetOnFinishedProcRef(const AOnFinishedProcRef: TProc);
-    procedure SingleSoundThreadOnTerminateHandler(Sender: TObject);
 
     procedure ResetValues;
     procedure UpdateCache;
 
     procedure RaiseMainThreadOnlyException(const AMethod: String);
   public
-    constructor Create(const AThreadFactory: TThreadFactory);
+    constructor Create;
     destructor Destroy; override;
 
     property FileName: String read GetFileName write SetFileName;
@@ -110,12 +109,10 @@ type
     class function GetHumanTime(const AMediaTime: Int64): String;
   end;
 
-  TSingleSoundThread = class(TThreadExt)
+  TSingleSoundThread = class(TSafeQueueThread)
   strict private
     FCriticalSection: TCriticalSection;
     FSingleSound: TSingleSound;
-//    FDoneEvent: TEvent;
-//    FGetDataEvent: TEvent;
 
     FOnGetData: TProc;
     FOnFinished: TProc;
@@ -130,12 +127,8 @@ type
   protected
     procedure InnerExecute; override;
   public
-    constructor Create(
-      const AThreadFactory: TThreadFactory;
-      const ASingleSound: TSingleSound);
+    constructor Create(const ASingleSound: TSingleSound);
     destructor Destroy; override;
-
-    //procedure WaitForDone;
 
     property OnGetData: TProc read GetOnGetData write SetOnGetData;
     property OnFinished: TProc read GetOnFinished write SetOnFinished;
@@ -209,28 +202,19 @@ begin
   end;
 end;
 
-procedure TSingleSound.SingleSoundThreadOnTerminateHandler(Sender: TObject);
-begin
-  FSingleSoundThread := nil;
-end;
-
-constructor TSingleSound.Create(const AThreadFactory: TThreadFactory);
+constructor TSingleSound.Create;
 begin
   try
-    if not Assigned(AThreadFactory) then
-      raise Exception.Create('AThreadFactory cannot be nil');
-
     FCriticalSection := TCriticalSection.Create;
 
     FOnGetData := nil;
 
     FMediaPlayer := TMediaPlayer.Create(nil);
-    FSingleSoundThread := TSingleSoundThread.Create(AThreadFactory, Self);
+    FSingleSoundThread := TSingleSoundThread.Create(Self);
     FSingleSoundThread.OnGetData := DoGetData;
     FSingleSoundThread.OnFinished := nil;
     FSingleSoundThread.UnHoldThread;
     FSingleSoundThread.Start;
-    FSingleSoundThread.OnTerminate := SingleSoundThreadOnTerminateHandler;
 
     ResetValues;
   except
@@ -242,8 +226,11 @@ end;
 destructor TSingleSound.Destroy;
 begin
   if Assigned(FSingleSoundThread) then
+  begin
     FSingleSoundThread.Terminate;
-  FSingleSoundThread := nil;
+    FSingleSoundThread.WaitFor;
+    FreeAndNil(FSingleSoundThread);
+  end;
 
   FreeAndNil(FMediaPlayer);
   FreeAndNil(FCriticalSection);
@@ -272,8 +259,6 @@ begin
       TErrorClass.FileNotExists.ErrorTextFmt, [FileName]);
 
   Stop;
-
-//  CurrentTime := 0;
 
   FMediaPlayer.FileName := FileName;
   Duration := FMediaPlayer.Duration;
@@ -485,16 +470,12 @@ begin
   end;
 
   if Assigned(FOnGetData) then
-    TThread.Queue(nil,
-      procedure
-      begin
-        FOnGetData(
-          FileName,
-          CurrentTime,
-          Duration,
-          Volume,
-          State);
-      end);
+  begin
+    FOnGetData(
+      FileName, CurrentTime,
+      Duration, Volume,
+      State);
+  end;
 end;
 
 procedure TSingleSound.SetOnFinishedProcRef(const AOnFinishedProcRef: TProc);
@@ -504,40 +485,26 @@ end;
 
 { TSingleSoundThread }
 
-constructor TSingleSoundThread.Create(
-  const AThreadFactory: TThreadFactory;
-  const ASingleSound: TSingleSound);
+constructor TSingleSoundThread.Create(const ASingleSound: TSingleSound);
 begin
   FCriticalSection := TCriticalSection.Create;
 
-  FreeOnTerminate := true;
-
   FSingleSound := ASingleSound;
-
-//  FDoneEvent := TEvent.Create(nil, true, false, '', false);
-//  FGetDataEvent := TEvent.Create(nil, true, false, '', false);
 
   FOnGetData := nil;
   FOnFinished := nil;
 
-  inherited Create(AThreadFactory, 'TSingleSoundThread', true);
+  inherited Create(true);
 
   OnAfterTerminatedSet := DoAfterTerminatedSet;
 end;
 
 destructor TSingleSoundThread.Destroy;
 begin
-//  FreeAndNil(FGetDataEvent);
-//  FreeAndNil(FDoneEvent);
   FreeAndNil(FCriticalSection);
 
   inherited;
 end;
-
-//procedure TSingleSoundThread.WaitForDone;
-//begin
-//  FDoneEvent.WaitFor(INFINITE);
-//end;
 
 procedure TSingleSoundThread.SetOnGetData(const AProc: TProc);
 begin
@@ -583,9 +550,6 @@ procedure TSingleSoundThread.DoAfterTerminatedSet(Sender: TObject);
 begin
   OnGetData := nil;
   OnFinished := nil;
-
-//  FGetDataEvent.SetEvent;
-//  UnHoldThread;
 end;
 
 procedure TSingleSoundThread.InnerExecute;
@@ -594,61 +558,49 @@ var
   Duration: TMediaTime;
   MediaState: TMediaState;
 begin
-//  FDoneEvent.ResetEvent;
   HoldThread;
   ExecHold;
-//  try
-    while not Terminated do
-    begin
-//      if not Terminated then
-//        FGetDataEvent.ResetEvent;
 
-      if not Terminated then
-        StartWaitQueueDone;
+  while not Terminated do
+  begin
+    if not Terminated then
+      StartWaitQueueDone;
 
-      TThread.Queue(nil,
-        procedure
+    SafeForceQueue(
+      procedure
+      begin
+        if TThread.CurrentThread.ThreadID <> MainThreadID then
+          raise Exception.Create('Is not a main thread');
+
+        if Assigned(OnGetData) then
+          OnGetData();
+
+        CurrentTime := FSingleSound.CurrentTime;
+        Duration := FSingleSound.Duration;
+        MediaState := FSingleSound.MediaState;
+
+        if (CurrentTime >= Duration) and
+           (MediaState <> TMediaState.Playing)
+        then
         begin
-          if TThread.CurrentThread.ThreadID <> MainThreadID then
-            raise Exception.Create('Is not a main thread');
-
-          if Assigned(OnGetData) then
-            OnGetData();
-
-          CurrentTime := FSingleSound.CurrentTime;
-          Duration := FSingleSound.Duration;
-          MediaState := FSingleSound.MediaState;
-
-          if (CurrentTime >= Duration) and
-             (MediaState <> TMediaState.Playing)
-          then
+          if Assigned(OnFinished) then
           begin
-            if Assigned(OnFinished) then
-            begin
-              HoldThread;
-              OnFinished();
-            end;
+            HoldThread;
+            OnFinished();
           end;
+        end;
 
-          //FGetDataEvent.SetEvent;
+        QueueIsDone;
+      end);
 
-          QueueIsDone;
-        end);
+      WaitForQueueDone;
 
-        WaitForQueueDone;
+    if not Terminated then
+      ExecHold;
 
-//      if not Terminated then
-//        FGetDataEvent.WaitFor(INFINITE);
-
-      if not Terminated then
-        ExecHold;
-
-      if not Terminated then
-        Sleep(100);
-    end;
-//  finally
-//    FDoneEvent.SetEvent;
-//  end;
+    if not Terminated then
+      Sleep(100);
+  end;
 end;
 
 initialization
