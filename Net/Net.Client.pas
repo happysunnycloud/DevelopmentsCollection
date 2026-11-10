@@ -118,6 +118,8 @@ type
       write FLogin;
     property Password: String
       write FPassword;
+    property IP: String
+      write FIP;
     property Port: Word
       write SetPort;
   end;
