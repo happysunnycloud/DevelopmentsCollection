@@ -80,6 +80,7 @@ type
 
     function GetIsOnDisconnectedHandled: Boolean;
 
+    procedure SetIP(const AIP: String);
     procedure SetPort(const APort: Word);
 
     property IsOnDisconnectedHandled: Boolean read GetIsOnDisconnectedHandled;
@@ -119,7 +120,7 @@ type
     property Password: String
       write FPassword;
     property IP: String
-      write FIP;
+      write SetIP;
     property Port: Word
       write SetPort;
   end;
@@ -362,6 +363,12 @@ end;
 function TNetClient.GetIsOnDisconnectedHandled: Boolean;
 begin
   Result := TInterlocked.CompareExchange(FIsOnDisconnectedHandled, 1, 1) = 1;
+end;
+
+procedure TNetClient.SetIP(const AIP: String);
+begin
+  FPingClient.IP := AIP;
+  FDataClient.IP := AIP;
 end;
 
 procedure TNetClient.SetPort(const APort: Word);

@@ -96,6 +96,7 @@ type
 
     { Props }
 
+    property IP: String write FIP;
     property Port: Word write FPort;
     property ResponseStack: TResponseStack read FResponseStack;
     property IsConnected: Boolean read GetIsConnected;
