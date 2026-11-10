@@ -563,8 +563,7 @@ begin
 
   while not Terminated do
   begin
-    if not Terminated then
-      StartWaitQueueDone;
+    StartWaitQueueDone;
 
     SafeForceQueue(
       procedure
@@ -583,9 +582,9 @@ begin
            (MediaState <> TMediaState.Playing)
         then
         begin
+          HoldThread;
           if Assigned(OnFinished) then
           begin
-            HoldThread;
             OnFinished();
           end;
         end;
@@ -593,10 +592,9 @@ begin
         QueueIsDone;
       end);
 
-      WaitForQueueDone;
+    WaitForQueueDone;
 
-    if not Terminated then
-      ExecHold;
+    ExecHold;
 
     if not Terminated then
       Sleep(100);
