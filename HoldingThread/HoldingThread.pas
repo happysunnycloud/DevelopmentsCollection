@@ -227,7 +227,7 @@ procedure THoldingThread.WaitForQueueDone;
 begin
   TMonitor.Enter(FQueueLock);
   try
-    while FQueueIsDone and not Terminated do
+    while not FQueueIsDone and not Terminated do
       TMonitor.Wait(FQueueLock, INFINITE);
   finally
     TMonitor.Exit(FQueueLock);
